@@ -508,6 +508,22 @@ const Psha = (() => {
     return m;
   }
 
-  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite, correlationBJ2008, spectreConditionnel, niveauSite, grilleCarte };
+  // Modèle d'enseignement : une zone circulaire de rayon `rayon` (polygone à `cotes` côtés) centrée à `distance`
+  // km à l'est du site, loi de Gutenberg-Richter de taux λ(≥ 4) = taux4 (a = log10 taux4 + 4b, tronquée entre
+  // mmin et mmax), lois d'atténuation à poids égaux, sans faille ni autre branche. Mêmes conventions que
+  // modeleDefaut ; sert au cours et à ses exercices.
+  function modeleSimple({ distance = 0, rayon = 100, taux4 = 1, b = 1, mmin = 4, mmax = 6.5, rake = 0, vs30 = 800,
+    gmpe = ['akkar2014', 'bindi2014', 'boore2014'], imts = ['PGA', 0.2, 1], pasGrille = 10, cotes = 48 } = {}) {
+    const polygone = Array.from({ length: cotes }, (_, i) => [distance + rayon * Math.cos((2 * Math.PI * i) / cotes), rayon * Math.sin((2 * Math.PI * i) / cotes)]);
+    const ajustement = { b, sigmaB: 0, lamPivot: taux4, mPivot: 4 };
+    return {
+      site: { x: 0, y: 0, vs30 }, imts, niveaux: niveauxDefaut(), dureeVie: 50, troncature: 3, distanceMax: 300,
+      pasGrille, pasMfd: 0.1, pasFaille: 1,
+      zones: [{ id: 'z', nom: 'Zone', rake, profondeur: 10, mmin, mmax, polygone, ajustement, ab: [{ a: Math.log10(taux4) + 4 * b, b, poids: 1 }] }],
+      dMmax: [{ d: 0, poids: 1 }], gmpe: gmpe.map(id => ({ id, poids: 1 / gmpe.length })), failles: [], taux: [{ id: 'catalogue', poids: 1 }],
+    };
+  }
+
+  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, modeleSimple, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite, correlationBJ2008, spectreConditionnel, niveauSite, grilleCarte };
 })();
 export default Psha;

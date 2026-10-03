@@ -28,7 +28,7 @@ const Parcours = (() => {
     spectre: { titre: 'Le spectre de réponse et l\'Eurocode 8', fichier: 'cours.html#ch7', duree: 30 },
     sismicite: { titre: 'Catalogue et loi de Gutenberg-Richter', fichier: 'cours.html#ch8', duree: 25 },
     geodesie: { titre: 'Déformation de la croûte et taux de séismes', fichier: 'cours.html#ch9', duree: 25 },
-    alea: { titre: 'Le calcul probabiliste de l\'aléa', fichier: null, duree: 35 },
+    alea: { titre: 'Le calcul probabiliste de l\'aléa', fichier: 'cours.html#ch10', duree: 35 },
     selection: { titre: 'Choisir et caler des accélérogrammes', fichier: null, duree: 30 },
     site: { titre: 'Les effets de site', fichier: null, duree: 30 },
     liquefaction: { titre: 'La liquéfaction des sols', fichier: null, duree: 25 },

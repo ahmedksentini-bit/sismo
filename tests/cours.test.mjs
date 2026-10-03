@@ -239,3 +239,24 @@ test('chapitre 9 : les exemples chiffrés du texte', async () => {
   assert.ok(z2.taux(4) / z.taux(4) > 1.7 && z2.taux(4) / z.taux(4) < 2);
   for (const t of ['tous les <strong>58 ans</strong>', 'tous les <strong>330 ans</strong>', 'soit 133 ns/an', '9,0·10<sup>16</sup> N·m/an', 'a = 3,82', 'tous les <strong>170 ans</strong>', 'tous les\n       120 ans']) assert.ok(cours.includes(t), t);
 });
+
+test('chapitre 10 : les exemples chiffrés du texte', async () => {
+  const P = (await import('../src/sismo/psha.js')).default, G = (await import('../src/sismo/gmpe.js')).default;
+  const b14 = G.LOIS.boore2014.calculer({ M: 6, Rjb: 10, vs30: 800, rake: 0 }, 'PGA');
+  assert.equal(Math.exp(b14.ln).toFixed(3), '0.176');
+  assert.equal(b14.sigma.toFixed(2), '0.61');
+  assert.equal(Math.round(100 * P.survie((Math.log(0.3) - b14.ln) / b14.sigma, 3)), 19);
+  assert.deepEqual(['akkar2014', 'bindi2014'].map(id => Math.exp(G.LOIS[id].calculer({ M: 6, Rjb: 10, vs30: 800, rake: 0 }, 'PGA').ln).toFixed(3)), ['0.142', '0.128']);
+  assert.equal((1 - P.Phi(1)).toFixed(3), '0.159');
+  const niv = (o, p, k = 0) => { const m = P.modeleSimple({ imts: ['PGA', 0.2, 1], ...o }), r = P.calculer(m); return P.niveauPourProba(r.niveaux, r.moyenne[k], p); };
+  assert.equal(niv({}, 0.1).toFixed(3), '0.126');
+  assert.equal(niv({}, 0.02).toFixed(3), '0.248');
+  assert.equal(niv({}, 0.1, 1).toFixed(2), '0.26');
+  assert.equal(niv({}, 0.1, 2).toFixed(2), '0.04');
+  assert.equal(niv({ mmax: 7.5 }, 0.1).toFixed(3), '0.133');
+  assert.equal(niv({ taux4: 0.2 }, 0.1).toFixed(3), '0.055');
+  const m = P.modeleSimple({ imts: ['PGA'] }), d = P.desagregation(m, 'PGA', niv({}, 0.1));
+  assert.equal(d.mMoy.toFixed(1), '5.2');
+  assert.equal(Math.round(d.rMoy), 14);
+  for (const t of ['médiane de 0,176 g', 'vaut 19 %', 'PGA = <strong>0,126 g</strong> à 475 ans et 0,248 g', 'M̄ = 5,2 et R̄ = 14 km', 'monte qu\'à 0,133 g', 'descend à 0,055 g']) assert.ok(cours.includes(t), t);
+});
