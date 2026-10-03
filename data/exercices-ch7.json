@@ -1,0 +1,209 @@
+{
+ "chapitre": "ch7",
+ "exercices": [
+  {
+   "id": "ch7-ec8",
+   "titre": "Lire le spectre élastique de l'Eurocode 8",
+   "difficulte": 1,
+   "graine": 2993141406,
+   "enonce": "Site de classe de sol A, spectre de type 1, a_g = 0,28 g. Valeurs recommandées de l'EN 1998-1:2004 : S = 1,00, TB = 0,15 s, TC = 0,40 s, TD = 2,0 s ; ξ = 5 %.",
+   "donnees": [
+    {
+     "label": "Sol, type",
+     "valeur": "A, type 1"
+    },
+    {
+     "label": "a_g",
+     "valeur": "0,28 g"
+    },
+    {
+     "label": "S, TB, TC, TD",
+     "valeur": "1,00 ; 0,15 ; 0,40 ; 2,0 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Accélération spectrale du plateau ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.7,
+     "explication": "ag·S·2,5 = 0,28 × 1,00 × 2,5 = 0,7 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Se pour T = 0,1 s ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.56,
+     "explication": "0,1 s est sur la montée : Se = ag·S·[1 + (T/TB)(2,5η − 1)] = 0,28 × 1,00 × [1 + (0,1/0,15) × (2,5 × 1,000 − 1)] = 0,56 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Se pour T = 2 s ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.14,
+     "explication": "2 s est sur la branche en 1/T : Se = ag·S·η·2,5·TC/T = 0,28 × 1,00 × 2,5 × 0,40/2 = 0,14 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Accélération maximale du sol en surface (Se pour T = 0) ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.28,
+     "explication": "Se(0) = ag·S = 0,28 g : un oscillateur infiniment raide suit le sol.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch7-batiment",
+   "titre": "Période d'un bâtiment et demande spectrale",
+   "difficulte": 2,
+   "graine": 3207477352,
+   "enonce": "Un portique en béton armé de 33 m de haut est construit sur un sol de classe D (type 1 : S = 1,35, TB = 0,20 s, TC = 0,80 s, TD = 2,0 s) ; a_g = 0,20 g.",
+   "donnees": [
+    {
+     "label": "Structure",
+     "valeur": "un portique en béton armé, H = 33 m"
+    },
+    {
+     "label": "Sol",
+     "valeur": "D, type 1"
+    },
+    {
+     "label": "a_g",
+     "valeur": "0,20 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Période fondamentale approchée T₁ = Ct·H^(3/4) ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 1.03263,
+     "explication": "Ct = 0,075 : T₁ = 0,075 × 33^0,75 = 1,03 s.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Accélération spectrale élastique Se(T₁) ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.522934,
+     "explication": "T₁ sur la branche en 1/T : Se = ag·S·η·2,5·TC/T = 0,20 × 1,35 × 2,5 × 0,80/1,03 = 0,523 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Déplacement spectral Se·(T₁/2π)² ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 138.564,
+     "explication": "0,523 × 9,81 × (1,03/2π)² = 139 mm.",
+     "toleranceRel": 0.03
+    }
+   ]
+  },
+  {
+   "id": "ch7-amortissement",
+   "titre": "Effet de l'amortissement sur le spectre",
+   "difficulte": 1,
+   "graine": 1873143395,
+   "enonce": "Un ouvrage est amorti à ξ = 2 % ; site de classe C, type 1 (S = 1,15), a_g = 0,25 g.",
+   "donnees": [
+    {
+     "label": "ξ",
+     "valeur": "2 %"
+    },
+    {
+     "label": "Sol",
+     "valeur": "C (S = 1,15)"
+    },
+    {
+     "label": "a_g",
+     "valeur": "0,25 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Coefficient de correction η ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 1.19523,
+     "explication": "η = √(10/(5 + 2)) = 1,195.",
+     "tolerance": 0.01
+    },
+    {
+     "texte": "Accélération du plateau Se pour cet amortissement ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.859071,
+     "explication": "ag·S·η·2,5 = 0,25 × 1,15 × 1,195 × 2,5 = 0,859 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "L'amortissement modifie-t-il Se pour T = 0 ?",
+     "type": "choix",
+     "options": [
+      "oui : Se(0) est divisé par η",
+      "oui : Se(0) devient nul",
+      "non : Se(0) = ag·S, l'oscillateur rigide suit le sol",
+      "oui : Se(0) est multiplié par η"
+     ],
+     "reponse": 2,
+     "explication": "La branche de montée part de ag·S quel que soit ξ : un oscillateur infiniment raide ne se déforme pas, son amortissement ne joue pas."
+    }
+   ]
+  },
+  {
+   "id": "ch7-reponse",
+   "titre": "Du déplacement de l'oscillateur au spectre",
+   "difficulte": 2,
+   "graine": 996894460,
+   "enonce": "Soumis à un accélérogramme (Mw 6,7 à 18 km, PGA 0,16 g), un oscillateur de période 0,3 s amorti à 5 % atteint un déplacement relatif maximal de 8,39 mm.",
+   "donnees": [
+    {
+     "label": "T",
+     "valeur": "0,3 s"
+    },
+    {
+     "label": "Sd",
+     "valeur": "8,39 mm"
+    },
+    {
+     "label": "PGA",
+     "valeur": "0,16 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Pseudo-vitesse Sv = ω·Sd ?",
+     "type": "nombre",
+     "unite": "m/s",
+     "reponse": 0.17572,
+     "explication": "ω = 2π/0,3 = 20,9 rad/s ; Sv = 20,9 × 0,00839 = 0,176 m/s.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Pseudo-accélération Sa = ω²·Sd, en g ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.375155,
+     "explication": "Sa = 20,9² × 0,00839 = 3,68 m/s², soit 0,375 g (2,3 fois le PGA).",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Pour une période tendant vers zéro, Sa tend vers…",
+     "type": "choix",
+     "options": [
+      "l'accélération maximale du sol (PGA)",
+      "2,5 fois le PGA",
+      "zéro",
+      "le déplacement maximal du sol"
+     ],
+     "reponse": 0,
+     "explication": "Un oscillateur infiniment raide suit le sol : sa pseudo-accélération est l'accélération du sol. Aux très longues périodes, c'est Sd qui tend vers le déplacement maximal du sol."
+    }
+   ]
+  }
+ ]
+}

@@ -167,3 +167,38 @@ test('chapitre 5 : les exemples chiffrés du texte', async () => {
   assert.equal(r(2, 1.25, 0.8).deplacement.toFixed(2), '0.85');
   for (const t of ['f<sub>0</sub> = 1,0 Hz', '≈ 17,6 N·s/m', 'passe de 7,3 mm à 5,3 mm', '≈ 0,32', 'les deux valent 0,71', 'il en\n     rend encore 85 %']) assert.ok(cours.includes(t), t);
 });
+
+test('chapitre 6 : les exemples chiffrés du texte', async () => {
+  const Rf = (await import('../src/sismo/refraction.js')).default, m = Sismo.MODELE;
+  const ic = Math.asin(m.vp1 / m.vp2), ti = Rf.intercept(m.vp1, m.vp2, m.H, 10);
+  assert.equal((ic * 180 / Math.PI).toFixed(1), '48.6');
+  assert.equal(Math.cos(ic).toFixed(3), '0.661');
+  assert.equal(ti.toFixed(2), '5.95');
+  assert.equal(Math.round((2 * m.H - 10) * Math.tan(ic)), 61);
+  assert.equal(Math.round(Rf.croisement(m.vp1, m.vp2, ti, 10)), 141);
+  // le croisement du modèle est bien celui des temps de trajet du générateur
+  assert.ok(Sismo.temps(140, 10).tPn > Sismo.temps(140, 10).tPg && Sismo.temps(142, 10).tPn < Sismo.temps(142, 10).tPg);
+  // sismique réfraction de site
+  const H = Rf.epaisseur(0.6, 2.5, 20, 0);
+  assert.equal(H.toFixed(1), '6.2');
+  assert.equal(Math.sqrt(1 - 0.24 ** 2).toFixed(3), '0.971');
+  assert.equal(Math.round(Rf.croisement(0.6, 2.5, 20, 0)), 16);
+  for (const t of ['<strong>5,95 s</strong>', 'Pn apparaît à 61 km', '<strong>141 km</strong>', '≈ <strong>6,2 m</strong>', 'au-delà de 16 m']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 7 : les exemples chiffrés du texte', async () => {
+  const S = (await import('../src/sismo/spectre.js')).default;
+  const se = (T, type = 1) => S.ec8(T, { type, sol: 'C', ag: 0.2 });
+  assert.deepEqual([S.EC8_2004[1].C.S, S.EC8_2004[1].C.TB, S.EC8_2004[1].C.TC, S.EC8_2004[1].C.TD], [1.15, 0.2, 0.6, 2]);
+  assert.equal(se(0.4).toFixed(3), '0.575');
+  assert.equal(se(1).toFixed(3), '0.345');
+  assert.equal(se(3).toFixed(3), '0.077');
+  assert.deepEqual([S.EC8_2004[2].C.S, S.EC8_2004[2].C.TC], [1.5, 0.25]);
+  assert.equal(se(0.2, 2).toFixed(2), '0.75');
+  assert.equal(se(1, 2).toFixed(2), '0.19');
+  assert.deepEqual([0.05, 0.1, 0.02].map(x => S.eta(x).toFixed(2)), ['1.00', '0.82', '1.20']);
+  assert.ok(S.eta(0.27) > 0.55 && S.eta(0.29) === 0.55);
+  assert.equal(S.periodeApprochee(15, 'beton').toFixed(2), '0.57');
+  assert.ok(S.periodeApprochee(15, 'beton') < 0.6);
+  for (const t of ['<strong>0,575 g</strong>', '= 0,345 g', '= 0,077 g', 'tombe à 0,19 g', '≈ 0,57 s', '0,82 pour 10 % ; 1,20 pour 2 %', 'vers\n     28 %']) assert.ok(cours.includes(t), t);
+});

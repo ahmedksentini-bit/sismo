@@ -827,6 +827,276 @@
     <a class="secondary" href="labo.html#sismometre">Travaux pratiques : banc « Sismomètre »</a></div>
 </section>
 
+<section id="ch6" class="card">
+  <h2>6 · La structure de la croûte</h2>
+
+  <h3>Les hodochrones</h3>
+  <p>Alignons des stations sur un profil, de quelques kilomètres à quelques centaines de kilomètres du
+     séisme, et portons le temps d'arrivée de chaque onde en fonction de la distance : on obtient les
+     <strong>hodochrones</strong>. Dans une croûte homogène, l'onde directe <strong>Pg</strong> arrive au
+     bout du temps √(Δ² + h²)/V<sub>1</sub> : loin du foyer, une droite de pente 1/V<sub>1</sub>. Au-delà
+     d'une certaine distance, une autre onde la double : l'onde <strong>Pn</strong>, qui a plongé
+     jusqu'au <strong>Moho</strong>, la base de la croûte, et voyagé le long du manteau, plus rapide.
+     C'est en observant ce dédoublement après le séisme de la vallée de la Kupa, en Croatie, que
+     Mohorovičić a découvert en 1909 la discontinuité qui porte son nom.</p>
+
+  <h3>L'onde réfractée</h3>
+  <p>Un rai qui frappe le Moho sous l'<strong>angle critique</strong> i<sub>c</sub>, tel que
+     sin i<sub>c</sub> = V<sub>1</sub>/V<sub>2</sub>, longe l'interface à la vitesse V<sub>2</sub> du
+     manteau et renvoie de l'énergie vers la surface sous le même angle. Son temps de trajet est une
+     droite de pente 1/V<sub>2</sub> :</p>
+  <p class="formula">t<sub>Pn</sub> = Δ / V<sub>2</sub> + t<sub>i</sub>, avec t<sub>i</sub> = (2H − h) · cos i<sub>c</sub> / V<sub>1</sub></p>
+  <p class="method-note">H : épaisseur de la croûte ; h : profondeur du foyer ; t<sub>i</sub> : temps
+     d'intercept, ordonnée à l'origine de la droite de Pn. Pn n'existe qu'au-delà de la distance
+     critique (2H − h)·tan i<sub>c</sub>.</p>
+  <p>Plus lente au départ, Pn rattrape Pg à la <strong>distance de croisement</strong> : au-delà, la
+     première arrivée P est Pn. C'est pourquoi la règle d ≈ 8,4 × (S − P) du chapitre 1 surestime la
+     distance au-delà de 150 km environ.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Croûte du cours : V<sub>1</sub> = 6,0 km/s, manteau V<sub>2</sub> = 8,0 km/s, H = 32 km, foyer à
+       10 km. sin i<sub>c</sub> = 0,75, i<sub>c</sub> = 48,6°, cos i<sub>c</sub> = 0,661 ;
+       t<sub>i</sub> = (64 − 10) × 0,661 / 6,0 = <strong>5,95 s</strong>. Pn apparaît à 61 km et devient la
+       première arrivée vers <strong>141 km</strong>.</p></div>
+
+  <div class="calc" id="calcHodo">
+    <h3>Hodochrones d'une croûte sur manteau</h3>
+    <div class="data-grid">
+      <div class="field"><label for="hoV1">Vitesse P de la croûte V<sub>1</sub></label>
+        <div class="input-wrap"><input id="hoV1" type="text" inputmode="decimal" value="6" data-curseur="5 7 0.1"><span class="unit">km/s</span></div></div>
+      <div class="field"><label for="hoV2">Vitesse P du manteau V<sub>2</sub></label>
+        <div class="input-wrap"><input id="hoV2" type="text" inputmode="decimal" value="8" data-curseur="7.2 8.6 0.1"><span class="unit">km/s</span></div></div>
+      <div class="field"><label for="hoH">Épaisseur de la croûte H</label>
+        <div class="input-wrap"><input id="hoH" type="text" inputmode="decimal" value="32" data-curseur="20 60 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="hoh">Profondeur du foyer h</label>
+        <div class="input-wrap"><input id="hoh" type="text" inputmode="decimal" value="10" data-curseur="0 30 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="hoRed">Affichage</label>
+        <div class="input-wrap"><select id="hoRed">
+          <option value="0">temps vrais</option>
+          <option value="8">temps réduits t − Δ/8</option>
+          <option value="6">temps réduits t − Δ/6</option>
+        </select></div></div>
+    </div>
+    <div class="figure" id="hoFig"></div>
+    <p class="final-result" id="hoOut"></p>
+  </div>
+
+  <h3>Lire la croûte sur un profil</h3>
+  <p>Le problème inverse se résout à la règle : on trace deux droites à travers les premières arrivées,
+     l'une avant le croisement, l'autre après. Leurs pentes donnent V<sub>1</sub> et V<sub>2</sub> ;
+     l'ordonnée à l'origine de la seconde donne t<sub>i</sub>, d'où l'épaisseur de la croûte :</p>
+  <p class="formula">H = (t<sub>i</sub> · V<sub>1</sub> / cos i<sub>c</sub> + h) / 2</p>
+  <p class="method-note">Pour lire les pentes, on trace souvent les <strong>temps réduits</strong> t −
+     Δ/V<sub>r</sub> : une onde de vitesse V<sub>r</sub> devient horizontale. La réduction ne sert qu'à
+     l'œil ; les droites se calculent toujours sur les temps vrais.</p>
+
+  <div class="calc" id="calcProfil">
+    <h3>Vitesses et épaisseur de la croûte par un profil</h3>
+    <p class="method-note">Premières arrivées P lues sur un profil (distance épicentrale en km, temps
+       depuis l'origine en s) ; par défaut, douze stations du banc « profil » pour un séisme à 10 km de
+       profondeur, temps arrondis au dixième. Les points avant la distance de coupure servent à Pg, les
+       autres à Pn (moindres carrés).</p>
+    <div class="data-grid">
+      <div class="field champ-large"><label for="prPts">Distance Δ (km) et temps t (s), une station par ligne</label>
+        <textarea id="prPts" rows="6" spellcheck="false"></textarea></div>
+      <div class="field"><label for="prCoupe">Distance de coupure Pg / Pn</label>
+        <div class="input-wrap"><input id="prCoupe" type="text" inputmode="decimal" value="140" data-curseur="40 300 5"><span class="unit">km</span></div></div>
+      <div class="field"><label for="prh">Profondeur du foyer h</label>
+        <div class="input-wrap"><input id="prh" type="text" inputmode="decimal" value="10" data-curseur="0 30 1"><span class="unit">km</span></div></div>
+    </div>
+    <div class="figure" id="prFigure"></div>
+    <p class="final-result" id="prResultat"></p>
+  </div>
+
+  <h3>La même méthode, à l'échelle du site</h3>
+  <p>La <strong>sismique réfraction</strong> de la reconnaissance géotechnique applique exactement ces
+     formules, en mètres et en millisecondes : un coup de masse sur une plaque, une ligne de géophones
+     tous les quelques mètres, et les premières arrivées donnent la vitesse des terrains superficiels et
+     la profondeur du substratum rocheux (foyer en surface, h = 0). Les vitesses des ondes P qu'elle
+     mesure servent au classement des terrains (rippabilité) ; pour le séisme, on lui préfère les ondes
+     S, qui fixent le Vs30 et la classe de sol de l'Eurocode 8 (chapitre 12).</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Terrain altéré à 600 m/s sur substratum à 2 500 m/s, intercept de 20 ms : sin i<sub>c</sub> =
+       0,24, cos i<sub>c</sub> = 0,971, H = 0,020 × 600 / (2 × 0,971) ≈ <strong>6,2 m</strong>. Le
+       substratum devient la première arrivée au-delà de 16 m environ.</p></div>
+
+  <div class="calc" id="calcRefra">
+    <h3>Sismique réfraction : deux couches</h3>
+    <div class="data-grid">
+      <div class="field"><label for="rfV1">Vitesse de la couche superficielle</label>
+        <div class="input-wrap"><input id="rfV1" type="text" inputmode="decimal" value="600" data-curseur="200 2000 50"><span class="unit">m/s</span></div></div>
+      <div class="field"><label for="rfV2">Vitesse du substratum</label>
+        <div class="input-wrap"><input id="rfV2" type="text" inputmode="decimal" value="2500" data-curseur="800 5000 100"><span class="unit">m/s</span></div></div>
+      <div class="field"><label for="rfH">Épaisseur de la couche</label>
+        <div class="input-wrap"><input id="rfH" type="text" inputmode="decimal" value="6.2" data-curseur="1 30 0.1"><span class="unit">m</span></div></div>
+    </div>
+    <div class="figure" id="rfFig"></div>
+    <p class="final-result" id="rfOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Le modèle de vitesses conditionne la localisation (chapitre 2), donc la distance des séismes aux
+       failles et aux sites. La structure de la croûte façonne aussi l'atténuation : au-delà de quelques
+       dizaines de kilomètres, les ondes réfléchies sur le Moho ralentissent la décroissance du mouvement
+       avec la distance, ce que les lois d'atténuation et le générateur des bancs traduisent par une
+       expansion géométrique en 1/R puis en 1/√R.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Ajuster une seule droite sur toutes les premières arrivées d'un profil : la pente moyenne mélange
+       croûte et manteau et ne vaut ni V<sub>1</sub> ni V<sub>2</sub>. Autre piège : calculer les droites
+       sur des temps réduits — la réduction ne sert qu'à voir.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Pg : t = √(Δ² + h²)/V<sub>1</sub> ; Pn : t = Δ/V<sub>2</sub> + t<sub>i</sub>, au-delà de la
+        distance critique.</li>
+      <li>sin i<sub>c</sub> = V<sub>1</sub>/V<sub>2</sub> ; t<sub>i</sub> = (2H − h)·cos i<sub>c</sub>/V<sub>1</sub> ;
+        H = (t<sub>i</sub>V<sub>1</sub>/cos i<sub>c</sub> + h)/2.</li>
+      <li>Au-delà de la distance de croisement (≈ 140 km pour la croûte du cours), Pn est la première
+        arrivée.</li>
+      <li>Même méthode en sismique réfraction de site, en mètres et en millisecondes.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch6">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch6">Exerciseur</a>
+    <a class="secondary" href="labo.html#profil">Travaux pratiques : banc « Profil »</a></div>
+</section>
+
+<section id="ch7" class="card">
+  <h2>7 · Le spectre de réponse et l'Eurocode 8</h2>
+
+  <h3>Une famille d'oscillateurs</h3>
+  <p>Le chapitre 5 a montré qu'un ouvrage simple se comporte comme un oscillateur de période T et
+     d'amortissement ξ. Soumettons à un même accélérogramme toute une famille d'oscillateurs, de périodes
+     0,02 s à 4 s, au même amortissement (5 % par convention), et relevons pour chacun le plus grand
+     déplacement relatif : c'est le <strong>spectre de réponse en déplacement</strong> Sd(T). On en tire
+     la pseudo-vitesse et la <strong>pseudo-accélération</strong> :</p>
+  <p class="formula">Sv = ω · Sd &nbsp;;&nbsp; Sa = ω² · Sd, avec ω = 2π/T</p>
+  <p>Sa(T) multipliée par la masse est la force élastique maximale dans le ressort, donc l'effort
+     tranchant à la base de l'ouvrage : c'est la grandeur du dimensionnement. Aux très courtes périodes,
+     l'oscillateur rigide suit le sol et Sa tend vers l'accélération maximale du sol (PGA) ; aux très
+     longues périodes, la masse reste immobile et Sd tend vers le déplacement maximal du sol.</p>
+  <p class="method-note">Chaque oscillateur est intégré par Newmark à accélération moyenne, avec un pas au
+     plus égal à T/20 : les courtes périodes demandent des sous-pas, l'accélérogramme étant interpolé
+     linéairement entre ses échantillons.</p>
+
+  <div class="calc" id="calcSpectre">
+    <h3>Spectre de réponse d'un accélérogramme</h3>
+    <p class="method-note">Accélérogramme synthétique du banc « accélérogrammes » (méthode stochastique calée
+       sur les lois d'atténuation du cours, au rocher). La période choisie montre la réponse d'un
+       oscillateur ; son maximum donne un point du spectre.</p>
+    <div class="data-grid">
+      <div class="field"><label for="spM">Magnitude Mw</label>
+        <div class="input-wrap"><input id="spM" type="text" inputmode="decimal" value="6" data-curseur="5 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="spR">Distance Rjb</label>
+        <div class="input-wrap"><input id="spR" type="text" inputmode="decimal" value="10" data-curseur="2 100 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="spT">Période de l'oscillateur</label>
+        <div class="input-wrap"><input id="spT" type="text" inputmode="decimal" value="0.3" data-curseur="0.05 4 0.05"><span class="unit">s</span></div></div>
+      <div class="field"><label for="spXi">Amortissement ξ</label>
+        <div class="input-wrap"><input id="spXi" type="text" inputmode="decimal" value="0.05" data-curseur="0.01 0.3 0.01"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="spFigA"></div>
+    <div class="figure" id="spFigS"></div>
+    <p class="final-result" id="spOut"></p>
+  </div>
+
+  <h3>L'effet de l'amortissement</h3>
+  <p>Plus l'oscillateur est amorti, plus sa réponse est faible, surtout près des périodes fortes du
+     mouvement. L'Eurocode 8 passe du spectre à 5 % à un autre amortissement par le coefficient :</p>
+  <p class="formula">η = √(10 / (5 + ξ)) ≥ 0,55 &nbsp; (ξ en %)</p>
+  <p class="method-note">η = 1 pour 5 % ; 0,82 pour 10 % ; 1,20 pour 2 %. La borne 0,55 est atteinte vers
+     28 % : au-delà, l'Eurocode ne compte plus l'amortissement supplémentaire (chapitre 17).</p>
+
+  <h3>Le spectre élastique de l'Eurocode 8</h3>
+  <p>Le spectre d'un accélérogramme est dentelé et propre à cet enregistrement. Le règlement donne une
+     forme lissée, qui représente le mouvement d'un site pour une probabilité de dépassement donnée
+     (chapitre 10). Dans l'EN 1998-1:2004 (§ 3.2.2.2), le spectre élastique horizontal s'écrit, avec
+     a<sub>g</sub> l'accélération de calcul au rocher et S le paramètre de sol :</p>
+  <div class="table-large"><table class="resultats">
+    <thead><tr><th>Branche</th><th>Période</th><th>S<sub>e</sub>(T)</th></tr></thead>
+    <tbody>
+      <tr><td>montée</td><td class="n">0 ≤ T ≤ T<sub>B</sub></td><td>a<sub>g</sub>·S·[1 + (T/T<sub>B</sub>)·(2,5η − 1)]</td></tr>
+      <tr><td>plateau d'accélération</td><td class="n">T<sub>B</sub> ≤ T ≤ T<sub>C</sub></td><td>a<sub>g</sub>·S·η·2,5</td></tr>
+      <tr><td>vitesse constante</td><td class="n">T<sub>C</sub> ≤ T ≤ T<sub>D</sub></td><td>a<sub>g</sub>·S·η·2,5·T<sub>C</sub>/T</td></tr>
+      <tr><td>déplacement constant</td><td class="n">T<sub>D</sub> ≤ T ≤ 4 s</td><td>a<sub>g</sub>·S·η·2,5·T<sub>C</sub>T<sub>D</sub>/T²</td></tr>
+    </tbody></table></div>
+  <p>a<sub>g</sub> = γ<sub>I</sub>·a<sub>gR</sub> : l'accélération de référence a<sub>gR</sub> de la carte
+     nationale, multipliée par le coefficient d'importance de l'ouvrage. Le facteur 2,5 est
+     l'amplification moyenne du plateau. Les périodes de coin et S dépendent :</p>
+  <ul class="liste-cours">
+    <li>de la <strong>classe de sol</strong> (tableau 3.1) : A, rocher (Vs30 &gt; 800 m/s) ; B, sols très
+      denses (360 à 800 m/s) ; C, sols denses ou moyennement denses (180 à 360 m/s) ; D, sols lâches
+      (&lt; 180 m/s) ; E, couche de 5 à 20 m de type C ou D sur un rocher. Vs30 est la vitesse moyenne des
+      ondes S sur les 30 premiers mètres (chapitre 12) ;</li>
+    <li>du <strong>type de spectre</strong> : type 1 pour les séismes qui contribuent le plus à l'aléa
+      avec une magnitude de surface supérieure à 5,5, type 2 sinon — un séisme modéré et proche a un
+      spectre plus étroit, centré sur les courtes périodes.</li>
+  </ul>
+  <div class="table-large"><table class="resultats" id="tabEC8"></table></div>
+  <p class="method-note">Valeurs recommandées des tableaux 3.2 et 3.3 ; chaque pays les fixe dans son
+     annexe nationale. La deuxième génération de l'Eurocode 8 (EN 1998-1-1:2024) redéfinit l'action
+     sismique ; elle sera présentée à côté de la première, d'après son texte.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>a<sub>g</sub> = 0,20 g, sol C, type 1 : S = 1,15, T<sub>B</sub> = 0,2 s, T<sub>C</sub> = 0,6 s,
+       T<sub>D</sub> = 2 s. Plateau : 0,20 × 1,15 × 2,5 = <strong>0,575 g</strong> ; à 1 s : 0,575 × 0,6 / 1
+       = 0,345 g ; à 3 s : 0,575 × 0,6 × 2 / 9 = 0,077 g. Avec le type 2 (S = 1,5, T<sub>C</sub> =
+       0,25 s), le plateau monte à 0,75 g mais l'accélération à 1 s tombe à 0,19 g.</p></div>
+
+  <h3>La période de l'ouvrage</h3>
+  <p>Pour entrer dans le spectre, il faut la période fondamentale T<sub>1</sub> de l'ouvrage. Pour un
+     bâtiment de hauteur H ≤ 40 m, l'EN 1998-1 (§ 4.3.3.2.2) admet l'estimation :</p>
+  <p class="formula">T<sub>1</sub> = C<sub>t</sub> · H<sup>3/4</sup></p>
+  <p class="method-note">C<sub>t</sub> = 0,085 pour les portiques en acier, 0,075 pour les portiques en
+     béton armé, 0,050 pour les autres structures ; H en mètres. Un portique en béton armé de 15 m :
+     T<sub>1</sub> = 0,075 × 15<sup>0,75</sup> ≈ 0,57 s, sur le plateau du sol C (S<sub>e</sub> = 0,575 g
+     pour a<sub>g</sub> = 0,20 g). Le calcul modal du chapitre 15 donne une valeur plus juste.</p>
+
+  <div class="calc" id="calcEC8">
+    <h3>Spectre élastique de l'EN 1998-1:2004</h3>
+    <div class="data-grid">
+      <div class="field"><label for="ecAg">Accélération de calcul a<sub>g</sub></label>
+        <div class="input-wrap"><input id="ecAg" type="text" inputmode="decimal" value="0.2" data-curseur="0.02 0.5 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="ecType">Type de spectre</label>
+        <div class="input-wrap"><select id="ecType"><option value="1">type 1 (Ms &gt; 5,5)</option><option value="2">type 2 (Ms ≤ 5,5)</option></select></div></div>
+      <div class="field"><label for="ecSol">Classe de sol</label>
+        <div class="input-wrap"><select id="ecSol"><option>A</option><option>B</option><option selected>C</option><option>D</option><option>E</option></select></div></div>
+      <div class="field"><label for="ecXi">Amortissement ξ</label>
+        <div class="input-wrap"><input id="ecXi" type="text" inputmode="decimal" value="5" data-curseur="1 30 1"><span class="unit">%</span></div></div>
+      <div class="field"><label for="ecH">Hauteur du bâtiment</label>
+        <div class="input-wrap"><input id="ecH" type="text" inputmode="decimal" value="15" data-curseur="3 40 1"><span class="unit">m</span></div></div>
+      <div class="field"><label for="ecSys">Système</label>
+        <div class="input-wrap"><select id="ecSys"><option value="beton">portique en béton armé</option><option value="acier">portique en acier</option><option value="autres">autres structures</option></select></div></div>
+    </div>
+    <div class="figure" id="ecFig"></div>
+    <p class="final-result" id="ecOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Le spectre élastique est la demande sur un ouvrage qui resterait élastique. L'ouvrage réel se
+       plastifie et dissipe : l'Eurocode divise alors le spectre par le coefficient de comportement q
+       (spectre de calcul, chapitres 14 et 15). Les accélérogrammes d'un calcul temporel doivent, eux, être
+       compatibles avec le spectre élastique (chapitre 11).</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Lire S<sub>e</sub> au plateau pour tous les ouvrages « par sécurité ». Pour un ouvrage souple
+       (T<sub>1</sub> &gt; T<sub>C</sub>), c'est surestimer les efforts, mais sous-estimer les déplacements
+       si l'on calcule le déplacement par S<sub>e</sub>·(T/2π)² avec une période trop courte. Autre piège :
+       confondre a<sub>g</sub> (au rocher, déjà multiplié par γ<sub>I</sub>) et a<sub>g</sub>·S (en surface
+       du sol).</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Spectre de réponse : maximum de la réponse d'oscillateurs de toutes périodes ; Sa = ω²·Sd.</li>
+      <li>EN 1998-1:2004 : montée, plateau a<sub>g</sub>·S·η·2,5 entre T<sub>B</sub> et T<sub>C</sub>,
+        décroissance en 1/T puis en 1/T² ; η = √(10/(5 + ξ)) ≥ 0,55.</li>
+      <li>S et les périodes de coin dépendent de la classe de sol (Vs30) et du type (magnitude).</li>
+      <li>T<sub>1</sub> = C<sub>t</sub>·H<sup>3/4</sup> pour une première estimation.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch7">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch7">Exerciseur</a>
+    <a class="secondary" href="labo.html#spectre">Travaux pratiques : banc « Spectre »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -883,5 +1153,7 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch3.js"></script>
 <script type="module" src="src/cours-ch4.js"></script>
 <script type="module" src="src/cours-ch5.js"></script>
+<script type="module" src="src/cours-ch6.js"></script>
+<script type="module" src="src/cours-ch7.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>
