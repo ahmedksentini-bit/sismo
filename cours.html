@@ -1476,6 +1476,241 @@
     <a class="secondary" href="labo.html#alea">Travaux pratiques : banc « Aléa »</a></div>
 </section>
 
+<section id="ch11" class="card">
+  <h2>11 · Choisir et caler des accélérogrammes</h2>
+
+  <h3>Quand faut-il des accélérogrammes ?</h3>
+  <p>Le spectre suffit à l'analyse modale d'un ouvrage élastique. Dès que l'ouvrage se plastifie, glisse sur
+     ses appareils d'appui, se soulève ou interagit fortement avec le sol, il faut un <strong>calcul
+     temporel</strong> : l'ouvrage est soumis pas à pas à des accélérogrammes, et l'on relève sa réponse
+     (chapitres 14 à 17). Le résultat dépend des accélérogrammes choisis : leur sélection est une étape du
+     dimensionnement à part entière.</p>
+  <p>Trois familles existent : les enregistrements réels (bases européennes et mondiales), les
+     accélérogrammes simulés à partir d'un modèle de source et de propagation (comme ceux des bancs de ce
+     cours), et les accélérogrammes artificiels, fabriqués pour épouser un spectre. L'EN 1998-1:2004 admet
+     les trois (§ 3.2.3.1).</p>
+
+  <h3>Décrire un accélérogramme</h3>
+  <p>Au-delà du pic (PGA) et du spectre, quelques indicateurs résument un enregistrement :</p>
+  <ul class="liste-cours">
+    <li>l'<strong>intensité d'Arias</strong> I<sub>a</sub> = π/(2g) · ∫ a² dt, en m/s : l'énergie par unité
+      de masse transmise à une famille d'oscillateurs non amortis ; elle croît avec l'amplitude et la
+      durée ;</li>
+    <li>la <strong>courbe de Husid</strong>, I<sub>a</sub> cumulée et normée, et la <strong>durée
+      significative</strong> D<sub>5–95</sub>, temps entre 5 % et 95 % de I<sub>a</sub> (Trifunac et Brady,
+      1975) : elle s'allonge avec la magnitude et la distance ;</li>
+    <li>la <strong>vitesse absolue cumulée</strong> CAV = ∫ |a| dt et la vitesse maximale PGV.</li>
+  </ul>
+  <p class="method-note">Une sinusoïde d'amplitude A qui dure D secondes a pour intensité d'Arias π·A²·D/(4g) :
+     0,2 g pendant 5 s donnent π × 1,962² × 5 / (4 × 9,81) ≈ 1,54 m/s. La durée compte pour les
+     ouvrages qui se dégradent cycle après cycle, et pour la liquéfaction (chapitre 13).</p>
+
+  <div class="calc" id="calcAccelero">
+    <h3>Indicateurs d'un accélérogramme</h3>
+    <p class="method-note">Accélérogramme synthétique du banc « accélérogrammes », au rocher. Indicateurs
+       calculés comme eqsig (référence hors ligne du site).</p>
+    <div class="data-grid">
+      <div class="field"><label for="acM">Magnitude Mw</label>
+        <div class="input-wrap"><input id="acM" type="text" inputmode="decimal" value="6" data-curseur="5 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="acR">Distance Rjb</label>
+        <div class="input-wrap"><input id="acR" type="text" inputmode="decimal" value="10" data-curseur="2 100 1"><span class="unit">km</span></div></div>
+    </div>
+    <div class="figure" id="acFig"></div>
+    <p class="final-result" id="acOut"></p>
+  </div>
+
+  <h3>La cible : spectre réglementaire, UHS ou spectre conditionnel</h3>
+  <p>On cale les accélérogrammes sur un spectre cible. Le plus simple est le spectre élastique de l'Eurocode 8.
+     Une étude d'aléa fournit l'UHS (chapitre 10) ; mais aucun séisme réel n'atteint à la fois, à toutes les
+     périodes, le niveau de 475 ans : l'UHS enveloppe plusieurs scénarios et charge trop les calculs. Le
+     <strong>spectre moyen conditionnel</strong> (CMS, Baker 2011) prend le niveau de l'UHS à une seule
+     période T* (souvent T<sub>1</sub>) et, aux autres périodes, la moyenne attendue sachant ce niveau, avec
+     sa dispersion. Le banc « accélérogrammes » sait viser ces trois cibles.</p>
+
+  <h3>Choisir puis mettre à l'échelle</h3>
+  <p>On choisit des enregistrements proches du scénario de la désagrégation (magnitude, distance, sol,
+     mécanisme), puis on multiplie chacun par un <strong>facteur d'échelle</strong> s : soit pour que son
+     spectre colle au mieux à la cible sur une plage de périodes (moindres carrés en logarithme : ln s est la
+     moyenne des écarts ln cible − ln Sa), soit pour qu'il égale la cible à T*. Les facteurs trop grands
+     déforment le contenu du signal : on évite en pratique de sortir de 0,5 à 2, au plus de 0,25 à 4.</p>
+
+  <h3>Les règles de l'Eurocode 8</h3>
+  <p>Pour un jeu d'enregistrements, l'EN 1998-1:2004 (§ 3.2.3.1.3 (3), qui renvoie au § 3.2.3.1.2 (4))
+     demande :</p>
+  <ul class="liste-cours">
+    <li>au moins <strong>3</strong> accélérogrammes ;</li>
+    <li>une moyenne des accélérations maximales au moins égale à <strong>a<sub>g</sub>·S</strong> ;</li>
+    <li>entre <strong>0,2·T<sub>1</sub> et 2·T<sub>1</sub></strong>, une moyenne des spectres élastiques à 5 %
+      jamais inférieure à <strong>90 %</strong> du spectre élastique.</li>
+  </ul>
+  <p>La réponse à retenir (§ 4.3.3.4.3 (3)) est la <strong>moyenne</strong> des réponses si l'on a fait au
+     moins 7 calculs, la plus défavorable sinon. Quand le jeu ne respecte pas les règles, on le multiplie
+     par un facteur commun, le plus petit qui les satisfait.</p>
+
+  <div class="calc" id="calcCalage">
+    <h3>Caler sept accélérogrammes sur le spectre de l'EN 1998-1:2004</h3>
+    <p class="method-note">Sept accélérogrammes synthétiques du scénario, chacun mis à l'échelle par moindres
+       carrés en ln sur [0,2·T<sub>1</sub> ; 2·T<sub>1</sub>], puis, si demandé, le jeu entier multiplié par le
+       plus petit facteur commun qui respecte les règles. Spectre de type 1.</p>
+    <div class="data-grid">
+      <div class="field"><label for="caM">Magnitude du scénario</label>
+        <div class="input-wrap"><input id="caM" type="text" inputmode="decimal" value="6.5" data-curseur="5.5 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="caR">Distance du scénario</label>
+        <div class="input-wrap"><input id="caR" type="text" inputmode="decimal" value="10" data-curseur="2 60 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="caAg">a<sub>g</sub></label>
+        <div class="input-wrap"><input id="caAg" type="text" inputmode="decimal" value="0.25" data-curseur="0.05 0.5 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="caSol">Classe de sol</label>
+        <div class="input-wrap"><select id="caSol"><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select></div></div>
+      <div class="field"><label for="caT1">Période de l'ouvrage T<sub>1</sub></label>
+        <div class="input-wrap"><input id="caT1" type="text" inputmode="decimal" value="0.5" data-curseur="0.1 2 0.05"><span class="unit">s</span></div></div>
+      <div class="field"><label for="caCommun">Facteur commun</label>
+        <div class="input-wrap"><select id="caCommun"><option value="non">non appliqué</option><option value="oui">appliqué</option></select></div></div>
+    </div>
+    <div class="figure" id="caFigure"></div>
+    <div id="caTab"></div>
+    <p class="final-result" id="caResultat"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Les accélérogrammes synthétiques de ce cours représentent le rocher : pour un site de classe C ou D,
+       le spectre réglementaire a un plateau plus large que le leur, et le calage sur la plage de T<sub>1</sub>
+       demande un facteur commun nettement plus grand. Mieux vaut alors propager le mouvement du rocher à
+       travers le sol (chapitre 12), ou choisir des enregistrements sur sol comparable.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Caler chaque accélérogramme sur le seul PGA : les spectres restent dispersés autour de T<sub>1</sub>
+       et la règle des 90 % n'est pas tenue. Autre piège : faire trois calculs et retenir la moyenne — avec
+       moins de sept accélérogrammes, c'est la réponse la plus défavorable qui compte.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Arias I<sub>a</sub> = π/(2g)·∫a²dt ; durée D<sub>5–95</sub> ; CAV.</li>
+      <li>Cible : spectre EC8, UHS (enveloppe, conservatif) ou spectre conditionnel à T*.</li>
+      <li>Facteur d'échelle par moindres carrés en ln sur la plage, ou à T* ; éviter les grands facteurs.</li>
+      <li>EN 1998-1:2004 : ≥ 3 accélérogrammes, PGA moyen ≥ a<sub>g</sub>·S, moyenne ≥ 0,9·S<sub>e</sub> sur
+        [0,2T<sub>1</sub> ; 2T<sub>1</sub>] ; moyenne des réponses dès 7 calculs, sinon la plus défavorable.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch11">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch11">Exerciseur</a>
+    <a class="secondary" href="labo.html#accelerogrammes">Travaux pratiques : banc « Accélérogrammes »</a></div>
+</section>
+
+<section id="ch12" class="card">
+  <h2>12 · Les effets de site</h2>
+
+  <h3>Le sol amplifie</h3>
+  <p>À quelques centaines de mètres d'écart, deux sites peuvent subir des mouvements très différents. À
+     Mexico, en 1985, le séisme, à 350 km, a ravagé les quartiers bâtis sur les argiles lacustres et
+     épargné ceux du rocher ; à San Francisco, en 1989, les dégâts se sont concentrés sur les remblais du
+     quartier de la Marina. Les couches de sol meuble posées sur le rocher <strong>amplifient</strong> le
+     mouvement, surtout à certaines fréquences.</p>
+
+  <h3>Une couche sur un rocher</h3>
+  <p>Une onde S qui monte du rocher dans une couche plus lente s'y trouve piégée : elle se réfléchit sur la
+     surface libre, redescend, se réfléchit en partie sur le rocher. Les allers-retours se renforcent à la
+     <strong>fréquence fondamentale</strong> de la couche, pour laquelle son épaisseur vaut un quart de
+     longueur d'onde, puis aux harmoniques impaires :</p>
+  <p class="formula">f<sub>0</sub> = V<sub>s</sub> / (4H) &nbsp;;&nbsp; f<sub>n</sub> = (2n + 1)·f<sub>0</sub></p>
+  <p>À la résonance, l'amplification par rapport au rocher affleurant est limitée par deux pertes : l'énergie
+     qui repart dans le rocher, mesurée par le <strong>contraste d'impédance</strong> I =
+     ρ<sub>s</sub>V<sub>s</sub> / (ρ<sub>r</sub>V<sub>r</sub>), et l'amortissement ξ du sol :</p>
+  <p class="formula">A(f<sub>0</sub>) ≈ 1 / (I + πξ/2)</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>20 m de sol à V<sub>s</sub> = 200 m/s (17,5 kN/m³) sur un rocher à 1 000 m/s (22 kN/m³), ξ = 2 % :
+       f<sub>0</sub> = 200 / 80 = <strong>2,5 Hz</strong>, soit une période de 0,4 s ; I = (17,5 × 200)/(22 ×
+       1 000) = 0,16 ; A(f<sub>0</sub>) ≈ 1/(0,16 + 0,031) ≈ <strong>5,2</strong>, ce que donne aussi le
+       calcul exact. Un bâtiment de quatre étages, de période voisine, entrerait en résonance avec le
+       sol.</p></div>
+
+  <div class="calc" id="calcCouche">
+    <h3>Fonction de transfert d'une couche sur un rocher</h3>
+    <p class="method-note">Ondes SH verticales (Kramer, 1996), module complexe G·(√(1 − 4ξ²) + 2iξ),
+       amplification de la surface par rapport au rocher affleurant ; comportement linéaire.</p>
+    <div class="data-grid">
+      <div class="field"><label for="coH">Épaisseur H</label>
+        <div class="input-wrap"><input id="coH" type="text" inputmode="decimal" value="20" data-curseur="2 100 1"><span class="unit">m</span></div></div>
+      <div class="field"><label for="coVs">V<sub>s</sub> du sol</label>
+        <div class="input-wrap"><input id="coVs" type="text" inputmode="decimal" value="200" data-curseur="80 600 10"><span class="unit">m/s</span></div></div>
+      <div class="field"><label for="coXi">Amortissement ξ du sol</label>
+        <div class="input-wrap"><input id="coXi" type="text" inputmode="decimal" value="0.02" data-curseur="0.005 0.15 0.005"><span class="unit">—</span></div></div>
+      <div class="field"><label for="coVr">V<sub>s</sub> du rocher</label>
+        <div class="input-wrap"><input id="coVr" type="text" inputmode="decimal" value="1000" data-curseur="400 3000 50"><span class="unit">m/s</span></div></div>
+    </div>
+    <div class="figure" id="coFig"></div>
+    <p class="final-result" id="coOut"></p>
+  </div>
+
+  <h3>Vs30 et la classe de sol</h3>
+  <p>Pour un profil de plusieurs couches, on approche f<sub>0</sub> par 1/(4·Σ h<sub>i</sub>/V<sub>i</sub>).
+     L'Eurocode 8 classe le site par <strong>Vs30</strong>, vitesse moyenne des ondes S sur les 30 premiers
+     mètres, au sens du temps de trajet :</p>
+  <p class="formula">Vs30 = 30 / Σ (h<sub>i</sub> / V<sub>i</sub>) &nbsp; (EN 1998-1:2004, éq. 3.1)</p>
+  <p class="method-note">Classes A (&gt; 800 m/s), B (360 à 800), C (180 à 360), D (&lt; 180), et E pour 5 à 20 m
+     de sol de type C ou D sur un rocher : la couche de l'exemple, Vs30 = 273 m/s, est de classe E, pas C.
+     Les classes S1 (argiles molles épaisses) et S2 (sols liquéfiables) demandent une étude particulière. On
+     mesure V<sub>s</sub> par forages (cross-hole, down-hole), par ondes de surface (MASW), et l'on estime
+     f<sub>0</sub> par le rapport spectral H/V du bruit de fond.</p>
+
+  <h3>Le sol n'est pas élastique</h3>
+  <p>Sous forte sollicitation, le sol se déforme davantage, sa rigidité chute et il dissipe plus : le
+     <strong>module sécant</strong> G/G<sub>0</sub> diminue et l'<strong>amortissement</strong> ξ augmente avec la
+     distorsion γ. Les courbes de Darendeli (2001) donnent ces lois selon l'indice de plasticité et la
+     contrainte effective ; la distorsion de référence, où G/G<sub>0</sub> = 0,5, vaut quelques 10<sup>−4</sup>.
+     La méthode <strong>linéaire équivalente</strong> (programmes SHAKE, pystrata) itère : on calcule la
+     distorsion effective de chaque couche (0,65 fois la distorsion maximale), on en tire G et ξ, et l'on
+     recommence jusqu'à convergence. Plus le mouvement est fort, plus l'amplification baisse et plus la
+     fréquence de résonance descend.</p>
+
+  <div class="calc" id="calcProfilSite">
+    <h3>Réponse d'un profil de sol, linéaire et linéaire équivalente</h3>
+    <p class="method-note">Profils du banc « site » ; accélérogramme synthétique (Mw 6,5 à 20 km) mis au PGA
+       choisi au rocher affleurant ; calcul vérifié contre pystrata.</p>
+    <div class="data-grid">
+      <div class="field"><label for="siProfil">Profil</label>
+        <div class="input-wrap"><select id="siProfil">
+          <option value="ecole">profil d'école (34 m, Vs de 160 à 450 m/s)</option>
+          <option value="argile">argile molle (30 m, Vs de 110 à 250 m/s)</option>
+          <option value="alluvions">alluvions minces (12 m)</option>
+          <option value="sable">sable dense (45 m, Vs de 300 à 600 m/s)</option>
+        </select></div></div>
+      <div class="field"><label for="siPga">PGA au rocher affleurant</label>
+        <div class="input-wrap"><input id="siPga" type="text" inputmode="decimal" value="0.25" data-curseur="0.02 0.6 0.01"><span class="unit">g</span></div></div>
+    </div>
+    <div class="figure" id="siFigure"></div>
+    <p class="final-result" id="siResultat"></p>
+  </div>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Profil d'école : Vs30 = 267 m/s (classe C), f<sub>0</sub> ≈ 2,1 Hz. Sous 0,05 g au rocher, le calcul
+       linéaire équivalent donne 0,14 g en surface (amplification 2,9) ; sous 0,25 g, 0,46 g (1,9) — le
+       calcul linéaire, qui ignore la dégradation du sol, en prédirait 0,89 g ; sous 0,5 g, 0,76 g (1,5).</p></div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Le paramètre S et les périodes de coin de l'Eurocode 8 résument, classe par classe, ces effets en
+       moyenne. Un site particulier (forte couche molle, contraste marqué, f<sub>0</sub> proche de la fréquence
+       de l'ouvrage) justifie une étude de réponse : propagation d'accélérogrammes du rocher à travers le profil
+       mesuré, comme ci-dessus.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Classer un site par Vs30 sans regarder la profondeur du rocher : une couche molle mince sur un rocher
+       rapide relève de la classe E et résonne à haute fréquence. Autre piège : appliquer un calcul linéaire
+       à un mouvement fort — l'amplification est surestimée, et la période du site sous-estimée.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Une couche résonne à f<sub>0</sub> = V<sub>s</sub>/(4H) et aux harmoniques impaires ;
+        A(f<sub>0</sub>) ≈ 1/(I + πξ/2).</li>
+      <li>Vs30 = 30/Σ(h/V) ; classes A à E de l'EN 1998-1:2004 ; S1, S2 : étude particulière.</li>
+      <li>Non-linéarité : G/G<sub>0</sub> baisse, ξ monte avec γ ; méthode linéaire équivalente (γ<sub>eff</sub>
+        = 0,65 γ<sub>max</sub>).</li>
+      <li>Plus le mouvement est fort, moins le sol amplifie et plus sa fréquence descend.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch12">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch12">Exerciseur</a>
+    <a class="secondary" href="labo.html#effets-de-site">Travaux pratiques : banc « Site »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -1537,5 +1772,7 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch8.js"></script>
 <script type="module" src="src/cours-ch9.js"></script>
 <script type="module" src="src/cours-ch10.js"></script>
+<script type="module" src="src/cours-ch11.js"></script>
+<script type="module" src="src/cours-ch12.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>

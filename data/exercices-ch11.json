@@ -1,0 +1,249 @@
+{
+ "chapitre": "ch11",
+ "exercices": [
+  {
+   "id": "ch11-regles",
+   "titre": "Un jeu d'accélérogrammes respecte-t-il l'Eurocode 8 ?",
+   "difficulte": 2,
+   "graine": 2619988397,
+   "enonce": "7 accélérogrammes ont été calés pour un ouvrage de période T₁ = 0,5 s, sur un site de classe C (type 1, S = 1,15), a_g = 0,11 g. Leur PGA moyen vaut 0,109 g ; sur la plage de contrôle, leur spectre moyen descend au plus bas à 86 % du spectre élastique.",
+   "donnees": [
+    {
+     "label": "Nombre",
+     "valeur": "7"
+    },
+    {
+     "label": "a_g·S",
+     "valeur": "0,11 × 1,15"
+    },
+    {
+     "label": "PGA moyen",
+     "valeur": "0,109 g"
+    },
+    {
+     "label": "Minimum du spectre moyen",
+     "valeur": "86 % de Se"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Bornes de la plage de contrôle : borne supérieure 2·T₁ ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 1,
+     "explication": "La moyenne est contrôlée de 0,2·T₁ = 0,1 s à 2·T₁ = 1 s.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "La règle du PGA moyen est-elle respectée ?",
+     "type": "choix",
+     "options": [
+      "non",
+      "oui"
+     ],
+     "reponse": 0,
+     "explication": "Il faut PGA moyen ≥ ag·S = 0,127 g ; ici 0,109 g."
+    },
+    {
+     "texte": "La règle des 90 % est-elle respectée ?",
+     "type": "choix",
+     "options": [
+      "non",
+      "oui"
+     ],
+     "reponse": 0,
+     "explication": "La moyenne doit rester ≥ 90 % de Se sur la plage ; elle descend à 86 %."
+    },
+    {
+     "texte": "Plus petit facteur commun qui rend le jeu conforme (1 s'il l'est déjà) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 1.16055,
+     "explication": "Facteur = max(ag·S / PGA moyen ; 90 % / minimum) = max(1,161 ; 1,053) = 1,161.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Avec 7 calculs temporels, la réponse à retenir est…",
+     "type": "choix",
+     "options": [
+      "la moyenne des réponses",
+      "la réponse la plus défavorable"
+     ],
+     "reponse": 0,
+     "explication": "§ 4.3.3.4.3 (3) : la moyenne dès 7 calculs, sinon la plus défavorable."
+    }
+   ]
+  },
+  {
+   "id": "ch11-facteur",
+   "titre": "Facteur d'échelle sur une plage de périodes",
+   "difficulte": 2,
+   "graine": 766950263,
+   "enonce": "Un enregistrement a pour pseudo-accélérations 0,282 g à 0,2 s, 0,198 g à 0,3 s, 0,342 g à 0,5 s, 0,27 g à 0,7 s, 0,135 g à 1 s. La cible (spectre de l'EN 1998-1:2004, sol B, a_g = 0,2 g) vaut 0,6 g, 0,6 g, 0,6 g, 0,429 g, 0,3 g aux mêmes périodes.",
+   "donnees": [
+    {
+     "label": "T = 0,2 s",
+     "valeur": "Sa 0,282 g · cible 0,6 g"
+    },
+    {
+     "label": "T = 0,3 s",
+     "valeur": "Sa 0,198 g · cible 0,6 g"
+    },
+    {
+     "label": "T = 0,5 s",
+     "valeur": "Sa 0,342 g · cible 0,6 g"
+    },
+    {
+     "label": "T = 0,7 s",
+     "valeur": "Sa 0,27 g · cible 0,429 g"
+    },
+    {
+     "label": "T = 1 s",
+     "valeur": "Sa 0,135 g · cible 0,3 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Facteur qui égale la cible à T* = 1 s ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 2.22222,
+     "explication": "s = 0,3 / 0,135 = 2,22.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Facteur par moindres carrés en ln sur les cinq périodes ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 2.09022,
+     "explication": "ln s = moyenne de ln(cible/Sa) = (0,755 + 1,109 + 0,562 + 0,462 + 0,799)/5 = 0,737 → s = 2,09.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Pourquoi éviter les facteurs d'échelle très grands (au-delà de 4) ?",
+     "type": "choix",
+     "options": [
+      "ils changent la période de l'ouvrage",
+      "un séisme faible mis à l'échelle n'a ni la durée ni le contenu fréquentiel d'un fort séisme",
+      "ils rendent le calcul instable",
+      "l'Eurocode les interdit au-delà de 1,2"
+     ],
+     "reponse": 1,
+     "explication": "Le facteur multiplie l'amplitude sans changer la durée ni la forme du spectre, qui dépendent de la magnitude."
+    }
+   ]
+  },
+  {
+   "id": "ch11-arias",
+   "titre": "Intensité d'Arias et durée",
+   "difficulte": 1,
+   "graine": 2301455219,
+   "enonce": "Un mouvement idéalisé est une sinusoïde d'amplitude 0,32 g qui dure 4 s (un nombre entier de cycles).",
+   "donnees": [
+    {
+     "label": "Amplitude",
+     "valeur": "0,32 g"
+    },
+    {
+     "label": "Durée",
+     "valeur": "4 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Intensité d'Arias Ia = π/(2g)·∫a²dt ?",
+     "type": "nombre",
+     "unite": "m/s",
+     "reponse": 3.15587,
+     "explication": "∫a²dt = A²·D/2 pour une sinusoïde : Ia = π·A²·D/(4g) = π × 3,14² × 4 / (4 × 9,81) = 3,16 m/s.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Et si la même amplitude durait deux fois plus longtemps ?",
+     "type": "nombre",
+     "unite": "m/s",
+     "reponse": 6.31174,
+     "explication": "Ia est proportionnelle à la durée : elle double.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Et si l'amplitude doublait pour la même durée ?",
+     "type": "nombre",
+     "unite": "m/s",
+     "reponse": 12.6235,
+     "explication": "Ia est proportionnelle au carré de l'amplitude : elle quadruple.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "La durée significative D5–95 est…",
+     "type": "choix",
+     "options": [
+      "la durée totale de l'enregistrement",
+      "la période du pic du spectre",
+      "le temps entre l'arrivée P et l'arrivée S",
+      "le temps entre 5 % et 95 % de l'intensité d'Arias"
+     ],
+     "reponse": 3,
+     "explication": "Trifunac et Brady (1975) : elle s'allonge avec la magnitude et la distance."
+    }
+   ]
+  },
+  {
+   "id": "ch11-cible",
+   "titre": "Quelle cible pour les accélérogrammes ?",
+   "difficulte": 1,
+   "graine": 1283271880,
+   "enonce": "Questions sur la cible et la sélection des accélérogrammes.",
+   "questions": [
+    {
+     "texte": "Pourquoi l'UHS est-il une cible conservatrice ?",
+     "type": "choix",
+     "options": [
+      "il néglige les petits séismes",
+      "aucun séisme n'atteint en même temps le niveau de 475 ans à toutes les périodes",
+      "il est toujours inférieur au spectre de l'Eurocode 8",
+      "il est calculé sans dispersion"
+     ],
+     "reponse": 1,
+     "explication": "Chaque ordonnée de l'UHS est dominée par des scénarios différents ; le spectre conditionnel ne prend le niveau de l'UHS qu'à une période T*."
+    },
+    {
+     "texte": "On choisit de préférence des enregistrements…",
+     "type": "choix",
+     "options": [
+      "de la plus forte magnitude disponible",
+      "de PGA égal à ag",
+      "tous issus du même séisme",
+      "proches du scénario de la désagrégation (magnitude, distance, sol)"
+     ],
+     "reponse": 3,
+     "explication": "Le scénario de contrôle (M̄, R̄) fixe la forme du spectre et la durée attendues."
+    },
+    {
+     "texte": "Les accélérogrammes artificiels, fabriqués pour épouser un spectre, ont souvent…",
+     "type": "choix",
+     "options": [
+      "un contenu énergétique et une durée irréalistes",
+      "un spectre trop dentelé",
+      "une durée trop courte par construction",
+      "un PGA trop faible"
+     ],
+     "reponse": 0,
+     "explication": "Ajuster toutes les périodes à la fois produit des signaux trop riches en énergie : on préfère des enregistrements réels ou simulés quand le comportement non linéaire dépend des cycles."
+    },
+    {
+     "texte": "La plage de contrôle 0,2·T₁ à 2·T₁ couvre…",
+     "type": "choix",
+     "options": [
+      "les périodes du sol",
+      "seulement la période fondamentale",
+      "les périodes de l'instrument",
+      "les modes supérieurs (courtes périodes) et l'allongement de la période par la plastification"
+     ],
+     "reponse": 3,
+     "explication": "La plastification allonge la période effective ; les modes supérieurs se trouvent sous T₁."
+    }
+   ]
+  }
+ ]
+}

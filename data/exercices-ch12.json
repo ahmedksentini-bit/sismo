@@ -1,0 +1,219 @@
+{
+ "chapitre": "ch12",
+ "exercices": [
+  {
+   "id": "ch12-couche",
+   "titre": "Fréquence et amplification d'une couche",
+   "difficulte": 1,
+   "graine": 2390827073,
+   "enonce": "Une couche de sol de 43 m (Vs = 390 m/s, 17,5 kN/m³, amortissement 3 %) repose sur un rocher à Vs = 1600 m/s (22 kN/m³).",
+   "donnees": [
+    {
+     "label": "H, Vs",
+     "valeur": "43 m, 390 m/s"
+    },
+    {
+     "label": "Rocher",
+     "valeur": "1600 m/s"
+    },
+    {
+     "label": "ξ",
+     "valeur": "3 %"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Fréquence fondamentale f₀ ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 2.26744,
+     "explication": "f₀ = Vs/(4H) = 390/(4 × 43) = 2,27 Hz.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Fréquence de la première harmonique ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 6.80233,
+     "explication": "f₁ = 3·f₀ = 6,8 Hz (harmoniques impaires).",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Contraste d'impédance I = ρs·Vs/(ρr·Vr) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.193892,
+     "explication": "I = (17,5 × 390)/(22 × 1600) = 0,194.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Amplification approchée à f₀, 1/(I + πξ/2) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 4.1491,
+     "explication": "1/(0,194 + π × 0,03/2) = 4,15 (calcul exact des ondes SH : 4,15).",
+     "toleranceRel": 0.03
+    }
+   ]
+  },
+  {
+   "id": "ch12-vs30",
+   "titre": "Vs30 et classe de sol",
+   "difficulte": 1,
+   "graine": 2483230432,
+   "enonce": "Un profil compte 12 m à 210 m/s, puis 2 m à 230 m/s, sur un substratum à 700 m/s.",
+   "donnees": [
+    {
+     "label": "Couche 1",
+     "valeur": "12 m, 210 m/s"
+    },
+    {
+     "label": "Couche 2",
+     "valeur": "2 m, 230 m/s"
+    },
+    {
+     "label": "Substratum",
+     "valeur": "700 m/s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Vs30 ?",
+     "type": "nombre",
+     "unite": "m/s",
+     "reponse": 338.235,
+     "explication": "Vs30 = 30 / Σ hᵢ/Vᵢ sur 30 m = 30 / (12/210 + 2/230 + 16/700) = 338 m/s (les 16 derniers mètres dans le substratum).",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Classe de sol de l'EN 1998-1:2004 ?",
+     "type": "choix",
+     "options": [
+      "A",
+      "C",
+      "D",
+      "B"
+     ],
+     "reponse": 1,
+     "explication": "Vs30 = 338 m/s : A au-dessus de 800, B de 360 à 800, C de 180 à 360, D en dessous ; classe C."
+    },
+    {
+     "texte": "Fréquence fondamentale approchée du dépôt 1/(4·Σh/V) ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 3.79717,
+     "explication": "Σh/V = 12/210 + 2/230 = 0,0658 s ; f₀ = 3,8 Hz.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch12-darendeli",
+   "titre": "Le sol perd sa rigidité",
+   "difficulte": 2,
+   "graine": 1210412164,
+   "enonce": "Un sol d'indice de plasticité 30 %, sous une contrainte moyenne effective de 50 kPa, subit une distorsion effective de 0,0234 %. Les courbes de Darendeli (2001) donnent à cette distorsion G/G₀ = 0,672 et ξ = 6,1 %. Sa vitesse en petites déformations vaut 350 m/s.",
+   "donnees": [
+    {
+     "label": "IP, σ'm",
+     "valeur": "30 %, 50 kPa"
+    },
+    {
+     "label": "γ",
+     "valeur": "0,0234 %"
+    },
+    {
+     "label": "G/G₀, ξ",
+     "valeur": "0,672 ; 6,1 %"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Vitesse Vs compatible avec la déformation ?",
+     "type": "nombre",
+     "unite": "m/s",
+     "reponse": 286.918,
+     "explication": "G ∝ Vs² : Vs = 350 × √0,672 = 287 m/s.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "De combien la fréquence de résonance d'une couche de ce sol diminue-t-elle (rapport f/f₀) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.819766,
+     "explication": "f₀ ∝ Vs ∝ √G : rapport √0,672 = 0,820.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "À distorsion égale, un sol plus plastique (IP plus grand)…",
+     "type": "choix",
+     "options": [
+      "garde une plus grande part de sa rigidité",
+      "perd davantage sa rigidité",
+      "se comporte comme un sable sec",
+      "n'a plus d'amortissement"
+     ],
+     "reponse": 0,
+     "explication": "La distorsion de référence croît avec IP et avec la contrainte : les argiles plastiques restent linéaires plus longtemps que les sables."
+    }
+   ]
+  },
+  {
+   "id": "ch12-notions",
+   "titre": "Effets de site et Eurocode 8",
+   "difficulte": 1,
+   "graine": 2611425638,
+   "enonce": "Questions sur les effets de site.",
+   "questions": [
+    {
+     "texte": "Une couche de 10 m de sol mou sur un rocher à 1 500 m/s est classée…",
+     "type": "choix",
+     "options": [
+      "E",
+      "B",
+      "A",
+      "S1"
+     ],
+     "reponse": 0,
+     "explication": "5 à 20 m de sol de type C ou D sur un rocher à plus de 800 m/s : classe E."
+    },
+    {
+     "texte": "Les classes S1 et S2 de l'Eurocode 8 (argiles molles épaisses, sols liquéfiables)…",
+     "type": "choix",
+     "options": [
+      "demandent une étude particulière",
+      "sont assimilées à la classe A",
+      "se déduisent du seul Vs30",
+      "ont un paramètre S tabulé"
+     ],
+     "reponse": 0,
+     "explication": "Le règlement ne fournit pas de spectre pour ces sols : il faut une étude de site."
+    },
+    {
+     "texte": "La méthode linéaire équivalente retient comme distorsion effective…",
+     "type": "choix",
+     "options": [
+      "une distorsion fixée à 10⁻⁶",
+      "la distorsion maximale",
+      "la distorsion à la surface",
+      "0,65 fois la distorsion maximale de chaque couche"
+     ],
+     "reponse": 3,
+     "explication": "C'est la convention de SHAKE et de pystrata ; on itère jusqu'à ce que G et ξ soient compatibles avec cette distorsion."
+    },
+    {
+     "texte": "Le rapport spectral H/V du bruit de fond sert à estimer…",
+     "type": "choix",
+     "options": [
+      "l'intensité d'Arias",
+      "la magnitude des séismes locaux",
+      "la valeur b",
+      "la fréquence fondamentale f₀ du site"
+     ],
+     "reponse": 3,
+     "explication": "Le pic de H/V coïncide en général avec f₀ quand le contraste d'impédance est marqué."
+    }
+   ]
+  }
+ ]
+}
