@@ -6,6 +6,7 @@
   "description": "Sismologie et aléa sismique pour l'ingénieur : bancs interactifs, exercices, Eurocode 8",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "serve": "npx serve ."
+    "serve": "npx serve .",
+    "references": "node tools/oq/exporter-catalogue.mjs && ${PYTHON:-python3} tools/oq/coefficients.py && ${PYTHON:-python3} tools/oq/references.py"
   }
 }

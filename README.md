@@ -13,7 +13,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Réseau · localisation** | quatre stations sur un même axe des temps ; cercles de distance, diagramme de Wadati, localisation par recherche sur grille (x, y, h, t₀), zone compatible, gap azimutal ; épicentre déplaçable en exploration ; mode exercice noté |
 | **Sismomètre** | masse, ressort et amortisseur dans un bâti animé ; sol sinusoïdal, lâcher de la masse ou séisme simulé ; préréglages (Wood-Anderson, courte et longue période, accéléromètre) ; réponse en fréquence en déplacement et en accélération ; mesure du régime permanent |
 | **Spectre de réponse** | six bâtiments (T = 0,1 à 4 s) sur une table vibrante ; spectre Sa ou Sd qui se construit pendant la lecture de l'accélérogramme ; spectre élastique de l'EN 1998-1:2004 (types 1 et 2, sols A à E, η, ag calé sur le PGA ou imposé) ; période de l'ouvrage, T₁ = Ct·H^¾ |
-| **Sismicité** | catalogue simulé de 1900 à 2025 (Gutenberg-Richter, répliques d'Omori-Utsu, complétude qui s'améliore avec le temps) ; choix de la période et de Mc (courbure maximale), déclusterage de Gardner et Knopoff, valeur b au maximum de vraisemblance, taux annuels, périodes de retour, probabilités de Poisson ; mode exercice noté |
+| **Sismicité** | catalogue simulé de 1900 à 2025 (Gutenberg-Richter, répliques d'Omori-Utsu, complétude qui s'améliore avec le temps) ; graphique de Stepp ; valeur b d'Aki sur une période ou de Weichert sur une table de complétude ; Mc par courbure maximale ; déclusterage de Gardner et Knopoff ; taux annuels, périodes de retour, probabilités de Poisson ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
 Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
@@ -40,8 +40,10 @@ src/sismo/oscillateur.js  oscillateur à un degré de liberté : réponse en fr�
 src/sismo/refraction.js   droites t = tᵢ + Δ/V, épaisseur de la croûte, croisement
 src/sismo/spectre.js      spectres de réponse (Sd, Sv, Sa), calcul progressif,
                           spectre élastique EN 1998-1:2004, T₁ = Ct·H^¾
-src/sismo/sismicite.js    catalogue simulé, Mc, valeur b (Aki-Utsu, Shi-Bolt),
-                          déclusterage de Gardner et Knopoff, Poisson
+src/sismo/sismicite.js    catalogue simulé, Mc, Stepp, valeur b (Aki-Utsu, Shi-Bolt ;
+                          Weichert), déclusterage de Gardner et Knopoff, Poisson
+src/sismo/gmpe.js         lois d'atténuation : Akkar, Sandıkkaya et Bommer (2014)
+src/sismo/coefficients/   coefficients exportés de hazardlib (fichiers produits)
 src/lecteur-station.js  banc « une station »
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
@@ -49,7 +51,9 @@ src/banc-profil.js      banc « profil par distance »
 src/banc-spectre.js     banc « spectre de réponse »
 src/banc-sismicite.js   banc « sismicité »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
-tests/                  signal, localisation, bancs, spectre, sismicité (28 tests)
+tests/                  signal, localisation, bancs, spectre, sismicité, références (32 tests)
+tests/references/       valeurs calculées par OpenQuake (npm run references)
+tools/oq/               scripts de référence (Python, OpenQuake) et export du catalogue
 ```
 
 ## Modèle des signaux
@@ -64,6 +68,25 @@ simulation complète de la propagation.
 Calage vérifié par `npm test` : ML mesurée sur le signal sans bruit stable à ±0,2
 entre 20 et 250 km et proche de Mw (de −0,2 à +0,7) ; PGA d'environ 0,06 g pour un
 M5 à 10 km.
+
+## Références OpenQuake
+
+Les solveurs sont comparés à OpenQuake (hazardlib et Hazard Modeller's Toolkit de GEM) par `npm test`,
+sur des valeurs enregistrées dans `tests/references/` : loi d'Akkar et al. (2014), déclusterage de
+Gardner et Knopoff, estimateur de Weichert. OpenQuake n'est **pas** embarqué dans le site (Python,
+licence AGPL) ; il ne sert qu'à produire ces références et les coefficients de `src/sismo/coefficients/`.
+
+Pour les régénérer :
+
+```
+python3 -m venv ~/.venvs/oq
+~/.venvs/oq/bin/pip install --no-deps openquake.engine
+~/.venvs/oq/bin/pip install numpy scipy shapely pyproj h5py toml decorator pandas psutil pyzmq requests \
+    docutils numba alpha_shapes h3 geopandas pillow fiona
+PYTHON=~/.venvs/oq/bin/python npm run references
+```
+
+(Les roues GDAL de GEM ne sont pas nécessaires : `fiona`, sur PyPI, suffit à hazardlib et à HMTK.)
 
 ## Déploiement — Cloudflare Pages
 

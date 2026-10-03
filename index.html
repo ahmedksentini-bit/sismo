@@ -402,6 +402,10 @@
         <h2>Loi de Gutenberg-Richter<small>Disques : nombre annuel cumulé N(≥ M) ; carrés : par classe de 0,1 ; droite : ajustement au maximum de vraisemblance</small></h2>
         <canvas id="sc-fmd" aria-label="Distribution fréquence-magnitude"></canvas>
       </section>
+      <section class="carte" aria-label="Graphique de Stepp">
+        <h2>Graphique de Stepp (1971)<small>σλ = √(λ/T) sur les T dernières années, par classe de magnitude : la classe est complète tant que la courbe suit sa pente −1/2 (tirets)</small></h2>
+        <canvas id="sc-stepp" aria-label="Graphique de Stepp"></canvas>
+      </section>
     </div>
     <aside class="colonne">
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
@@ -420,16 +424,29 @@
       <section class="carte" id="sc-panneau-exercice" aria-label="Exercice" hidden>
         <p class="sous-titre">Exercice</p>
         <span class="numero" id="sc-exo-num"></span>
-        <p class="enonce">Voici un catalogue de 125 ans. Choisissez la période et la magnitude de complétude, décidez du déclusterage,
-          puis vérifiez votre valeur b et le taux annuel λ(M ≥ 5) des chocs principaux.</p>
+        <p class="enonce">Voici un catalogue de 125 ans. Lisez sa complétude sur le graphique de Stepp, choisissez une période (Aki) ou une table
+          de complétude (Weichert), décidez du déclusterage, puis vérifiez votre valeur b et le taux annuel λ(M ≥ 5) des chocs principaux.</p>
         <div class="actions"><button type="button" class="bouton primaire" id="sc-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="sc-nouvel-exo">Nouvel exercice</button></div>
         <div id="sc-corrige"></div>
       </section>
       <section class="carte" aria-label="Analyse">
         <p class="sous-titre">Analyse</p>
-        <div class="champ"><label for="sc-debut">Début de la période analysée <output id="sc-debut-v"></output></label><input type="range" id="sc-debut" min="1900" max="2015" step="1"></div>
-        <div class="champ"><label for="sc-mc">Magnitude de complétude Mc <output id="sc-mc-v"></output></label><input type="range" id="sc-mc" min="2.5" max="6" step="0.1"></div>
-        <div class="actions" style="margin-bottom:10px"><button type="button" class="bouton secondaire" id="sc-mc-auto">Mc par courbure maximale</button></div>
+        <div class="champ"><span class="etiquette">Méthode</span>
+          <div class="segments" role="group" aria-label="Méthode"><button type="button" data-sc-methode="aki">Aki : une période</button><button type="button" data-sc-methode="weichert">Weichert : table</button></div></div>
+        <div id="sc-aki">
+          <div class="champ"><label for="sc-debut">Début de la période analysée <output id="sc-debut-v"></output></label><input type="range" id="sc-debut" min="1900" max="2015" step="1"></div>
+          <div class="champ"><label for="sc-mc">Magnitude de complétude Mc <output id="sc-mc-v"></output></label><input type="range" id="sc-mc" min="2.5" max="6" step="0.1"></div>
+          <div class="actions" style="margin-bottom:10px"><button type="button" class="bouton secondaire" id="sc-mc-auto">Mc par courbure maximale</button></div>
+        </div>
+        <div id="sc-weichert" hidden>
+          <p class="aide" style="margin-top:0">Table de complétude : à partir de l'année indiquée, le catalogue est complet au-dessus de Mc. Lisez-la sur le graphique de Stepp.</p>
+          <table class="resultats table-completude"><thead><tr><th>Depuis</th><th>Mc</th></tr></thead><tbody>
+            <tr><td><input type="number" id="sc-ta-0" min="1900" max="2024" step="1"></td><td><input type="number" id="sc-tm-0" min="2.5" max="7" step="0.1"></td></tr>
+            <tr><td><input type="number" id="sc-ta-1" min="1900" max="2024" step="1"></td><td><input type="number" id="sc-tm-1" min="2.5" max="7" step="0.1"></td></tr>
+            <tr><td><input type="number" id="sc-ta-2" min="1900" max="2024" step="1"></td><td><input type="number" id="sc-tm-2" min="2.5" max="7" step="0.1"></td></tr>
+            <tr><td><input type="number" id="sc-ta-3" min="1900" max="2024" step="1"></td><td><input type="number" id="sc-tm-3" min="2.5" max="7" step="0.1"></td></tr>
+          </tbody></table>
+        </div>
         <label class="case" style="margin-bottom:12px"><input type="checkbox" id="sc-declus"> Déclusterage de Gardner et Knopoff (1974)</label>
         <div class="afficheurs deux" id="sc-afficheurs"></div>
       </section>

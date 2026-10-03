@@ -29,7 +29,7 @@ const Sismicite = (() => {
 
   // Catalogue simulé dans une région de 300 × 300 km, de `debut` à `fin` (années décimales).
   // taux4 : nombre annuel de chocs principaux de magnitude ≥ 4.
-  function genererCatalogue({ b = 1, taux4 = 2, Mmax = 7.5, debut = 1900, fin = 2025, repliques = true, completude = COMPLETUDE, graine = 1 }) {
+  function genererCatalogue({ b = 1, taux4 = 2, Mmax = 7.5, debut = 1900, fin = 2025, repliques = true, completude = COMPLETUDE, graine = 1, arrondi = 0.1 }) {
     const u = Sismo.aleatoire(graine), lam = taux4 * Math.pow(10, b * (4 - MMIN)), tous = [];
     let t = debut, id = 0;
     for (;;) {
@@ -52,29 +52,42 @@ const Sismicite = (() => {
     const cat = [];
     for (const e of tous) {
       const mc = mcAnnee(e.t, completude), pd = Math.min(1, Math.max(0, (e.M - mc + 0.3) / 0.6));
-      if (u() < pd) cat.push({ ...e, M: Math.round(e.M * 10) / 10 });
+      if (u() < pd) cat.push({ ...e, M: Math.round(e.M / arrondi) * arrondi });
     }
     cat.sort((p, q) => p.t - q.t);
     return cat;
   }
 
-  // Déclusterage de Gardner et Knopoff : du plus fort au plus faible, chaque séisme non encore
-  // rattaché « absorbe » les plus faibles dans sa fenêtre espace-temps qui le suivent.
-  function declusterGK(cat) {
-    const n = cat.length, ordre = [...cat.keys()].sort((i, j) => cat[j].M - cat[i].M), dep = new Uint8Array(n);
-    const temps = cat.map(e => e.t);
-    const premierApres = t => { let a = 0, b = n; while (a < b) { const m = (a + b) >> 1; if (temps[m] < t) a = m + 1; else b = m; } return a; };
-    for (const i of ordre) {
-      if (dep[i]) continue;
-      const e = cat[i], w = fenetreGK(e.M), tmax = e.t + w.T / 365.25;
-      for (let j = premierApres(e.t); j < n && temps[j] <= tmax; j++) {
-        if (j === i || dep[j]) continue;
-        const f = cat[j];
-        if (f.M <= e.M && Math.hypot(f.x - e.x, f.y - e.y) <= w.L) dep[j] = 1;
+  // Déclusterage de Gardner et Knopoff, avec les conventions de HMTK (GardnerKnopoffType1) :
+  // du plus fort au plus faible, chaque séisme qui n'appartient encore à aucun amas ouvre une
+  // fenêtre [t − f·T, t + T] × L ; tous les séismes libres qu'elle contient, quelle que soit leur
+  // magnitude, rejoignent son amas. Fenêtre de temps en années de 364,75 jours.
+  // Renvoie l'amas de chaque séisme et un drapeau : 0 choc principal ou isolé, 1 réplique, −1 précurseur.
+  const JOURS_GK = 364.75;
+  const distancePlane = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  function amasGK(cat, { distance = distancePlane, propPrecurseurs = 0 } = {}) {
+    const n = cat.length, amas = new Int32Array(n), drapeau = new Int8Array(n);
+    const parTemps = [...cat.keys()].sort((i, j) => cat[i].t - cat[j].t), temps = parTemps.map(i => cat[i].t);
+    const premier = t => { let a = 0, b = n; while (a < b) { const m = (a + b) >> 1; if (temps[m] < t) a = m + 1; else b = m; } return a; };
+    const ordre = [...cat.keys()].sort((i, j) => cat[j].M - cat[i].M);
+    let numero = 0;
+    for (let k = 0; k < n - 1; k++) {
+      const i = ordre[k];
+      if (amas[i]) continue;
+      const e = cat[i], w = fenetreGK(e.M), T = w.T / JOURS_GK, membres = [];
+      for (let q = premier(e.t - T * propPrecurseurs); q < n && temps[q] <= e.t + T; q++) {
+        const j = parTemps[q];
+        if (j !== i && !amas[j] && distance(cat[j], e) <= w.L) membres.push(j);
       }
+      if (!membres.length) continue;
+      numero++;
+      amas[i] = numero;
+      for (const j of membres) { amas[j] = numero; drapeau[j] = cat[j].t >= e.t ? 1 : -1; }
     }
-    return cat.map((e, i) => !dep[i]);
+    return { amas, drapeau };
   }
+  // Séismes gardés (chocs principaux et isolés) : drapeau nul.
+  const declusterGK = (cat, options) => Array.from(amasGK(cat, options).drapeau, d => d === 0);
 
   // Magnitude de complétude par courbure maximale (+0,2, Woessner et Wiemer 2005).
   function mcCourbureMax(mags) {
@@ -100,10 +113,80 @@ const Sismicite = (() => {
     const lamMc = r.N / annees;
     return { ...r, Mc, lamMc, a: Math.log10(lamMc) + r.b * Mc, taux: m => lamMc * Math.pow(10, -r.b * (m - Mc)) };
   }
+  // Comptages par classe de magnitude avec une table de complétude [[année, Mc], …] rangée de la plus
+  // récente à la plus ancienne (mêmes conventions que HMTK, get_completeness_counts). anneeFin : dernière
+  // année du catalogue. Renvoie les centres de classe, les durées d'observation et les effectifs.
+  function arange(debut, fin, pas) { const n = Math.max(0, Math.ceil((fin - debut) / pas)); return Array.from({ length: n }, (_, i) => debut + i * pas); }
+  function histogramme(valeurs, bords) {
+    const h = new Array(bords.length - 1).fill(0), der = bords[bords.length - 1];
+    for (const v of valeurs) {
+      if (v < bords[0] || v > der) continue;
+      if (v === der) { h[h.length - 1]++; continue; }
+      let a = 0, b = bords.length - 1;
+      while (b - a > 1) { const m = (a + b) >> 1; if (bords[m] <= v) a = m; else b = m; }
+      h[a]++;
+    }
+    return h;
+  }
+  function comptagesCompletude(evts, table, dm, anneeFin) {
+    const mmaxObs = Math.max(...evts.map(e => e.M));
+    let cmag = table.map(r => r[1]);
+    if (mmaxObs > Math.max(...cmag)) cmag = [...cmag, mmaxObs];
+    const cannee = [anneeFin + 1, ...table.map(r => r[0])];
+    const bords = arange(Math.min(...cmag) - 1e-7, Math.max(...cmag) + dm, dm);
+    const nobs = new Array(bords.length - 1).fill(0), duree = new Array(bords.length - 1).fill(0);
+    for (let i = 0; i < cannee.length - 1; i++) {
+      const sel = evts.filter(e => e.t < cannee[i] && e.t >= cannee[i + 1]).map(e => e.M);
+      const idx = bords.map((v, k) => k).filter(k => bords[k] >= cmag[i] - dm / 2);
+      const h = histogramme(sel, idx.map(k => bords[k]));
+      for (let q = 0; q < idx.length - 1; q++) { nobs[idx[q]] += h[q]; duree[idx[q]] += cannee[i] - cannee[i + 1]; }
+    }
+    let der = -1;
+    nobs.forEach((v, k) => { if (v > 0) der = k; });
+    const centres = nobs.map((_, k) => Math.round(((bords[k] + bords[k + 1]) / 2) * 1000) / 1000);
+    return { centres: centres.slice(0, der + 1), duree: duree.slice(0, der + 1), nobs: nobs.slice(0, der + 1) };
+  }
+  // Weichert (1980) : maximum de vraisemblance avec des durées d'observation différentes par classe.
+  // Itérations de Newton sur β = b·ln 10, comme HMTK. Renvoie b, σb, le taux λ(≥ m0) avec
+  // m0 = premier centre − dm/2, et le taux à la magnitude de référence mref.
+  function weichert({ centres, duree, nobs }, mref = 4, b0 = 1, tol = 1e-5, maxIter = 1000) {
+    if (centres.length < 2) return null;
+    let beta = b0 * Math.LN10;
+    const dm = centres[1] - centres[0], N = nobs.reduce((a, v) => a + v, 0);
+    const snm = nobs.reduce((a, v, k) => a + v * centres[k], 0);
+    for (let it = 1; it <= maxIter; it++) {
+      let sumexp = 0, sumtex = 0, stmex = 0, stm2x = 0;
+      centres.forEach((m, k) => { const e = Math.exp(-beta * m), te = duree[k] * e; sumexp += e; sumtex += te; stmex += te * m; stm2x += te * m * m; });
+      const d1 = stmex / sumtex, d2 = N * (d1 * d1 - stm2x / sumtex), grad = d1 * N - snm, ancien = beta;
+      beta -= grad / d2;
+      if (Math.abs(beta - ancien) <= tol) {
+        // fngtm0 = λ(≥ m0) ; 10^a = λ(≥ 0) = fngtm0·e^(β·m0) (le « fn0 » de HMTK).
+        const sigBeta = Math.sqrt(-1 / d2), lam0 = N * (sumexp / sumtex), m0 = centres[0] - dm / 2, b = beta / Math.LN10;
+        return {
+          b, sigma: sigBeta / Math.LN10, N, m0, lam0, sigmaLam0: lam0 / Math.sqrt(N),
+          a: Math.log10(lam0) + b * m0, lamRef: lam0 * Math.exp(-beta * (mref - m0)), taux: m => lam0 * Math.pow(10, -b * (m - m0)),
+        };
+      }
+    }
+    return null;
+  }
+
+  // Graphique de Stepp (1971) : pour chaque classe de magnitude, taux λ = n/T sur les T dernières années
+  // et son écart type σλ = √(λ/T). Tant que la classe est complète, σλ décroît comme 1/√T.
+  function stepp(evts, { classes = [[3, 3.5], [3.5, 4], [4, 4.5], [4.5, 5], [5, 6]], anneeFin = 2025, durees = [2, 3, 5, 7, 10, 15, 20, 30, 40, 50, 60, 80, 100, 125] } = {}) {
+    return classes.map(([m0, m1]) => ({
+      m0, m1,
+      points: durees.map(T => {
+        const n = evts.filter(e => e.M >= m0 - 1e-9 && e.M < m1 - 1e-9 && e.t >= anneeFin - T).length, lam = n / T;
+        return { T, n, lam, sigma: Math.sqrt(lam / T) };
+      }),
+    }));
+  }
+
   // Poisson : probabilité d'au moins un événement en t années, période de retour associée.
   const probabilite = (lam, t) => 1 - Math.exp(-lam * t);
   const periodeRetour = (P, t) => -t / Math.log(1 - P);
 
-  return { MMIN, DM, COMPLETUDE, mcAnnee, fenetreGK, genererCatalogue, declusterGK, mcCourbureMax, valeurB, recurrence, probabilite, periodeRetour };
+  return { MMIN, DM, COMPLETUDE, JOURS_GK, mcAnnee, fenetreGK, genererCatalogue, amasGK, declusterGK, mcCourbureMax, valeurB, recurrence, comptagesCompletude, weichert, stepp, probabilite, periodeRetour };
 })();
 export default Sismicite;
