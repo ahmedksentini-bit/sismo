@@ -1,0 +1,75 @@
+// Calculateurs du chapitre 8 : loi de Gutenberg-Richter tronquée (taux, périodes de retour, probabilités),
+// catalogue simulé (complétude par courbure maximale, valeur b d'Aki-Utsu, déclusterage de Gardner et
+// Knopoff), probabilité de Poisson.
+import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { graphe, COULEURS } from "./figures.js";
+import Sismicite from "./sismo/sismicite.js";
+
+// Taux de la loi tronquée à Mmax (forme continue, comme les sources d'aléa) : λ(≥m) = λ4·(10^(−b(m−4)) − 10^(−b(Mmax−4)))/(1 − 10^(−b(Mmax−4))).
+const tauxTronque = (l4, b, Mmax) => (m) => (m >= Mmax ? 0 : (l4 * (10 ** (-b * (m - 4)) - 10 ** (-b * (Mmax - 4)))) / (1 - 10 ** (-b * (Mmax - 4))));
+
+// ── Taux annuels et périodes de retour ───────────────────────────────────
+const majGR = garde("grOut", () => {
+  const l4 = num("grL4"), b = num("grB"), Mmax = num("grMmax"), t = num("grT");
+  if (!(l4 > 0 && b > 0 && Mmax > 4.5 && t > 0)) { el("grOut").textContent = "Saisir un taux, une valeur b, une Mmax supérieure à 4,5 et une durée positifs."; el("grFig").innerHTML = el("grTab").innerHTML = ""; return; }
+  const lam = tauxTronque(l4, b, Mmax), illimite = (m) => l4 * 10 ** (-b * (m - 4));
+  const ms = Array.from({ length: Math.round((Mmax - 4) / 0.05) }, (_, i) => 4 + i * 0.05);
+  el("grFig").innerHTML = graphe({
+    largeur: 560, hauteur: 300, xmin: 4, xmax: Math.ceil(Mmax + 0.2), ymin: 1e-4, ymax: 10 ** Math.ceil(Math.log10(l4) + 0.3), logY: true,
+    xlabel: "magnitude M", ylabel: "taux annuel λ(≥ M)",
+    series: [
+      { points: ms.map((m) => [m, illimite(m)]).concat([[Mmax + 0.2, illimite(Mmax + 0.2)]]), couleur: COULEURS.discret, epaisseur: 1.4, tirets: "5 4", libelle: "loi non tronquée" },
+      { points: ms.map((m) => [m, lam(m)]), couleur: COULEURS.bleu, epaisseur: 2.6, libelle: `tronquée à Mmax = ${fd(Mmax, 1)}` },
+    ],
+  });
+  const lignes = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8].filter((m) => m < Mmax);
+  el("grTab").innerHTML = `<div class="table-large"><table class="resultats"><thead><tr><th>M ≥</th><th class="num">λ (/an)</th><th class="num">période de retour</th><th class="num">P en ${f(t, 3)} ans</th></tr></thead><tbody>${
+    lignes.map((m) => { const l = lam(m); return `<tr><td>${fd(m, 1)}</td><td class="n">${f(l, 3)}</td><td class="n">${f(1 / l, 3)} ans</td><td class="n">${fd(100 * Sismicite.probabilite(l, t), 1)} %</td></tr>`; }).join("")
+  }</tbody></table></div>`;
+  el("grOut").innerHTML = `a = log<sub>10</sub> ${f(l4, 3)} + ${f(b, 3)} × 4 = <strong>${fd(Math.log10(l4) + 4 * b, 2)}</strong> · M ≥ 6 : <strong>λ = ${f(lam(6), 3)} / an</strong>, une fois tous les ${f(1 / lam(6), 3)} ans en moyenne
+    <small>La troncature n'agit que près de Mmax : à M 6, la loi non tronquée donnerait ${f(illimite(6), 3)} / an.</small>`;
+});
+brancher(["grL4", "grB", "grMmax", "grT"], majGR);
+
+// ── Un catalogue simulé : complétude et valeur b ─────────────────────────
+let cleCat = "", cat = null, garde_ = null;
+const majCat = garde("caOut", () => {
+  const b = num("caB"), debut = num("caDebut"), decl = el("caDecl").value;
+  if (!(b >= 0.5 && b <= 1.5 && debut >= 1900 && debut <= 2020)) { el("caOut").textContent = "b de 0,5 à 1,5 ; année de 1900 à 2020."; el("caFig").innerHTML = ""; return; }
+  if (`${b}` !== cleCat) { cat = Sismicite.genererCatalogue({ b, graine: 3 }); garde_ = Sismicite.declusterGK(cat); cleCat = `${b}`; }
+  const sel = cat.filter((e, i) => e.t >= debut && (decl === "tous" || garde_[i])), mags = sel.map((e) => e.M), annees = 2025 - debut;
+  if (mags.length < 20) { el("caOut").textContent = "Trop peu de séismes sur cette période."; el("caFig").innerHTML = ""; return; }
+  const Mc = Sismicite.mcCourbureMax(mags), r = Sismicite.recurrence(mags, Mc, annees);
+  // distributions incrémentale et cumulée, taux annuels
+  const classes = new Map();
+  for (const m of mags) { const k = Math.round(m * 10); classes.set(k, (classes.get(k) || 0) + 1); }
+  const ks = [...classes.keys()].sort((p, q) => p - q), inc = ks.map((k) => [k / 10, classes.get(k) / annees]);
+  let cumul = 0;
+  const cum = [...ks].reverse().map((k) => { cumul += classes.get(k); return [k / 10, cumul / annees]; }).reverse();
+  const mmax = ks[ks.length - 1] / 10;
+  el("caFig").innerHTML = graphe({
+    largeur: 560, hauteur: 320, xmin: 2, xmax: Math.ceil(mmax + 0.5), ymin: 10 ** Math.floor(Math.log10(1 / annees)), ymax: 10 ** Math.ceil(Math.log10(cum[0][1])), logY: true,
+    xlabel: "magnitude M", ylabel: "taux annuel",
+    series: [
+      { points: cum, couleur: COULEURS.encre, nuage: true, rayon: 3.2, libelle: "λ(≥ M), cumulé" },
+      { points: inc, couleur: COULEURS.discret, nuage: true, rayon: 2.6, libelle: "par classe de 0,1" },
+      r && { points: [[Mc, r.taux(Mc)], [mmax + 0.3, r.taux(mmax + 0.3)]], couleur: COULEURS.effort, epaisseur: 2.2, libelle: `b = ${fd(r.b, 2)} au-dessus de Mc = ${fd(Mc, 1)}` },
+    ].filter(Boolean),
+    zones: [{ x0: 2, x1: Mc - 0.05, y0: 10 ** Math.floor(Math.log10(1 / annees)), y1: 10 ** Math.ceil(Math.log10(cum[0][1])), couleur: COULEURS.f62, opacite: 0.08, libelle: "incomplet" }],
+  });
+  if (!r) { el("caOut").textContent = "Trop peu de séismes au-dessus de la complétude."; return; }
+  el("caOut").innerHTML = `${mags.length} séismes depuis ${Math.round(debut)} · Mc (courbure maximale + 0,2) = <strong>${fd(Mc, 1)}</strong> ·
+    <strong>b = ${fd(r.b, 2)} ± ${fd(r.sigma, 2)}</strong> (N = ${r.N}, vraie ${fd(b, 2)}) · a = ${fd(r.a, 2)} · λ(≥ 4) = ${f(r.taux(4), 3)} / an
+    <small>${decl === "tous" ? "Répliques comprises : le taux des petits séismes est gonflé, et Poisson ne s'applique pas." : "Chocs principaux : le catalogue convient au calcul de l'aléa."} ${debut < 1960 ? "Sur une période longue, Mc est celle des années anciennes : on perd les petits séismes récents ; d'où l'estimateur de Weichert." : ""}</small>`;
+});
+brancher(["caB", "caDebut", "caDecl"], majCat);
+
+// ── Probabilité de Poisson ───────────────────────────────────────────────
+const majPoisson = garde("poOut", () => {
+  const TR = num("poTR"), t = num("poT");
+  if (!(TR > 0 && t > 0)) { el("poOut").textContent = "Saisir une période de retour et une durée positives."; return; }
+  const P = Sismicite.probabilite(1 / TR, t);
+  el("poOut").innerHTML = `λ = 1/${f(TR, 4)} = ${f(1 / TR, 3)} / an → <strong>P = 1 − e<sup>−λt</sup> = ${fd(100 * P, 1)} %</strong> en ${f(t, 3)} ans
+    <small>Inversement : ${fd(100 * P, 1)} % en ${f(t, 3)} ans ↔ T<sub>R</sub> = −t / ln(1 − P) = ${f(Sismicite.periodeRetour(P, t), 4)} ans. Probabilité d'au moins deux événements : ${fd(100 * (1 - Math.exp(-t / TR) * (1 + t / TR)), 1)} %.</small>`;
+});
+brancher(["poTR", "poT"], majPoisson);

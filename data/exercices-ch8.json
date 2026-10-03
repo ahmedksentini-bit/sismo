@@ -1,0 +1,217 @@
+{
+ "chapitre": "ch8",
+ "exercices": [
+  {
+   "id": "ch8-taux",
+   "titre": "Taux annuels et périodes de retour",
+   "difficulte": 1,
+   "graine": 1890998347,
+   "enonce": "La sismicité d'une région suit la loi de Gutenberg-Richter log₁₀ λ(≥ M) = 3,25 − 1,05·M (λ par an, chocs principaux).",
+   "donnees": [
+    {
+     "label": "a",
+     "valeur": "3,25"
+    },
+    {
+     "label": "b",
+     "valeur": "1,05"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Taux annuel des séismes de magnitude ≥ 5,5 ?",
+     "type": "nombre",
+     "unite": "/ an",
+     "reponse": 0.00298538,
+     "explication": "λ = 10^(3,25 − 1,05 × 5,5) = 0,00299 / an.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Période de retour des séismes de magnitude ≥ 7,0 ?",
+     "type": "nombre",
+     "unite": "ans",
+     "reponse": 12589.3,
+     "explication": "λ = 10^(-4,100) = 0,0000794 / an ; T_R = 1/λ = 12 600 ans.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Probabilité d'au moins un séisme de magnitude ≥ 7,0 en 50 ans (en %) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 0.396376,
+     "explication": "P = 1 − e^(−λt) = 1 − e^(−0,0000794 × 50) = 0,4 %.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Combien de séismes de magnitude ≥ 5,5 pour un de magnitude ≥ 7,0 ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 37.5837,
+     "explication": "10^(b·ΔM) = 10^(1,05 × 1,5) = 37,6.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch8-b",
+   "titre": "Valeur b d'un catalogue",
+   "difficulte": 2,
+   "graine": 2753885069,
+   "enonce": "Un catalogue déclustérisé couvre 30 ans (1995–2025), magnitudes rangées par classes de 0,1. Au-dessus de la magnitude de complétude Mc = 3,0, il compte 247 séismes, de magnitude moyenne 3,418.",
+   "donnees": [
+    {
+     "label": "Mc",
+     "valeur": "3,0"
+    },
+    {
+     "label": "N (M ≥ Mc)",
+     "valeur": "247"
+    },
+    {
+     "label": "Magnitude moyenne",
+     "valeur": "3,418"
+    },
+    {
+     "label": "Durée",
+     "valeur": "30 ans"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Valeur b (Aki-Utsu) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.92798,
+     "explication": "b = 0,4343 / (M̄ − (Mc − ΔM/2)) = 0,4343 / (3,418 − 2,95) = 0,928 (catalogue simulé avec b = 0,85).",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Incertitude approchée b/√N ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.0590459,
+     "explication": "0,928 / √247 = 0,059.",
+     "toleranceRel": 0.05
+    },
+    {
+     "texte": "Valeur a annuelle (log₁₀ λ(≥ Mc) + b·Mc) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 3.69951,
+     "explication": "λ(≥ Mc) = 247/30 = 8,23 / an ; a = log₁₀ 8,23 + 0,928 × 3,0 = 3,70.",
+     "tolerance": 0.05
+    },
+    {
+     "texte": "Si l'on avait inclus des magnitudes sous la complétude, b serait…",
+     "type": "choix",
+     "options": [
+      "inchangé",
+      "surestimé",
+      "négatif",
+      "sous-estimé : les petits séismes manquants aplatissent la distribution"
+     ],
+     "reponse": 3,
+     "explication": "Sous Mc, des séismes manquent : la moyenne des magnitudes monte relativement à la borne choisie, et b = 0,4343/(M̄ − Mc + ΔM/2) diminue."
+    }
+   ]
+  },
+  {
+   "id": "ch8-poisson",
+   "titre": "Probabilités et périodes de retour",
+   "difficulte": 1,
+   "graine": 4197222772,
+   "enonce": "Un niveau d'aléa est défini par une probabilité de dépassement de 2 % en 50 ans ; on s'intéresse aussi à un ouvrage de durée de vie 50 ans.",
+   "donnees": [
+    {
+     "label": "Probabilité",
+     "valeur": "2 % en 50 ans"
+    },
+    {
+     "label": "Durée de vie",
+     "valeur": "50 ans"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Période de retour correspondante ?",
+     "type": "nombre",
+     "unite": "ans",
+     "reponse": 2474.92,
+     "explication": "T_R = −t / ln(1 − P) = −50 / ln(1 − 0,02) = 2 475 ans.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Probabilité de dépasser le niveau de période de retour 2475 ans pendant 50 ans (en %) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 1.99993,
+     "explication": "P = 1 − e^(−50/2475) = 2,0 %.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Le niveau de référence de l'EN 1998-1:2004 pour le non-effondrement (valeur recommandée) est…",
+     "type": "choix",
+     "options": [
+      "50 % en 50 ans",
+      "2 % en 50 ans, soit 100 ans",
+      "10 % en 50 ans, soit 475 ans de période de retour",
+      "10 % en 10 ans, soit 475 ans"
+     ],
+     "reponse": 2,
+     "explication": "Valeurs recommandées : 10 % en 50 ans (475 ans) pour le non-effondrement, 10 % en 10 ans (95 ans) pour la limitation des dommages."
+    }
+   ]
+  },
+  {
+   "id": "ch8-repliques",
+   "titre": "Répliques et déclusterage",
+   "difficulte": 1,
+   "graine": 757112913,
+   "enonce": "Un séisme de magnitude 6,5 vient de se produire.",
+   "donnees": [
+    {
+     "label": "M",
+     "valeur": "6,5"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Magnitude moyenne attendue de la plus forte réplique (loi de Båth) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 5.3,
+     "explication": "M − 1,2 = 5,3.",
+     "tolerance": 0.05
+    },
+    {
+     "texte": "Rayon de la fenêtre de Gardner et Knopoff, L = 10^(0,1238·M + 0,983) ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 61.3338,
+     "explication": "L = 10^(0,1238 × 6,5 + 0,983) = 61,3 km.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Durée de la fenêtre en jours ?",
+     "type": "nombre",
+     "unite": "jours",
+     "reponse": 884.912,
+     "explication": "Pour M ≥ 6,5 : T = 10^(0,032·M + 2,7389) = 885 jours.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Pourquoi retirer les répliques avant le calcul de l'aléa ?",
+     "type": "choix",
+     "options": [
+      "pour augmenter la valeur b",
+      "les répliques sont toujours plus fortes que le choc principal",
+      "les répliques ne produisent pas de mouvement du sol",
+      "le calcul suppose des séismes indépendants, poissoniens"
+     ],
+     "reponse": 3,
+     "explication": "Le modèle de Poisson suppose des événements indépendants ; les répliques, groupées dans le temps et l'espace, ne le sont pas."
+    }
+   ]
+  }
+ ]
+}
