@@ -1,20 +1,23 @@
-"""tools/oq/psha.py — calcul de référence du moteur PSHA par OpenQuake (calculateur « classical »).
+"""tools/oq/psha.py — calcul de référence du moteur PSHA par OpenQuake (calculateurs « classical » et
+« disaggregation »).
 
-Lit tests/references/modele_psha.json (écrit par exporter-modele.mjs : points des zones, branches
-de l'arbre logique), le traduit en NRML, fait tourner le moteur et écrit tests/references/psha.json :
-courbes d'aléa de chaque réalisation, moyenne et fractiles, spectre à probabilité uniforme.
+Lit tests/references/modele_psha.json (écrit par exporter-modele.mjs : points des zones, variantes du
+modèle de taux, branches de l'arbre), le traduit en NRML, fait tourner le moteur et écrit
+tests/references/psha.json : courbes d'aléa de chaque réalisation, moyenne et fractiles, spectre à
+probabilité uniforme, désagrégation magnitude-distance.
 
 Traduction du modèle :
-- chaque point de zone devient une pointSource (PointMSR : rupture de 10 m × 10 m, donc Rjb égale à
-  la distance épicentrale) portant la part 1/n du taux de la zone : a_point = a_zone − log10(n) ;
-- les branches du modèle de sources (a, b) de chaque zone × ΔMmax commun sont écrites en toutes
-  lettres, un fichier par combinaison, dans un branchset « sourceModel » : les incertitudes
-  abGRAbsolute ne s'appliquent qu'à une source, et sur une multiPointSource deux modifications
-  successives s'écrasent (MultiMFD.modify ne les empile pas) ;
+- chaque zone devient une multiPointSource (PointMSR : rupture de 10 m × 10 m, donc Rjb égale à la
+  distance épicentrale) dont chaque point porte la part 1/n du taux : a_point = a_zone − log10(n) ;
+- variantes « catalogue » : a et b donnés, inchangés quand Mmax varie ; variantes « géodésie » : a
+  calculé par OpenQuake (TruncatedGRMFD._set_a) pour libérer le taux de moment χ·Ṁ0 avec le Mmax de
+  la branche ;
+- chaque combinaison variante × ΔMmax est un fichier de sources, branche d'un branchset
+  « sourceModel » : les incertitudes abGRAbsolute ne s'appliquent qu'à une source, et sur une
+  multiPointSource deux modifications successives s'écrasent (MultiMFD.modify ne les empile pas) ;
 - l'arbre des lois d'atténuation est un branchset gmpeModel ordinaire.
 Le calcul est fait sans serveur (OQ_DISTRIBUTE=no), dans un dossier temporaire.
 """
-import itertools
 import json
 import math
 import os
@@ -27,6 +30,7 @@ os.environ.setdefault('OQ_DISTRIBUTE', 'no')
 import openquake.engine  # noqa: E402
 from openquake.calculators import base  # noqa: E402
 from openquake.commonlib import datastore, logs  # noqa: E402
+from openquake.hazardlib.mfd import TruncatedGRMFD  # noqa: E402
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 REF = RACINE / 'tests' / 'references'
@@ -48,21 +52,34 @@ def nom_imt(imt):
     return 'PGA' if imt == 'PGA' else f'SA({float(imt)})'
 
 
-def sources(modele, chemin):
-    """Modèle de sources d'une branche : chemin = (branche ab de chaque zone…, branche ΔMmax).
+def loi_zone(modele, variante, iz, d):
+    """Loi (a, b, mmin, mmax) de la zone iz pour une variante de taux et un ΔMmax. Variante géodésique :
+    a est calculé par OpenQuake lui-même (TruncatedGRMFD._set_a) pour libérer le taux de moment χ·Ṁ0."""
+    z, p = modele['zones'][iz], variante['zones'][iz]
+    mmax = z['mmax'] + d
+    if 'moment' in p:
+        mfd = TruncatedGRMFD(z['mmin'], mmax, modele['pasMfd'], 0.0, p['b'])
+        mfd._set_a(p['moment'])
+        return mfd.a_val, p['b'], z['mmin'], mmax
+    return p['a'], p['b'], z['mmin'], mmax
+
+
+def sources(modele, variante, idm):
+    """Modèle de sources d'une branche : variante de taux et branche ΔMmax.
     Une multiPointSource par zone ; tous ses points portent la même loi (part 1/n du taux)."""
-    dm = modele['dMmax'][chemin[-1]]['d']
+    d = modele['dMmax'][idm]['d']
     blocs = []
     for iz, z in enumerate(modele['zones']):
-        br, n = z['ab'][chemin[iz]], len(z['points'])
-        a = br['a'] - math.log10(n)
+        a, b, mmin, mmax = loi_zone(modele, variante, iz, d)
+        n = len(z['points'])
+        a -= math.log10(n)
         pos = ' '.join(f"{p['lon']!r} {p['lat']!r}" for p in z['points'])
         blocs.append(f'''  <multiPointSource id="{z['id']}" name="{z['id']}" tectonicRegion="{TRT}">
    <multiPointGeometry><gml:posList>{pos}</gml:posList>
     <upperSeismoDepth>0</upperSeismoDepth><lowerSeismoDepth>20</lowerSeismoDepth></multiPointGeometry>
    <magScaleRel>PointMSR</magScaleRel><ruptAspectRatio>1</ruptAspectRatio>
    <multiMFD kind="truncGutenbergRichterMFD" size="{n}">
-    <min_mag>{z['mmin']!r}</min_mag><max_mag>{z['mmax'] + dm!r}</max_mag><a_val>{a!r}</a_val><b_val>{br['b']!r}</b_val>
+    <min_mag>{mmin!r}</min_mag><max_mag>{mmax!r}</max_mag><a_val>{a!r}</a_val><b_val>{b!r}</b_val>
    </multiMFD>
    <nodalPlaneDist><nodalPlane probability="1" strike="0" dip="90" rake="{z['rake']}"/></nodalPlaneDist>
    <hypoDepthDist><hypoDepth probability="1" depth="{z['profondeur']!r}"/></hypoDepthDist>
@@ -71,21 +88,19 @@ def sources(modele, chemin):
                        + '\n'.join(blocs) + '\n </sourceGroup>\n </sourceModel>')
 
 
-def chemins(modele):
-    """Toutes les combinaisons (a, b) des zones × ΔMmax, avec leur poids."""
-    ensembles = [range(len(z['ab'])) for z in modele['zones']] + [range(len(modele['dMmax']))]
-    for ch in itertools.product(*ensembles):
-        poids = math.prod(z['ab'][ch[i]]['poids'] for i, z in enumerate(modele['zones'])) * modele['dMmax'][ch[-1]]['poids']
-        yield ch, poids
+def branches_sources(modele):
+    """Toutes les branches du modèle de sources (variante de taux × ΔMmax), avec leur poids."""
+    for v in modele['variantes']:
+        for idm, dm in enumerate(modele['dMmax']):
+            yield f"sm_{v['id']}_{idm}", v, idm, v['poids'] * dm['poids']
 
 
 def ecrire_jobs(modele, dossier):
     """Écrit les sources, les deux arbres logiques et deux jobs : classique (courbes, fractiles, UHS) et
     désagrégation magnitude-distance aux niveaux imposés (OpenQuake refuse les deux dans un même job)."""
     branches = []
-    for ch, poids in chemins(modele):
-        nom = 'sm_' + '_'.join(map(str, ch))
-        (dossier / f'{nom}.xml').write_text(sources(modele, ch), encoding='utf-8')
+    for nom, v, idm, poids in branches_sources(modele):
+        (dossier / f'{nom}.xml').write_text(sources(modele, v, idm), encoding='utf-8')
         branches.append(f'   <logicTreeBranch branchID="{nom}"><uncertaintyModel>{nom}.xml</uncertaintyModel>'
                         f'<uncertaintyWeight>{poids!r}</uncertaintyWeight></logicTreeBranch>')
     (dossier / 'ssmlt.xml').write_text(NRML.format(
@@ -167,12 +182,12 @@ def calculer(modele):
         return tuple(lancer(job) for job in ecrire_jobs(modele, pathlib.Path(tmp)))
 
 
-def chemin(rlz, flt, modele):
-    """Chemin d'une réalisation dans l'arbre du site : branches (a, b) des zones, ΔMmax, loi."""
+def cle(rlz, flt, modele):
+    """Clé d'une réalisation dans l'arbre du site : « variante|ΔMmax|loi »."""
     ids = {v: k for k, v in GSIM.items()}  # identifiants abrégés des branches de lois (gA0…) → site
     loi = {b.id: ids[type(b.gsim).__name__] for b in flt.gsim_lt.branches}
-    return ([int(c) for c in rlz.sm_lt_path[0].removeprefix('sm_').split('_')]
-            + [[g['id'] for g in modele['gmpe']].index(loi[rlz.gsim_lt_path[0]])])
+    _, variante, idm = rlz.sm_lt_path[0].split('_')
+    return f"{variante}|{idm}|{[g['id'] for g in modele['gmpe']].index(loi[rlz.gsim_lt_path[0]])}"
 
 
 def extraire(calc_id, modele):
@@ -186,7 +201,7 @@ def extraire(calc_id, modele):
     hmaps = ds['hmaps-stats'][0]     # (S, M, P)
     noms_stats = list(oq.hazard_stats())
     realisations = [{
-        'chemin': chemin(r, flt, modele),
+        'cle': cle(r, flt, modele),
         'poids': float(r.weight[0]),
         'poe': {imt: f7s(courbes[r.ordinal, m]) for m, imt in enumerate(imts)},
     } for r in flt.get_realizations()]
@@ -208,7 +223,7 @@ def extraire_desag(calc_id, modele):
     ds = datastore.read(calc_id)
     oq = ds['oqparam']
     imts = list(oq.imtls)
-    chemins = {r.ordinal: chemin(r, ds['full_lt'], modele) for r in ds['full_lt'].get_realizations()}
+    cles = {r.ordinal: cle(r, ds['full_lt'], modele) for r in ds['full_lt'].get_realizations()}
     rlzs = ds['best_rlzs'][0]                 # z → numéro de réalisation
     stats = ds['disagg-stats/Mag_Dist'][0]    # (Ma, D, M, P, 1)
     indiv = ds['disagg-rlzs/Mag_Dist'][0]     # (Ma, D, M, P, Z)
@@ -217,7 +232,7 @@ def extraire_desag(calc_id, modele):
         'dist': [float(x) for x in ds['disagg-bins/Dist'][:]],
         'niveaux': {nom_imt(n['imt']): n['x'] for n in modele['desagregation']['niveaux']},
         'moyenne': {imt: f7s(stats[:, :, m, 0, 0]) for m, imt in enumerate(imts)},
-        'realisations': [{'chemin': chemins[int(r)], 'poe': {imt: f7s(indiv[:, :, m, 0, z]) for m, imt in enumerate(imts)}}
+        'realisations': [{'cle': cles[int(r)], 'poe': {imt: f7s(indiv[:, :, m, 0, z]) for m, imt in enumerate(imts)}}
                          for z, r in enumerate(rlzs)],
     }
 

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import Gmpe from '../src/sismo/gmpe.js';
 import Sc from '../src/sismo/sismicite.js';
+import Geodesie from '../src/sismo/geodesie.js';
 
 const lire = f => JSON.parse(readFileSync(new URL(`./references/${f}`, import.meta.url), 'utf-8'));
 function catalogue() {
@@ -62,4 +63,20 @@ test('estimateur de Weichert identique à HMTK : b, σb, taux et a', () => {
   assert.ok(Math.abs(r.a - w.agr) < 1e-6, `a = ${r.a} au lieu de ${w.agr}`);
   // La loi ajustée redonne le taux de référence à mref et 10^a à M = 0
   assert.ok(Math.abs(r.taux(w.mref) / w.taux_mref - 1) < 1e-6 && Math.abs(Math.log10(r.taux(0)) - w.agr) < 1e-6);
+});
+
+test('invariants des taux de déformation identiques à HMTK (GeodeticStrain)', () => {
+  for (const d of lire('geodesie.json').deformations) {
+    const p = Geodesie.principales(d);
+    for (const [js, oq] of [[p.deuxiemeInvariant, d['2nd_inv']], [p.dilatation, d.dilatation], [p.err, d.err], [p.e1h, d.e1h], [p.e2h, d.e2h]])
+      assert.ok(Math.abs(js - oq) < 1e-9 * Math.max(1, Math.abs(oq)), `${JSON.stringify(d)}`);
+  }
+});
+
+test('taux de moment et équilibre en moment identiques à hazardlib (TruncatedGRMFD)', () => {
+  for (const l of lire('geodesie.json').lois) {
+    assert.ok(Math.abs(Geodesie.momentGR(l) / l.moment - 1) < 1e-12, `moment ${JSON.stringify(l)}`);
+    const a = Geodesie.aDepuisMoment({ moment: l.momentCible, b: l.b, mmin: l.mmin, mmax: l.mmax });
+    assert.ok(Math.abs(a - l.aCible) < 1e-12, `a ${a} contre ${l.aCible}`);
+  }
 });

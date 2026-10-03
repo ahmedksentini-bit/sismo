@@ -45,9 +45,17 @@ la virgule décimale.
     tronquée identiques à `TruncatedGRMFD` (arrondi au pas, centres m₀ + pas/2) ; écarts types
     tronqués à ±3σ ; PoE = 1 − exp(−λT) ; la moyenne de l'arbre porte sur les probabilités,
     les fractiles interpolent les poids cumulés comme `hazardlib.stats.quantile_curve`.
-    Les branches ΔMmax gardent a (pas d'équilibre du moment). Un fractile peut sauter de
+    Variantes de taux : « catalogue » garde a quand Mmax change ; « géodésie » garde le moment
+    χ·Ṁ0 (a recalculé comme `TruncatedGRMFD._set_a`). Une réalisation se désigne par sa clé
+    « variante|ΔMmax|loi ». Un fractile peut sauter de
     quelques % quand deux réalisations quasi égales changent d'ordre : le test vérifie
     l'algorithme sur les courbes d'OpenQuake. Après tout changement du modèle d'école,
     relancer `npm run references` (OpenQuake, ~5 min).
-14. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+14. **Géodésie** (`src/sismo/geodesie.js`) : le champ vrai ne dépend que de x (faille de
+    Savage et Burford, bande de raccourcissement uniforme) ; ε̇ en ns/an (1 mm/an/km = 1000 ns/an) ;
+    e1h est l'axe le plus compressif, comme HMTK ; Kostrov sous la forme de Savage et Simpson
+    (1997) ; M0 = 10^(1,5M + 9,05) ; équilibre en moment par l'intégrale continue de
+    `_set_a`, pas `from_moment` (qui intègre depuis M = 0 avec 9,1). La vérité des exercices est
+    le tenseur moyen du générateur sur la zone, jamais un ajustement bruité.
+15. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.

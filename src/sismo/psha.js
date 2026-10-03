@@ -1,10 +1,12 @@
 import Gmpe from './gmpe.js';
+import Geodesie from './geodesie.js';
 
 // src/sismo/psha.js — calcul probabiliste de l'aléa sismique (PSHA, Cornell-McGuire) avec arbre logique.
 // Sources : zones discrétisées en points, ruptures ponctuelles (Rjb = distance épicentrale, comme la
 // PointMSR d'OpenQuake), loi de Gutenberg-Richter tronquée par classes de magnitude. Écarts types
-// des lois d'atténuation tronqués à ±t·σ. Arbre logique : (a, b) par zone, ΔMmax commun, loi
-// d'atténuation ; énumération complète, moyenne et fractiles pondérés comme hazardlib.stats.
+// des lois d'atténuation tronqués à ±t·σ. Arbre logique : modèle de taux (catalogue : (a, b) par
+// zone ; géodésie : couplage χ commun, loi équilibrée en moment), ΔMmax commun, loi d'atténuation ;
+// énumération complète, moyenne et fractiles pondérés comme hazardlib.stats.
 // Vérifié contre OpenQuake par tests/psha.test.mjs. Solveurs purs.
 const Psha = (() => {
   'use strict';
@@ -97,13 +99,40 @@ const Psha = (() => {
     return S;
   }
 
-  // Énumération complète de l'arbre : (a, b) de chaque zone × ΔMmax × loi d'atténuation.
+  // Variantes du modèle de sources. Catalogue : produit des branches (a, b) de chaque zone, taux
+  // conservés quand Mmax change. Géodésie : une variante par couplage χ, même χ pour toutes les zones,
+  // taux de moment χ·Ṁ0 conservé quand Mmax change (a recalculé comme TruncatedGRMFD._set_a).
+  function variantes(modele) {
+    const out = [];
+    for (const t of modele.taux || [{ id: 'catalogue', poids: 1 }]) {
+      if (t.id === 'catalogue') {
+        let l = [{ cle: [], poids: t.poids, zones: [], etiquettes: { modele: 'catalogue' } }];
+        modele.zones.forEach((z, iz) => {
+          l = l.flatMap(v => z.ab.map((br, i) => ({ cle: [...v.cle, i], poids: v.poids * br.poids,
+            zones: [...v.zones, { a: br.a, b: br.b }], etiquettes: { ...v.etiquettes, ['ab' + iz]: i } })));
+        });
+        out.push(...l.map(v => ({ id: 'c' + v.cle.join(''), poids: v.poids, zones: v.zones, etiquettes: v.etiquettes })));
+      } else if (t.id === 'geodesie') {
+        t.couplage.forEach((c, i) => out.push({ id: 'g' + i, poids: t.poids * c.poids,
+          zones: modele.zones.map((z, iz) => ({ moment: c.chi * t.moments[iz], b: z.ajustement.b })), etiquettes: { modele: 'geodesie', chi: i } }));
+      }
+    }
+    return out.filter(v => v.poids > 0);
+  }
+  // Loi de la zone iz pour une variante et un ΔMmax : { a, b, mmin, mmax }.
+  function loiZone(modele, v, iz, d) {
+    const z = modele.zones[iz], p = v.zones[iz], mmax = z.mmax + d;
+    const a = p.moment !== undefined ? Geodesie.aDepuisMoment({ moment: p.moment, b: p.b, mmin: z.mmin, mmax }) : p.a;
+    return { a, b: p.b, mmin: z.mmin, mmax };
+  }
+  // Énumération complète de l'arbre : variante de taux × ΔMmax × loi d'atténuation. Chaque réalisation a
+  // une clé « variante|ΔMmax|loi » et ses étiquettes (branche retenue dans chaque ensemble).
   function realisations(modele) {
-    const ensembles = [...modele.zones.map(z => z.ab.map((br, i) => ({ i, poids: br.poids }))),
-      modele.dMmax.map((br, i) => ({ i, poids: br.poids })), modele.gmpe.map((br, i) => ({ i, poids: br.poids }))];
-    let liste = [{ chemin: [], poids: 1 }];
-    for (const ens of ensembles) liste = liste.flatMap(r => ens.map(br => ({ chemin: [...r.chemin, br.i], poids: r.poids * br.poids })));
-    return liste;
+    const out = [];
+    variantes(modele).forEach((v, iv) => modele.dMmax.forEach((dm, idm) => modele.gmpe.forEach((g, ig) => {
+      if (dm.poids * g.poids > 0) out.push({ cle: `${v.id}|${idm}|${ig}`, iv, idm, ig, poids: v.poids * dm.poids * g.poids, etiquettes: { ...v.etiquettes, dm: idm, gmpe: ig } });
+    })));
+    return out;
   }
 
   // Calcul complet. Renvoie, pour chaque grandeur, les courbes de probabilité de dépassement en
@@ -111,20 +140,20 @@ const Psha = (() => {
   function calculer(modele, { fractiles = [0.16, 0.5, 0.84] } = {}) {
     const { site, imts, niveaux, dureeVie } = modele, Z = modele.zones.length;
     const opts = { sf: tableSurvie(modele.troncature), distanceMax: modele.distanceMax };
-    const dmMax = Math.max(...modele.dMmax.map(d => d.d));
+    const dmMax = Math.max(...modele.dMmax.map(d => d.d)), vars = variantes(modele);
     // Probabilités par zone et par loi, sur toutes les classes possibles
     const parZone = modele.zones.map(z => {
       const pts = z.points || discretiser(z.polygone, modele.pasGrille), zone = { ...z, points: pts };
       const mags = mfdGR({ a: 0, b: 1, mmin: z.mmin, mmax: z.mmax + dmMax, pas: modele.pasMfd }).map(c => c.M);
       return { zone, mags, S: modele.gmpe.map(g => probabilitesZone(zone, site, Gmpe.LOIS[g.id], imts, niveaux, mags, opts)) };
     });
-    // Taux par zone pour chaque (branche ab, ΔMmax, loi) : λ = Σm taux_m · S_m
+    // Taux par zone pour chaque (variante, ΔMmax, loi) : λ = Σm taux_m · S_m
     const cache = new Map();
-    const tauxZone = (iz, iab, idm, ig) => {
-      const cle = `${iz}|${iab}|${idm}|${ig}`;
+    const tauxZone = (iz, iv, idm, ig) => {
+      const cle = `${iz}|${iv}|${idm}|${ig}`;
       if (cache.has(cle)) return cache.get(cle);
-      const { zone, mags, S } = parZone[iz], br = zone.ab[iab];
-      const mfd = mfdGR({ a: br.a, b: br.b, mmin: zone.mmin, mmax: zone.mmax + modele.dMmax[idm].d, pas: modele.pasMfd });
+      const { mags, S } = parZone[iz];
+      const mfd = mfdGR({ ...loiZone(modele, vars[iv], iz, modele.dMmax[idm].d), pas: modele.pasMfd });
       const lam = imts.map(() => new Float64Array(niveaux.length));
       mfd.forEach((c, m) => {
         if (Math.abs(mags[m] - c.M) > 1e-9) throw new Error('classes de magnitude incohérentes');
@@ -134,10 +163,9 @@ const Psha = (() => {
       return lam;
     };
     const rlz = realisations(modele).map(r => {
-      const idm = r.chemin[Z], ig = r.chemin[Z + 1];
       const lam = imts.map(() => new Float64Array(niveaux.length));
       for (let iz = 0; iz < Z; iz++) {
-        const lz = tauxZone(iz, r.chemin[iz], idm, ig);
+        const lz = tauxZone(iz, r.iv, r.idm, r.ig);
         lam.forEach((o, k) => { for (let l = 0; l < o.length; l++) o[l] += lz[k][l]; });
       }
       return { ...r, lam, poe: lam.map(v => Float64Array.from(v, x => 1 - Math.exp(-x * dureeVie))) };
@@ -145,7 +173,7 @@ const Psha = (() => {
     const poids = rlz.map(r => r.poids);
     const stat = f => imts.map((_, k) => Float64Array.from(niveaux, (_, l) => f(rlz.map(r => r.poe[k][l]))));
     return {
-      imts, niveaux, dureeVie, realisations: rlz, parZone,
+      imts, niveaux, dureeVie, realisations: rlz, variantes: vars, parZone,
       moyenne: stat(v => v.reduce((s, x, i) => s + x * poids[i], 0) / poids.reduce((a, b) => a + b, 0)),
       fractiles: Object.fromEntries(fractiles.map(q => [q, stat(v => quantile(q, v, poids))])),
     };
@@ -190,31 +218,33 @@ const Psha = (() => {
   }
 
   // Désagrégation magnitude-distance du taux de dépassement d'un niveau x (classes de `largeurM` en
-  // magnitude, de `largeurR` km en distance). Sans `chemin`, chaque case est le taux moyen pondéré sur
-  // l'arbre (comme la moyenne d'OpenQuake) ; avec `chemin`, celui d'une seule réalisation. Distance des
+  // magnitude, de `largeurR` km en distance). Sans `cle`, chaque case est le taux moyen pondéré sur
+  // l'arbre (comme la moyenne d'OpenQuake) ; avec `cle`, celui d'une seule réalisation. Distance des
   // classes : épicentrale (Rjb des ruptures ponctuelles) ou hypocentrale (`distance: 'rrup'`, celle
   // d'OpenQuake, voir distanceHypocentrale). Renvoie aussi les parts (somme 1), M̄, R̄ et la part de chaque zone.
-  function desagregation(modele, imt, x, { largeurM = 0.5, largeurR = 20, chemin = null, distance = 'rjb' } = {}) {
-    const sf = tableSurvie(modele.troncature), lnx = Math.log(x), site = modele.site, Z = modele.zones.length;
+  function desagregation(modele, imt, x, { largeurM = 0.5, largeurR = 20, cle = null, distance = 'rjb' } = {}) {
+    const sf = tableSurvie(modele.troncature), lnx = Math.log(x), site = modele.site, vars = variantes(modele);
     const cases = new Map(), parZone = modele.zones.map(() => 0);
     const ajouter = (M, R, v, iz) => {
       const cle = `${Math.floor(M / largeurM + 1e-9)}|${Math.floor(R / largeurR)}`;
       cases.set(cle, (cases.get(cle) || 0) + v);
       parZone[iz] += v;
     };
-    // Poids des branches retenues : toutes (poids de l'arbre) ou celles du chemin (poids 1)
-    const sel = (ens, e) => ens.map((br, i) => (chemin ? (chemin[e] === i ? 1 : 0) : br.poids));
-    const wDm = sel(modele.dMmax, Z), wG = sel(modele.gmpe, Z + 1);
+    // Poids retenus : ceux de l'arbre, ou 1 pour la seule réalisation demandée
+    const [vSel, dmSel, gSel] = cle ? cle.split('|') : [];
+    const wV = vars.map(v => (cle ? (v.id === vSel ? 1 : 0) : v.poids));
+    const wDm = modele.dMmax.map((d, i) => (cle ? (i === +dmSel ? 1 : 0) : d.poids));
+    const wG = modele.gmpe.map((g, i) => (cle ? (i === +gSel ? 1 : 0) : g.poids));
     modele.zones.forEach((z, iz) => {
-      const pts = z.points || discretiser(z.polygone, modele.pasGrille), wAb = sel(z.ab, iz);
-      // Taux moyen par classe de magnitude sur les branches (a, b) × ΔMmax
+      const pts = z.points || discretiser(z.polygone, modele.pasGrille);
+      // Taux moyen par classe de magnitude sur les variantes de taux × ΔMmax
       const taux = new Map();
-      z.ab.forEach((br, iab) => modele.dMmax.forEach((dm, idm) => {
-        const w = wAb[iab] * wDm[idm];
+      vars.forEach((v, iv) => modele.dMmax.forEach((dm, idm) => {
+        const w = wV[iv] * wDm[idm];
         if (!w) return;
-        for (const c of mfdGR({ a: br.a, b: br.b, mmin: z.mmin, mmax: z.mmax + dm.d, pas: modele.pasMfd })) {
-          const cle = c.M.toFixed(6);
-          taux.set(cle, { M: c.M, t: (taux.has(cle) ? taux.get(cle).t : 0) + w * c.taux });
+        for (const c of mfdGR({ ...loiZone(modele, v, iz, dm.d), pas: modele.pasMfd })) {
+          const k = c.M.toFixed(6);
+          taux.set(k, { M: c.M, t: (taux.has(k) ? taux.get(k).t : 0) + w * c.taux });
         }
       }));
       modele.gmpe.forEach((g, ig) => {
@@ -244,29 +274,41 @@ const Psha = (() => {
   }
 
   // Sensibilité : pour chaque ensemble de branches, niveau moyen à la probabilité P quand on impose
-  // chacune de ses branches (les autres gardent leurs poids). Base du graphique « en tornade ».
+  // chacune de ses branches, les autres gardant leurs poids. Un ensemble emboîté (les (a, b) d'une zone
+  // sous « catalogue », χ sous « géodésie ») est évalué dans son sous-arbre. Base du graphique en tornade.
   function sensibilite(resultat, modele, k, P) {
     const virg = (x, d) => x.toFixed(d).replace('.', ',').replace(/^-/, '−');
-    const noms = [...modele.zones.map(z => `(a, b) ${z.nom}`), 'Mmax', 'Loi d\'atténuation'];
-    const branches = [...modele.zones.map(z => z.ab.map(br => `b = ${virg(br.b, 2)}`)),
-      modele.dMmax.map(d => `ΔMmax = ${d.d >= 0 ? '+' : ''}${virg(d.d, 1)}`), modele.gmpe.map(g => Gmpe.LOIS[g.id].nom)];
-    return noms.map((nom, e) => ({
-      nom,
-      branches: branches[e].map((lib, i) => {
-        const sel = resultat.realisations.filter(r => r.chemin[e] === i), w = sel.reduce((s, r) => s + r.poids, 0);
+    const geo = (modele.taux || []).find(t => t.id === 'geodesie');
+    const ensembles = [
+      ['modele', 'Modèle de taux', i => (modele.taux || []).find(t => t.id === i)?.nom || i],
+      ...modele.zones.map((z, iz) => ['ab' + iz, `(a, b) ${z.nom}`, i => `b = ${virg(z.ab[i].b, 2)}`]),
+      ['chi', 'Couplage χ', i => `χ = ${virg(geo.couplage[i].chi, 2)}`],
+      ['dm', 'Mmax', i => `ΔMmax = ${modele.dMmax[i].d >= 0 ? '+' : ''}${virg(modele.dMmax[i].d, 1)}`],
+      ['gmpe', 'Loi d\'atténuation', i => Gmpe.LOIS[modele.gmpe[i].id].nom],
+    ];
+    const out = [];
+    for (const [cle, nom, libelle] of ensembles) {
+      const dans = resultat.realisations.filter(r => r.etiquettes[cle] !== undefined);
+      if (!dans.length) continue;
+      const valeurs = [...new Set(dans.map(r => r.etiquettes[cle]))];
+      out.push({ nom, cle, branches: valeurs.map(val => {
+        const sel = dans.filter(r => r.etiquettes[cle] === val), w = sel.reduce((s, r) => s + r.poids, 0);
         const poe = Float64Array.from(resultat.niveaux, (_, l) => sel.reduce((s, r) => s + r.poids * r.poe[k][l], 0) / w);
-        return { libelle: lib, niveau: niveauPourProba(resultat.niveaux, poe, P) };
-      }),
-    }));
+        return { libelle: libelle(val), niveau: niveauPourProba(resultat.niveaux, poe, P) };
+      }) });
+    }
+    return out;
   }
 
   // Modèle d'école (aucune donnée régionale) : un site au rocher, une zone proche peu active et une
   // zone lointaine plus active, en km autour du site ; foyers à 10 km de profondeur (sans effet sur les
-  // lois en Rjb, seulement sur la distance hypocentrale). Les lois (a, b) viennent d'un ajustement de
-  // Weichert : b, σ(b) et le taux au-dessus de 4.
+  // lois en Rjb, seulement sur la distance hypocentrale). Deux modèles de taux à poids égaux : le
+  // catalogue (ajustement de Weichert : b, σ(b), taux au-dessus de 4) et la géodésie (taux de moment de
+  // Kostrov du champ GNSS d'école, μ = 30 GPa, H = 15 km ; couplage χ de 0,3 à 0,9).
   const niveauxDefaut = (n = 30, x0 = 1e-3, x1 = 3) => Array.from({ length: n }, (_, i) => x0 * Math.pow(x1 / x0, i / (n - 1)));
+  const COUPLAGE = [{ chi: 0.3, poids: 0.25 }, { chi: 0.6, poids: 0.5 }, { chi: 0.9, poids: 0.25 }];
   function modeleDefaut() {
-    return {
+    const m = {
       site: { x: 0, y: 0, vs30: 800 },
       imts: ['PGA', 0.04, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.7, 1, 1.5, 2, 3],
       niveaux: niveauxDefaut(),
@@ -282,8 +324,13 @@ const Psha = (() => {
       dMmax: [{ d: -0.3, poids: 0.3 }, { d: 0, poids: 0.5 }, { d: 0.3, poids: 0.2 }],
       gmpe: [{ id: 'akkar2014', poids: 0.5 }, { id: 'bindi2014', poids: 0.5 }],
     };
+    m.taux = [
+      { id: 'catalogue', nom: 'Catalogue', poids: 0.5 },
+      { id: 'geodesie', nom: 'Géodésie', poids: 0.5, couplage: COUPLAGE, moments: Geodesie.momentsVrais(m.zones.map(z => z.polygone)) },
+    ];
+    return m;
   }
 
-  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, distanceHypocentrale, dansPolygone, discretiser, branchesAB, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite };
+  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite };
 })();
 export default Psha;

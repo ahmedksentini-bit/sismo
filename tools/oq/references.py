@@ -3,7 +3,9 @@
 Écrit tests/references/*.json, que `npm test` compare aux solveurs du site :
 - gmpe_akkar2014.json, gmpe_bindi2014.json : médianes et écarts types d'AkkarEtAlRjb2014 et de
   BindiEtAl2014Rjb sur une grille (M, Rjb, Vs30, style, période) ;
-- hmtk.json : déclusterage de Gardner et Knopoff et estimateur de Weichert sur tests/references/catalogue.csv.
+- hmtk.json : déclusterage de Gardner et Knopoff et estimateur de Weichert sur tests/references/catalogue.csv ;
+- geodesie.json : invariants des taux de déformation (GeodeticStrain d'HMTK) ; taux de moment d'une
+  Gutenberg-Richter tronquée et valeur a qui équilibre un taux de moment (TruncatedGRMFD de hazardlib).
 Prérequis : openquake.engine installé (voir README) ; le catalogue est produit par exporter-catalogue.mjs.
 """
 import csv
@@ -18,6 +20,8 @@ from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
 from openquake.hmtk.seismicity.occurrence.weichert import Weichert
+from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
+from openquake.hazardlib.mfd import TruncatedGRMFD
 import openquake.engine
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
@@ -72,12 +76,32 @@ def hmtk():
     }
 
 
+def geodesie():
+    rng = np.random.default_rng(2024)
+    # Tenseurs en ns/an : cas particuliers (raccourcissement E–O, cisaillement pur, isotrope) et tirages
+    t = np.array([[-20.0, 0.0, 0.0], [0.0, 0.0, -1.5], [5.0, 5.0, 0.0], [-3.0, 8.0, 4.0]] + rng.normal(0, 15, (40, 3)).tolist())
+    g = GeodeticStrain()
+    g.get_secondary_strain_data({'longitude': np.zeros(len(t)), 'latitude': np.zeros(len(t)),
+                                 'exx': t[:, 0], 'eyy': t[:, 1], 'exy': t[:, 2]})
+    deformations = [{'exx': float(e[0]), 'eyy': float(e[1]), 'exy': float(e[2]),
+                     **{k: float(g.data[k][i]) for k in ('2nd_inv', 'dilatation', 'err', 'e1h', 'e2h')}} for i, e in enumerate(t)]
+    lois = []
+    for a, b, mmin, mmax in [(3.4, 1.0, 4.0, 6.5), (3.68, 0.9, 4.0, 7.3), (4.2, 0.75, 4.5, 8.0), (2.5, 1.5, 4.0, 6.0), (3.0, 1.2, 5.0, 7.6)]:
+        mfd = TruncatedGRMFD(mmin, mmax, 0.1, a, b)
+        tmr = mfd._get_total_moment_rate()
+        cible = 1.0e17
+        mfd._set_a(cible)
+        lois.append({'a': a, 'b': b, 'mmin': mmin, 'mmax': mmax, 'moment': tmr, 'momentCible': cible, 'aCible': mfd.a_val})
+    return {'deformations': deformations, 'lois': lois}
+
+
 def main():
     entete = {'outil': f'OpenQuake {openquake.engine.__version__}'}
     (REF / 'gmpe_akkar2014.json').write_text(json.dumps({**entete, **gmpe()}, ensure_ascii=False), encoding='utf-8')
     (REF / 'gmpe_bindi2014.json').write_text(json.dumps({**entete, **gmpe(BindiEtAl2014Rjb, ('PGA', 'PGV', 0.02, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0))}, ensure_ascii=False), encoding='utf-8')
     (REF / 'hmtk.json').write_text(json.dumps({**entete, **hmtk()}, ensure_ascii=False), encoding='utf-8')
-    print('écrit tests/references/gmpe_akkar2014.json, gmpe_bindi2014.json et hmtk.json')
+    (REF / 'geodesie.json').write_text(json.dumps({**entete, **geodesie()}, ensure_ascii=False), encoding='utf-8')
+    print('écrit tests/references/gmpe_akkar2014.json, gmpe_bindi2014.json, hmtk.json et geodesie.json')
 
 
 if __name__ == '__main__':
