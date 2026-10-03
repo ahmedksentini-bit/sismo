@@ -111,7 +111,7 @@ main { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 2
 .champ > label, .champ > .etiquette { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12.5px; font-weight: 800; }
 .champ output { color: var(--ink); font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 100%; accent-color: var(--blue); }
-select, input[type="number"] { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--input-line); border-radius: 10px; background: var(--input); }
+select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--input-line); border-radius: 10px; background: var(--input); }
 .segments { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--input-line); border-radius: 11px; background: var(--input); }
 .segments button { flex: 1; min-width: 0; padding: 6px 8px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 13px; font-weight: 800; cursor: pointer; }
 .segments button[aria-pressed="true"] { background: var(--paper); color: var(--blue-ink); box-shadow: 0 1px 3px #0f172a26; }
@@ -201,6 +201,14 @@ select, input[type="number"] { width: 100%; min-width: 0; padding: 8px 10px; bor
 .table-completude input { width: 100%; padding: 6px 8px; border: 1px solid var(--input-line); border-radius: 8px; background: var(--input); font-family: var(--mono); }
 #sc-fmd { display: block; width: 100%; height: 320px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 
+/* Banc aléa */
+#al-carte { display: block; width: 100%; height: 400px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; touch-action: pan-y; }
+#al-courbe { display: block; width: 100%; height: 360px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#al-uhs { display: block; width: 100%; height: 330px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#al-desag { display: block; width: 100%; height: 330px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#al-tornade { display: block; width: 100%; height: 270px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#al-imts { flex-wrap: wrap; }
+
 /* Banc profil */
 #p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
 
@@ -212,6 +220,8 @@ select, input[type="number"] { width: 100%; min-width: 0; padding: 8px 10px; bor
   .afficheurs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #traces { height: 330px; }
   #p-section { height: 480px; }
+  #al-carte { height: 290px; }
+  #al-courbe, #al-uhs, #al-desag { height: 300px; }
   #s-scene { height: 250px; }
   .hodo-cadre { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .curseur-lecture { margin-left: 0; width: 100%; }

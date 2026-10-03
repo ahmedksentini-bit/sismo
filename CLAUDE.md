@@ -36,10 +36,18 @@ la virgule décimale.
 11. **Sismicité** : magnitudes rangées par classes de 0,1 ; b d'Aki avec la correction
     d'Utsu (Mc − ΔM/2). Les taux et les probabilités de Poisson se calculent sur le
     catalogue déclusteré ; la vérité des exercices est la loi des chocs principaux.
-12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et (à venir)
-    le moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
+12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et le
+    moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le
     déclusterage suit les conventions de HMTK (année de 364,75 j, amas, pas de condition de
     magnitude). OpenQuake n'est jamais embarqué dans le site (AGPL).
-13. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+13. **PSHA** (`src/sismo/psha.js`) : classes de magnitude et taux de la Gutenberg-Richter
+    tronquée identiques à `TruncatedGRMFD` (arrondi au pas, centres m₀ + pas/2) ; écarts types
+    tronqués à ±3σ ; PoE = 1 − exp(−λT) ; la moyenne de l'arbre porte sur les probabilités,
+    les fractiles interpolent les poids cumulés comme `hazardlib.stats.quantile_curve`.
+    Les branches ΔMmax gardent a (pas d'équilibre du moment). Un fractile peut sauter de
+    quelques % quand deux réalisations quasi égales changent d'ordre : le test vérifie
+    l'algorithme sur les courbes d'OpenQuake. Après tout changement du modèle d'école,
+    relancer `npm run references` (OpenQuake, ~5 min).
+14. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.

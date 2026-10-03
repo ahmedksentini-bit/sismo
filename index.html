@@ -22,6 +22,7 @@
     <button type="button" data-onglet="profil" aria-pressed="false">Profil</button>
     <button type="button" data-onglet="spectre" aria-pressed="false">Spectre</button>
     <button type="button" data-onglet="sismicite" aria-pressed="false">Sismicité</button>
+    <button type="button" data-onglet="alea" aria-pressed="false">Aléa</button>
   </nav>
 </header>
 
@@ -42,6 +43,8 @@
         En balayant les périodes, on obtient le spectre de réponse de l'accélérogramme, que l'on compare au spectre élastique de l'Eurocode 8.</p>
       <p class="chapeau" id="chapeau-sismicite" hidden>Un siècle de catalogue sismique : choisir la période et la magnitude à partir desquelles il est complet,
         retirer les répliques, ajuster la loi de Gutenberg-Richter, puis en tirer des taux annuels et des probabilités sur la durée de vie d'un ouvrage.</p>
+      <p class="chapeau" id="chapeau-alea" hidden>Deux zones sources, deux lois d'atténuation et un arbre logique : le calcul probabiliste (PSHA) somme tous
+        les séismes possibles pour donner la courbe d'aléa du site, le spectre à probabilité uniforme et le scénario qui domine. Moteur vérifié contre OpenQuake.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -461,6 +464,87 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-alea" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Modèle de sources">
+        <h2>Modèle de sources<small>Zones discrétisées en points tous les 10 km ; un clic déplace le site</small></h2>
+        <canvas id="al-carte" aria-label="Zones sources et site"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-s)"></i>zone A</span><span><i style="background:var(--amp)"></i>zone B</span><span><i class="tirets" style="border-color:var(--muted)"></i>50, 100 et 200 km du site</span><span class="curseur-lecture" id="al-curseur" style="margin-left:0">—</span></p>
+      </section>
+      <section class="carte" aria-label="Courbe d'aléa">
+        <h2>Courbe d'aléa<small>Probabilité de dépasser chaque niveau en 50 ans : une courbe fine par réalisation de l'arbre logique, la moyenne et les fractiles</small></h2>
+        <div class="outils"><div class="segments compact" role="group" aria-label="Grandeur" id="al-imts"></div></div>
+        <canvas id="al-courbe" aria-label="Courbes d'aléa du site"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>moyenne</span><span><i class="tirets" style="border-color:var(--blue)"></i>fractiles 16 % et 84 %</span><span><i style="background:var(--grid-strong)"></i>réalisations</span><span><i class="tirets" style="border-color:var(--teal)"></i>probabilité visée</span></p>
+      </section>
+      <section class="carte" aria-label="Spectre à probabilité uniforme">
+        <h2>Spectre à probabilité uniforme (UHS)<small>Chaque ordonnée a la même probabilité d'être dépassée ; en regard, les spectres élastiques de l'EN 1998-1:2004 calés sur le PGA</small></h2>
+        <canvas id="al-uhs" aria-label="Spectre à probabilité uniforme et spectres de l'Eurocode 8"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>UHS moyen</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>fractiles 16 – 84 %</span><span><i class="tirets" style="border-color:var(--teal)"></i>EC8 type 1</span><span><i class="tirets" style="border-color:var(--amp)"></i>EC8 type 2</span><span id="al-legende-ec8"></span></p>
+      </section>
+      <section class="carte" aria-label="Désagrégation">
+        <h2>Désagrégation magnitude – distance<small>Part de chaque couple (M, R) dans le taux de dépassement du niveau de l'UHS moyen, pour la grandeur choisie</small></h2>
+        <canvas id="al-desag" aria-label="Désagrégation en magnitude et distance"></canvas>
+      </section>
+      <section class="carte" aria-label="Sensibilité à l'arbre logique">
+        <h2>Ce qui pèse dans l'arbre logique<small>Niveau moyen quand on impose une branche, les autres gardant leurs poids ; trait vertical : moyenne de l'arbre</small></h2>
+        <canvas id="al-tornade" aria-label="Sensibilité aux branches de l'arbre logique"></canvas>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="al-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="al-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Probabilité visée">
+        <p class="sous-titre">Probabilité visée</p>
+        <div class="segments" role="group" aria-label="Probabilité" style="margin-bottom:12px">
+          <button type="button" data-al-proba="0.1|50">10 % en 50 ans</button><button type="button" data-al-proba="0.02|50">2 % en 50 ans</button><button type="button" data-al-proba="0.1|10">10 % en 10 ans</button>
+        </div>
+        <div class="afficheurs deux" id="al-afficheurs"></div>
+      </section>
+      <section class="carte" id="al-panneau-explorer" aria-label="Modèle">
+        <p class="sous-titre">Site</p>
+        <div class="champ"><label for="al-vs30">Vs30 <output id="al-vs30-v"></output></label><input type="range" id="al-vs30" min="200" max="1100" step="10"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Zones sources</p>
+        <div class="segments" role="group" aria-label="Zone" style="margin-bottom:12px"><button type="button" data-al-zone="0">Zone A (proche)</button><button type="button" data-al-zone="1">Zone B (lointaine)</button></div>
+        <div class="champ"><label for="al-lam">Taux annuel λ(M ≥ 4) <output id="al-lam-v"></output></label><input type="range" id="al-lam" min="-1.5" max="0.6" step="0.01"></div>
+        <div class="champ"><label for="al-b">Valeur b <output id="al-b-v"></output></label><input type="range" id="al-b" min="0.7" max="1.3" step="0.01"></div>
+        <div class="champ"><label for="al-mmax">Magnitude maximale Mmax <output id="al-mmax-v"></output></label><input type="range" id="al-mmax" min="5.5" max="7.6" step="0.1"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Arbre logique</p>
+        <label class="case"><input type="checkbox" id="al-inc-ab"> (a, b) de chaque zone : b ± 1,645 σ (poids 0,185 / 0,63 / 0,185)</label>
+        <label class="case" style="margin-top:6px"><input type="checkbox" id="al-inc-mmax"> Mmax − 0,3 / + 0 / + 0,3 (poids 0,3 / 0,5 / 0,2)</label>
+        <div class="champ" style="margin-top:12px"><label for="al-poids">Poids d'Akkar et al. (2014) face à Bindi et al. (2014) <output id="al-poids-v"></output></label><input type="range" id="al-poids" min="0" max="1" step="0.05"></div>
+        <p class="aide" id="al-arbre"></p>
+        <div class="actions" style="margin-top:10px"><button type="button" class="bouton secondaire" id="al-defaut">Revenir au modèle d'école</button></div>
+      </section>
+      <section class="carte" id="al-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="al-exo-num"></span>
+        <p class="enonce">Le site et les zones ont changé. Sur la courbe d'aléa moyenne et sur l'UHS, lisez les accélérations à 10 % en 50 ans ;
+          sur la désagrégation, dites quelle zone domine aux longues périodes.</p>
+        <div class="champ"><label for="al-r-pga">PGA à 475 ans (g)</label><input type="text" id="al-r-pga" inputmode="decimal" autocomplete="off" placeholder="ex. 0,12"></div>
+        <div class="champ"><label for="al-r-sa1">Sa(1 s) à 475 ans (g)</label><input type="text" id="al-r-sa1" inputmode="decimal" autocomplete="off" placeholder="ex. 0,045"></div>
+        <div class="champ"><span class="etiquette">Zone qui domine Sa(1 s)</span>
+          <div class="segments" role="group" aria-label="Zone dominante"><button type="button" data-al-dom="0" aria-pressed="false">Zone A</button><button type="button" data-al-dom="1" aria-pressed="false">Zone B</button></div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="al-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="al-nouvel-exo">Nouvel exercice</button></div>
+        <div id="al-corrige"></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Incertitude aléatoire</b> : magnitudes, positions et dispersion σ des lois sont intégrées dans chaque courbe. Tronquer à 3σ coupe les queues.</li>
+          <li><b>Incertitude épistémique</b> : on ne sait pas quel modèle est le bon ; l'arbre logique donne une courbe par réalisation, la moyenne en fait la synthèse et les fractiles mesurent la dispersion.</li>
+          <li><b>Désagrégation</b> : courtes périodes, séismes modérés et proches ; longues périodes, grands séismes lointains. C'est la raison d'être des spectres de type 1 et 2 de l'EC8.</li>
+          <li><b>L'EN 1998-1:2004</b> recommande 10 % en 50 ans (475 ans) pour le non-effondrement ; agR, accélération de référence au rocher (sol A) à cette probabilité, est fixée par l'annexe nationale à partir d'une étude d'aléa comme celle-ci.</li>
+        </ul>
+        <p class="aide" id="al-verif"></p>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -484,6 +568,7 @@
 <script type="module" src="src/banc-profil.js"></script>
 <script type="module" src="src/banc-spectre.js"></script>
 <script type="module" src="src/banc-sismicite.js"></script>
+<script type="module" src="src/banc-alea.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
