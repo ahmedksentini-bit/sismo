@@ -299,3 +299,28 @@ test('chapitre 12 : les exemples chiffrés du texte', async () => {
   assert.deepEqual([surf(0.05).toFixed(2), surf(0.25).toFixed(2), surf(0.25, true).toFixed(2), surf(0.5).toFixed(2)], ['0.14', '0.46', '0.89', '0.76']);
   for (const t of ['= <strong>2,5 Hz</strong>', '≈ <strong>5,2</strong>', 'Vs30 = 273 m/s, est de classe E', 'Vs30 = 267 m/s (classe C)', '0,46 g (1,9)', 'en prédirait 0,89 g']) assert.ok(cours.includes(t), t);
 });
+
+test('chapitre 13 : les exemples chiffrés du texte', async () => {
+  const L = (await import('../src/sismo/liquefaction.js')).default;
+  const sv = 18 * 5, u = 9.8 * 3, sve = sv - u, p = L.pointSPT(12, 10, sv, sve, 0.25, 6.5, 5);
+  assert.deepEqual([sv, u.toFixed(1), sve.toFixed(1)], [90, '29.4', '60.6']);
+  assert.equal(L.rd(5, 6.5).toFixed(2), '0.93');
+  assert.equal((sv / sve).toFixed(2), '1.49');
+  assert.equal(p.csr.toFixed(3), '0.225');
+  assert.deepEqual([p.n1cs.toFixed(1), p.crr75.toFixed(3), p.msf.toFixed(2), p.ks.toFixed(2), p.crr.toFixed(3), p.fs.toFixed(2)], ['16.4', '0.169', '1.14', '1.06', '0.203', '0.90']);
+  assert.equal(L.pointSPT(25, 10, sv, sve, 0.25, 6.5, 5).fs, 2);
+  assert.equal(1 / 0.8, 1.25);
+  for (const t of ['σ\'<sub>v</sub> = 60,6 kPa', '= <strong>0,225</strong>', '<strong>FS = 0,90</strong>', 'λ = 0,8, le\n     coefficient doit atteindre 1/0,8 = <strong>1,25</strong>']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 14 : les exemples chiffrés du texte', async () => {
+  const I = (await import('../src/sismo/inelastique.js')).default, S = (await import('../src/sismo/spectre.js')).default;
+  assert.equal(I.regles.n2(4, 1, 0.6), 4);
+  assert.equal(I.regles.n2(4, 0.3, 0.6), 7);
+  assert.equal(I.regles.energies(4), 8.5);
+  assert.equal(S.ec8(0.4, { type: 1, sol: 'C', ag: 0.2 }).toFixed(3), '0.575');
+  assert.equal(S.ec8Calcul(0.4, { type: 1, sol: 'C', ag: 0.2, q: 3.9 }).toFixed(3), '0.147');
+  assert.equal((0.2 * 1.15 * 2.5 / 3.9 * 0.6 * 2 / 2.5 ** 2).toFixed(3), '0.028');
+  assert.equal(S.ec8Calcul(2.5, { type: 1, sol: 'C', ag: 0.2, q: 3.9 }), 0.2 * 0.2);
+  for (const t of ['0,575 g au plateau', '0,6/0,3 =\n       <strong>7</strong>', '(16 + 1)/2 = 8,5', '<strong>0,147 g</strong>', 'β·a<sub>g</sub> = 0,04 g']) assert.ok(cours.includes(t), t);
+});

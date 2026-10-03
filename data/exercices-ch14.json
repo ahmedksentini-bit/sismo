@@ -1,0 +1,217 @@
+{
+ "chapitre": "ch14",
+ "exercices": [
+  {
+   "id": "ch14-regles",
+   "titre": "Ductilité demandée par les règles R–μ–T",
+   "difficulte": 1,
+   "graine": 2928399128,
+   "enonce": "Une structure est dimensionnée pour la force élastique divisée par R = 5. Le spectre a pour période de coin TC = 0,60 s.",
+   "donnees": [
+    {
+     "label": "R",
+     "valeur": "5"
+    },
+    {
+     "label": "TC",
+     "valeur": "0,60 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Ductilité demandée à T = 0,9 s (règle des égaux déplacements) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 5,
+     "explication": "T > TC : μ = R = 5.",
+     "tolerance": 0.05
+    },
+    {
+     "texte": "Ductilité demandée à T = 0,36 s (règle de la méthode N2) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 7.66667,
+     "explication": "T < TC : μ = 1 + (R − 1)·TC/T = 1 + 4 × 0,60/0,36 = 7,67.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Ductilité selon la règle des égales énergies ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 13,
+     "explication": "μ = (R² + 1)/2 = (25 + 1)/2 = 13,0.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Pour une même réduction R, quels ouvrages demandent la plus grande ductilité ?",
+     "type": "choix",
+     "options": [
+      "les ouvrages souples, de longue période",
+      "les ouvrages raides, de courte période",
+      "tous demandent μ = R",
+      "aucun : la ductilité ne dépend que du matériau"
+     ],
+     "reponse": 1,
+     "explication": "Sous TC, le déplacement plastique dépasse nettement le déplacement élastique : μ croît quand T diminue."
+    }
+   ]
+  },
+  {
+   "id": "ch14-oscillateur",
+   "titre": "Un oscillateur élastoplastique",
+   "difficulte": 2,
+   "graine": 2077121707,
+   "enonce": "Un oscillateur de période 1 s (ξ = 5 %) aurait, s'il restait élastique, une pseudo-accélération maximale de 0,0599 g sous un accélérogramme. On lui donne une résistance égale à cette force divisée par R = 2, sans écrouissage ; le calcul pas à pas donne un déplacement maximal de 17,5 mm.",
+   "donnees": [
+    {
+     "label": "T",
+     "valeur": "1 s"
+    },
+    {
+     "label": "Sa élastique",
+     "valeur": "0,0599 g"
+    },
+    {
+     "label": "R",
+     "valeur": "2"
+    },
+    {
+     "label": "u_max",
+     "valeur": "17,5 mm"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Déplacement élastique limite u_y = (Sa/R)/ω² ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 7.44228,
+     "explication": "ω = 2π/1 = 6,28 rad/s ; u_y = 0,0599 × 9,81 / 2 / 6,28² = 7,44 mm.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Ductilité μ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 2.35143,
+     "explication": "μ = 17,5 / 7,44 = 2,35.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Déplacement de l'oscillateur élastique Sa/ω² ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 14.8846,
+     "explication": "0,0599 × 9,81 / 6,28² = 14,9 mm : la règle des égaux déplacements le compare à u_max = 17,5 mm.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch14-calcul",
+   "titre": "Spectre de calcul de l'EN 1998-1:2004",
+   "difficulte": 1,
+   "graine": 3792082846,
+   "enonce": "Sol D, type 1 (S = 1,35, TB = 0,20 s, TC = 0,80 s, TD = 2,0 s), a_g = 0,12 g, coefficient de comportement q = 3,9, β = 0,2.",
+   "donnees": [
+    {
+     "label": "Sol",
+     "valeur": "D (S = 1,35)"
+    },
+    {
+     "label": "a_g",
+     "valeur": "0,12 g"
+    },
+    {
+     "label": "q",
+     "valeur": "3,9"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Plateau du spectre de calcul a_g·S·2,5/q ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.103846,
+     "explication": "0,12 × 1,35 × 2,5 / 3,9 = 0,104 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Sd pour T = 1 s ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.0830769,
+     "explication": "Formule de la branche : 0,0831 g ; plancher β·a_g = 0,024 g ; Sd = 0,0831 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Sd pour T = 0 ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.108,
+     "explication": "Sd(0) = a_g·S·2/3 = 0,108 g (expression 3.13).",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch14-n2",
+   "titre": "Déplacement cible d'un système à courte période",
+   "difficulte": 2,
+   "graine": 464564354,
+   "enonce": "Un système équivalent à un degré de liberté a pour période T* = 0,2 s et pour résistance F*y/m* = 0,3 g. Le spectre élastique donne Se(T*) = 0,90 g ; TC = 0,50 s.",
+   "donnees": [
+    {
+     "label": "T*",
+     "valeur": "0,2 s"
+    },
+    {
+     "label": "F*y/m*",
+     "valeur": "0,3 g"
+    },
+    {
+     "label": "Se(T*)",
+     "valeur": "0,90 g"
+    },
+    {
+     "label": "TC",
+     "valeur": "0,50 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Déplacement élastique d*e = Se·(T*/2π)² ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 8.94565,
+     "explication": "0,90 × 9,81 × (0,2/2π)² = 8,95 mm.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "qu = Se(T*)·m*/F*y ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 3,
+     "explication": "qu = 0,90 / 0,3 = 3,000.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Déplacement cible d*t (EN 1998-1:2004, annexe B) ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 17.8913,
+     "explication": "T* < TC : d*t = (d*e/qu)·(1 + (qu − 1)·TC/T*) = (8,95/3,000) × (1 + 2,000 × 0,50/0,2) = 17,9 mm, au moins d*e.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Ductilité correspondante d*t/d*y ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 6,
+     "explication": "d*y = (F*y/m*)·(T*/2π)² = 2,98 mm ; μ = 6,00.",
+     "toleranceRel": 0.03
+    }
+   ]
+  }
+ ]
+}

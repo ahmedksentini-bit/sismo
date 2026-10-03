@@ -1711,6 +1711,255 @@
     <a class="secondary" href="labo.html#effets-de-site">Travaux pratiques : banc « Site »</a></div>
 </section>
 
+<section id="ch13" class="card">
+  <h2>13 · La liquéfaction des sols</h2>
+
+  <h3>Le phénomène</h3>
+  <p>Un sable lâche et saturé, cisaillé en cycles par les ondes S, tend à se tasser. L'eau des pores n'a pas
+     le temps de s'échapper : sa <strong>pression interstitielle</strong> monte, la contrainte effective
+     entre les grains chute, et le sol perd sa résistance au cisaillement — il se comporte un temps comme un
+     liquide. C'est la <strong>liquéfaction</strong>. À Niigata, en 1964, des immeubles se sont couchés sur
+     leurs fondations intactes ; à Kobe, en 1995, les quais du port ont glissé vers la mer. Ses conséquences :
+     tassements, rupture de portance, déplacements latéraux des berges, remontée des ouvrages enterrés,
+     volcans de sable.</p>
+  <p class="method-note">Sont sensibles les sables et sables limoneux lâches, jeunes, saturés (sous la
+     nappe), à moins de 15 à 20 m de profondeur. Les sols fins plastiques se comportent autrement
+     (radoucissement cyclique) : la méthode ci-dessous les exclut (indice de comportement Ic &gt; 2,6).</p>
+
+  <h3>La méthode simplifiée</h3>
+  <p>Seed et Idriss (1971) comparent deux rapports de contrainte, sous forme adimensionnelle. La
+     <strong>sollicitation</strong>, rapport de contrainte cyclique, se tire de l'accélération maximale en
+     surface a<sub>max</sub> :</p>
+  <p class="formula">CSR = 0,65 · (σ<sub>v</sub> / σ'<sub>v</sub>) · (a<sub>max</sub> / g) · r<sub>d</sub></p>
+  <p class="method-note">σ<sub>v</sub> et σ'<sub>v</sub> : contraintes verticales totale et effective à la
+     profondeur z ; r<sub>d</sub> ≤ 1 traduit la souplesse de la colonne de sol ; 0,65 ramène le pic à une
+     contrainte cyclique uniforme équivalente.</p>
+  <p>La <strong>résistance</strong>, rapport de résistance cyclique, se lit sur la résistance à la
+     pénétration, normalisée et corrigée des fines : (N<sub>1</sub>)<sub>60cs</sub> au carottier (SPT) ou
+     q<sub>c1Ncs</sub> au pénétromètre statique (CPT). Boulanger et Idriss (2014) donnent CRR<sub>7,5</sub>
+     pour un séisme de magnitude 7,5 sous 1 atmosphère, que l'on corrige par le facteur de magnitude MSF (un
+     petit séisme fait moins de cycles) et par K<sub>σ</sub> (effet du confinement) :</p>
+  <p class="formula">CRR = CRR<sub>7,5</sub> · MSF · K<sub>σ</sub> &nbsp;;&nbsp; FS = CRR / CSR</p>
+  <p>Le sol se liquéfie si FS &lt; 1. L'EN 1998-5 demande une marge : avec la valeur recommandée λ = 0,8, le
+     coefficient doit atteindre 1/0,8 = <strong>1,25</strong>. On prend a<sub>max</sub> = a<sub>g</sub>·S et la
+     magnitude du scénario dominant de l'aléa.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Sable à 5 m de profondeur, nappe à 2 m, γ = 18 kN/m³ : σ<sub>v</sub> = 90 kPa, u = 9,8 × 3 = 29,4 kPa,
+       σ'<sub>v</sub> = 60,6 kPa. Pour a<sub>max</sub> = 0,25 g et M = 6,5 : r<sub>d</sub> = 0,93, CSR = 0,65 × 1,49 ×
+       0,25 × 0,93 = <strong>0,225</strong>. Au SPT, N<sub>60</sub> = 12 et 10 % de fines donnent
+       (N<sub>1</sub>)<sub>60cs</sub> = 16,4, CRR<sub>7,5</sub> = 0,169, MSF = 1,14, K<sub>σ</sub> = 1,06, CRR =
+       0,203 : <strong>FS = 0,90</strong>, la couche se liquéfie. Avec N<sub>60</sub> = 25, FS dépasse 2.</p></div>
+
+  <div class="calc" id="calcSPT">
+    <h3>Un essai SPT pas à pas</h3>
+    <p class="method-note">Méthode de Boulanger et Idriss (2014), conventions de liquepy (référence hors ligne
+       du site) ; γ = 18 kN/m³ au-dessus et au-dessous de la nappe, γ<sub>w</sub> = 9,8 kN/m³.</p>
+    <div class="data-grid">
+      <div class="field"><label for="lqZ">Profondeur de l'essai</label>
+        <div class="input-wrap"><input id="lqZ" type="text" inputmode="decimal" value="5" data-curseur="1 20 0.5"><span class="unit">m</span></div></div>
+      <div class="field"><label for="lqNappe">Profondeur de la nappe</label>
+        <div class="input-wrap"><input id="lqNappe" type="text" inputmode="decimal" value="2" data-curseur="0 10 0.5"><span class="unit">m</span></div></div>
+      <div class="field"><label for="lqN">N<sub>60</sub></label>
+        <div class="input-wrap"><input id="lqN" type="text" inputmode="decimal" value="12" data-curseur="2 40 1"><span class="unit">coups</span></div></div>
+      <div class="field"><label for="lqFC">Teneur en fines FC</label>
+        <div class="input-wrap"><input id="lqFC" type="text" inputmode="decimal" value="10" data-curseur="0 50 1"><span class="unit">%</span></div></div>
+      <div class="field"><label for="lqA">a<sub>max</sub> en surface</label>
+        <div class="input-wrap"><input id="lqA" type="text" inputmode="decimal" value="0.25" data-curseur="0.05 0.6 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="lqM">Magnitude</label>
+        <div class="input-wrap"><input id="lqM" type="text" inputmode="decimal" value="6.5" data-curseur="5 8 0.1"><span class="unit">—</span></div></div>
+    </div>
+    <div id="lqTab"></div>
+    <p class="final-result" id="lqOut"></p>
+  </div>
+
+  <h3>Un sondage entier : LPI et tassements</h3>
+  <p>Un pénétromètre statique donne un point tous les 2 cm : on obtient un profil de FS. Iwasaki et al. (1982)
+     le résument par l'<strong>indice de potentiel de liquéfaction</strong> LPI = Σ (1 − FS)·(10 − 0,5z)·Δz sur
+     les 20 premiers mètres, pour FS &lt; 1 : nul pour 0, faible jusqu'à 5, élevé jusqu'à 15, très élevé
+     au-delà. Les couches liquéfiées se tassent en se reconsolidant : la déformation volumique de Zhang et al.
+     (2002), fonction de FS et de q<sub>c1Ncs</sub>, intégrée sur la profondeur, donne le tassement en surface.</p>
+
+  <div class="calc" id="calcCPT">
+    <h3>Profil de liquéfaction d'un sondage CPT</h3>
+    <p class="method-note">Sondages d'école du banc « liquéfaction » (profils de q<sub>c</sub> et de frottement
+       simulés), méthode de Boulanger et Idriss (2014), FS plafonné à 2.</p>
+    <div class="data-grid">
+      <div class="field"><label for="cpProfil">Sondage</label>
+        <div class="input-wrap"><select id="cpProfil">
+          <option value="lache">sables lâches</option><option value="alternance">sables et limons</option>
+          <option value="dense">sable dense</option><option value="argile">argile sur sable</option>
+        </select></div></div>
+      <div class="field"><label for="cpA">a<sub>max</sub> en surface</label>
+        <div class="input-wrap"><input id="cpA" type="text" inputmode="decimal" value="0.25" data-curseur="0.05 0.6 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="cpM">Magnitude</label>
+        <div class="input-wrap"><input id="cpM" type="text" inputmode="decimal" value="6.5" data-curseur="5 8 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="cpNappe">Profondeur de la nappe</label>
+        <div class="input-wrap"><input id="cpNappe" type="text" inputmode="decimal" value="2" data-curseur="0 8 0.5"><span class="unit">m</span></div></div>
+    </div>
+    <div class="figure" id="cpFig"></div>
+    <p class="final-result" id="cpOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>La liquéfaction se traite d'abord en reconnaissance : sondages CPT ou SPT serrés, granulométrie, niveau de
+       la nappe. Si le risque est avéré, on améliore le sol (vibrocompactage, colonnes ballastées, injections,
+       drains) ou l'on fonde au-dessous des couches liquéfiables, en tenant compte du frottement négatif qui suit
+       la reconsolidation.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Prendre pour a<sub>max</sub> l'accélération au rocher a<sub>g</sub> au lieu de a<sub>g</sub>·S, ou la
+       magnitude maximale de la région au lieu de celle du scénario dominant. Autre piège : oublier que la nappe
+       peut remonter — une étude faite en saison sèche peut manquer une couche liquéfiable.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Sables lâches saturés : la pression interstitielle monte, la contrainte effective s'annule.</li>
+      <li>CSR = 0,65·(σ<sub>v</sub>/σ'<sub>v</sub>)·a<sub>max</sub>/g·r<sub>d</sub> ; CRR = CRR<sub>7,5</sub>·MSF·K<sub>σ</sub>
+        depuis (N<sub>1</sub>)<sub>60cs</sub> ou q<sub>c1Ncs</sub> ; FS = CRR/CSR.</li>
+      <li>EN 1998-5, valeur recommandée λ = 0,8 : FS ≥ 1,25 ; a<sub>max</sub> = a<sub>g</sub>·S.</li>
+      <li>LPI d'Iwasaki sur 20 m ; tassements de Zhang et al.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch13">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch13">Exerciseur</a>
+    <a class="secondary" href="labo.html#liquefaction">Travaux pratiques : banc « Liquéfaction »</a></div>
+</section>
+
+<section id="ch14" class="card">
+  <h2>14 · Ductilité et coefficient de comportement</h2>
+
+  <h3>Résister ou plier</h3>
+  <p>Dimensionner un bâtiment pour qu'il reste élastique sous le spectre élastique — 0,575 g au plateau pour
+     a<sub>g</sub> = 0,2 g sur un sol C — demanderait des sections énormes. L'Eurocode 8 fait un autre choix :
+     l'ouvrage est dimensionné pour une force plus faible, et l'on accepte qu'il se plastifie, pourvu qu'il
+     puisse se déformer au-delà de sa limite élastique sans perdre sa résistance : c'est la
+     <strong>ductilité</strong>. Le séisme impose surtout un déplacement ; un ouvrage ductile le suit en
+     dissipant de l'énergie dans ses zones plastiques.</p>
+
+  <h3>L'oscillateur élastoplastique</h3>
+  <p>Reprenons l'oscillateur du chapitre 5, avec un ressort qui plafonne à la force f<sub>y</sub> (puis
+     éventuellement s'écrouit avec une pente α·k). Si l'oscillateur élastique de même période demande la force
+     m·S<sub>a</sub>, on lui donne la résistance f<sub>y</sub> = m·S<sub>a</sub> / R : R est le <strong>facteur de
+     réduction</strong>. On mesure la <strong>ductilité</strong> par le rapport du déplacement maximal au
+     déplacement élastique limite :</p>
+  <p class="formula">μ = u<sub>max</sub> / u<sub>y</sub>, avec u<sub>y</sub> = f<sub>y</sub> / k</p>
+  <p class="method-note">Le calcul pas à pas (Newmark et Newton, vérifié contre OpenSeesPy) donne la boucle
+     force–déplacement : son aire est l'énergie dissipée ; le déplacement qui reste à la fin est le
+     <strong>déplacement résiduel</strong>.</p>
+
+  <div class="calc" id="calcBoucle">
+    <h3>Un oscillateur élastoplastique sous un séisme</h3>
+    <p class="method-note">Accélérogramme synthétique (Mw 6,5 à 10 km, rocher) ; ξ = 5 % ; résistance égale à la
+       force élastique divisée par R.</p>
+    <div class="data-grid">
+      <div class="field"><label for="boT">Période T</label>
+        <div class="input-wrap"><input id="boT" type="text" inputmode="decimal" value="0.5" data-curseur="0.1 3 0.05"><span class="unit">s</span></div></div>
+      <div class="field"><label for="boR">Facteur de réduction R</label>
+        <div class="input-wrap"><input id="boR" type="text" inputmode="decimal" value="4" data-curseur="1 8 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="boAlpha">Écrouissage α</label>
+        <div class="input-wrap"><input id="boAlpha" type="text" inputmode="decimal" value="0" data-curseur="0 0.2 0.01"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="boFig"></div>
+    <p class="final-result" id="boOut"></p>
+  </div>
+
+  <h3>Les règles R–μ–T</h3>
+  <p>Combien de ductilité faut-il pour un facteur R donné ? Trois règles, issues des calculs sur de nombreux
+     accélérogrammes :</p>
+  <ul class="liste-cours">
+    <li><strong>égaux déplacements</strong> (Newmark et Hall) : pour les périodes moyennes et longues, au-delà
+      de T<sub>C</sub>, l'oscillateur plastique se déplace autant que l'élastique : μ = R ;</li>
+    <li><strong>égales énergies</strong> : aux courtes périodes, l'énergie emmagasinée se conserve :
+      μ = (R² + 1)/2 ;</li>
+    <li><strong>règle de la méthode N2</strong> (Vidic, Fajfar et Fischinger) : μ = 1 + (R − 1)·T<sub>C</sub>/T
+      sous T<sub>C</sub>, μ = R au-delà.</li>
+  </ul>
+  <p>Les ouvrages raides sont donc les plus exigeants : pour une même réduction, ils doivent être bien plus
+     ductiles.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>R = 4, T<sub>C</sub> = 0,6 s. À T = 1 s, μ = 4. À T = 0,3 s, la règle N2 donne μ = 1 + 3 × 0,6/0,3 =
+       <strong>7</strong> ; celle des égales énergies, (16 + 1)/2 = 8,5.</p></div>
+
+  <div class="calc" id="calcRegles">
+    <h3>Ductilité demandée : règles et calculs temporels</h3>
+    <p class="method-note">Cinq accélérogrammes synthétiques (Mw 6,5 à 10 km) ; à chaque période, la ductilité
+       moyenne des cinq oscillateurs de résistance S<sub>a</sub>/R, face aux trois règles.</p>
+    <div class="data-grid">
+      <div class="field"><label for="rgR">Facteur de réduction R</label>
+        <div class="input-wrap"><input id="rgR" type="text" inputmode="decimal" value="4" data-curseur="1.5 8 0.5"><span class="unit">—</span></div></div>
+      <div class="field"><label for="rgTC">Période de coin T<sub>C</sub> (règle N2)</label>
+        <div class="input-wrap"><input id="rgTC" type="text" inputmode="decimal" value="0.4" data-curseur="0.2 0.8 0.05"><span class="unit">s</span></div></div>
+    </div>
+    <div class="figure" id="rgFig"></div>
+    <p class="final-result" id="rgOut"></p>
+  </div>
+
+  <h3>Le coefficient de comportement</h3>
+  <p>L'Eurocode 8 traduit cette réduction par le <strong>coefficient de comportement q</strong> : l'analyse
+     élastique se fait sous le <strong>spectre de calcul</strong> S<sub>d</sub>(T), obtenu en divisant le
+     spectre élastique par q (EN 1998-1:2004, § 3.2.2.5, expressions 3.13 à 3.16) :</p>
+  <div class="table-large"><table class="resultats">
+    <thead><tr><th>Période</th><th>S<sub>d</sub>(T)</th></tr></thead>
+    <tbody>
+      <tr><td class="n">0 ≤ T ≤ T<sub>B</sub></td><td>a<sub>g</sub>·S·[2/3 + (T/T<sub>B</sub>)·(2,5/q − 2/3)]</td></tr>
+      <tr><td class="n">T<sub>B</sub> ≤ T ≤ T<sub>C</sub></td><td>a<sub>g</sub>·S·2,5/q</td></tr>
+      <tr><td class="n">T<sub>C</sub> ≤ T ≤ T<sub>D</sub></td><td>max(a<sub>g</sub>·S·(2,5/q)·T<sub>C</sub>/T ; β·a<sub>g</sub>)</td></tr>
+      <tr><td class="n">T<sub>D</sub> ≤ T</td><td>max(a<sub>g</sub>·S·(2,5/q)·T<sub>C</sub>T<sub>D</sub>/T² ; β·a<sub>g</sub>)</td></tr>
+    </tbody></table></div>
+  <p class="method-note">β = 0,2 (valeur recommandée) borne le spectre aux longues périodes. q inclut à la fois
+     la ductilité et la surrésistance de la structure ; il dépend du système (portiques, voiles, mixte), de sa
+     régularité et de la <strong>classe de ductilité</strong> : faible (DCL, q ≤ 1,5, sans dispositions
+     particulières), moyenne (DCM) ou haute (DCH). Le déplacement réel se retrouve en multipliant le déplacement
+     élastique calculé par q (d<sub>s</sub> = q·d<sub>e</sub>, chapitre 15).</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>a<sub>g</sub> = 0,2 g, sol C (S = 1,15), q = 3,9 : plateau S<sub>d</sub> = 0,2 × 1,15 × 2,5 / 3,9 =
+       <strong>0,147 g</strong>, quatre fois moins que le spectre élastique ; à 2,5 s, la formule donnerait
+       0,028 g, mais le plancher β·a<sub>g</sub> = 0,04 g s'applique.</p></div>
+
+  <div class="calc" id="calcCalcul">
+    <h3>Spectre de calcul de l'EN 1998-1:2004</h3>
+    <div class="data-grid">
+      <div class="field"><label for="sdAg">a<sub>g</sub></label>
+        <div class="input-wrap"><input id="sdAg" type="text" inputmode="decimal" value="0.2" data-curseur="0.05 0.5 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="sdSol">Classe de sol</label>
+        <div class="input-wrap"><select id="sdSol"><option>A</option><option>B</option><option selected>C</option><option>D</option><option>E</option></select></div></div>
+      <div class="field"><label for="sdQ">Coefficient de comportement q</label>
+        <div class="input-wrap"><input id="sdQ" type="text" inputmode="decimal" value="3.9" data-curseur="1 6 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="sdT">Période de l'ouvrage</label>
+        <div class="input-wrap"><input id="sdT" type="text" inputmode="decimal" value="0.5" data-curseur="0.05 4 0.05"><span class="unit">s</span></div></div>
+    </div>
+    <div class="figure" id="sdFig"></div>
+    <p class="final-result" id="sdOut"></p>
+  </div>
+
+  <h3>Garantir la ductilité</h3>
+  <p>Un coefficient q élevé n'a de sens que si la ductilité est réellement disponible. D'où le
+     <strong>dimensionnement en capacité</strong> : on choisit les zones qui doivent se plastifier (rotules en
+     extrémité de poutres, pied de voiles), on les rend ductiles par les détails (confinement, ancrages), et l'on
+     dimensionne tout le reste — poteaux, nœuds, fondations, efforts tranchants — pour la résistance réelle de ces
+     zones, majorée de leur surrésistance. Le mécanisme d'étage, où tous les poteaux d'un niveau se
+     plastifient, est le mode de ruine à éviter (chapitre 16).</p>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Prendre un q élevé « pour réduire les efforts » sans les dispositions constructives de la classe de
+       ductilité correspondante : la structure n'aura pas la ductilité supposée. Autre piège : oublier qu'un
+       ouvrage raide (T &lt; T<sub>C</sub>) demande, pour le même q, une ductilité bien supérieure à q.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>μ = u<sub>max</sub>/u<sub>y</sub> ; f<sub>y</sub> = m·S<sub>a</sub>/R.</li>
+      <li>Égaux déplacements μ = R (T &gt; T<sub>C</sub>) ; égales énergies μ = (R² + 1)/2 ; N2 : μ = 1 + (R − 1)T<sub>C</sub>/T
+        sous T<sub>C</sub>.</li>
+      <li>Spectre de calcul : S<sub>e</sub>/q, plateau a<sub>g</sub>S·2,5/q, plancher β·a<sub>g</sub> ; classes DCL, DCM,
+        DCH.</li>
+      <li>Dimensionnement en capacité : zones dissipatives choisies, le reste plus résistant.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch14">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch14">Exerciseur</a>
+    <a class="secondary" href="labo.html#ductilite">Travaux pratiques : banc « Ductilité »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -1774,5 +2023,7 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch10.js"></script>
 <script type="module" src="src/cours-ch11.js"></script>
 <script type="module" src="src/cours-ch12.js"></script>
+<script type="module" src="src/cours-ch13.js"></script>
+<script type="module" src="src/cours-ch14.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>
