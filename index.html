@@ -1,10 +1,29 @@
 <!doctype html>
-<html lang="fr">
-<head>
+<html lang="fr"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Sismologie et aléa sismique</title>
-<script>location.replace('labo.html' + location.hash);</script>
-</head>
-<body><p><a href="labo.html">Travaux pratiques : bancs interactifs</a></p></body>
-</html>
+<meta name="theme-color" content="#075985">
+<meta name="description" content="Sismologie et aléa sismique pour l'ingénieur — polycopié, cours interactif, exerciseur et travaux pratiques, jusqu'au calcul des ouvrages selon l'Eurocode 8">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="enhancements.css">
+<link rel="stylesheet" href="site.css">
+<title>Sismologie et aléa sismique — Eurocode 8</title>
+</head><body>
+<header class="topbar">
+  <button class="brand" id="homeButton" aria-label="Retour à l'accueil">
+    <span class="brand-mark">SI</span>
+    <span><strong>Sismologie</strong><small>Aléa sismique · Eurocode 8</small></span>
+  </button>
+  <div class="header-actions">
+    <a class="ghost course-link" href="cours.html"><span class="course-link-verb">Ouvrir le </span>cours</a>
+    <a class="ghost course-link" href="exerciseur.html">Exerciseur</a>
+    <a class="ghost course-link" href="labo.html">Travaux pratiques</a>
+  </div>
+</header>
+<main id="app" tabindex="-1"></main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<noscript>Activez JavaScript pour parcourir le cours et les exercices.</noscript>
+<script type="module" src="src/socle.js"></script>
+<script type="module" src="src/app.js"></script>
+<script type="module" src="src/tableaux.js"></script>
+</body></html>

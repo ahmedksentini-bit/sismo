@@ -67,6 +67,8 @@ main { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 2
 a.parcours-lien { text-decoration: none; }
 .parcours-lien.lecon { background: var(--blue); border-color: var(--blue); color: var(--paper); }
 .lien-cours { margin-left: 6px; padding: 6px 12px; border-radius: 10px; background: var(--blue); color: var(--paper); font-weight: 800; text-decoration: none; }
+.lien-cours.secondaire { background: var(--paper); color: var(--blue-ink); border: 1px solid var(--soft-line); }
+a.brand-mark { text-decoration: none; }
 .parcours-lien:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .topbar nav.mode-switch button[data-debut-chapitre] { margin-left: 10px; }
 .topbar nav.mode-switch .saut { display: none; }

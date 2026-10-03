@@ -100,7 +100,7 @@
       <div class="field"><label for="smH">Profondeur du foyer</label>
         <div class="input-wrap"><input id="smH" type="text" inputmode="decimal" value="10" data-curseur="2 30 1"><span class="unit">km</span></div></div>
     </div>
-    <div class="figure" id="smFig"><canvas id="smCanvas" aria-label="Sismogramme trois composantes avec les arrivées P, S et des ondes de surface"></canvas></div>
+    <div class="figure" id="smFig"></div>
     <p class="final-result" id="smOut"></p>
   </div>
 
@@ -168,11 +168,11 @@
 
   <div class="calc" id="calcML">
     <h3>Calcul de la magnitude locale</h3>
-    <p class="method-note">Multipliez l'amplitude par 10 : la magnitude gagne une unité. À amplitude
-       égale, une station plus lointaine signale un séisme plus fort.</p>
+    <p class="method-note">L'amplitude se règle par son logarithme : un cran de 1 multiplie A par 10, et
+       la magnitude gagne une unité. À amplitude égale, une station plus lointaine signale un séisme plus fort.</p>
     <div class="data-grid">
-      <div class="field"><label for="mlA">Amplitude maximale A</label>
-        <div class="input-wrap"><input id="mlA" type="text" inputmode="decimal" value="2000" data-curseur="10 1000000 10"><span class="unit">nm</span></div></div>
+      <div class="field"><label for="mlLogA">log<sub>10</sub> A, avec A en nanomètres</label>
+        <div class="input-wrap"><input id="mlLogA" type="text" inputmode="decimal" value="3.3" data-curseur="1 6 0.05"><span class="unit">—</span></div></div>
       <div class="field"><label for="mlR">Distance hypocentrale R</label>
         <div class="input-wrap"><input id="mlR" type="text" inputmode="decimal" value="63" data-curseur="10 300 1"><span class="unit">km</span></div></div>
     </div>
@@ -249,4 +249,47 @@
 </aside>
 </div>
 </main>
+
+<script type="module">
+import { chargerJson } from "./src/donnees.js";
+const { chapitres } = await chargerJson("data/chapitres.json");
+document.getElementById("sommaire").innerHTML = chapitres.map((c) => {
+  const pret = document.getElementById(c.id);
+  return `<li><a data-ch="${c.id}" href="${pret ? "#" + c.id : "index.html#" + c.id}">
+    ${c.number} · ${c.title}<small>${pret ? "disponible" : "en préparation"}</small></a></li>`;
+}).join("");
+
+// Sommaire actif : la section dont le titre est le dernier franchi vers le haut.
+const liens = new Map([...document.querySelectorAll("#sommaire a[data-ch]")]
+  .map((a) => [a.dataset.ch, a]));
+const sections = chapitres.map((c) => document.getElementById(c.id)).filter(Boolean);
+
+function marquerSectionLue() {
+  const repere = 120;
+  let courante = sections[0];
+  for (const sec of sections)
+    if (sec.getBoundingClientRect().top <= repere) courante = sec;
+  for (const [id, a] of liens) a.classList.toggle("actif", id === courante?.id);
+  const actif = liens.get(courante?.id);
+  if (actif && liens.size > 6) {
+    const boite = actif.closest("ul");
+    const dessus = actif.offsetTop - boite.scrollTop;
+    if (dessus < 0 || dessus > boite.clientHeight - actif.offsetHeight)
+      boite.scrollTop = actif.offsetTop - boite.clientHeight / 2;
+  }
+}
+let planifie = false;
+addEventListener("scroll", () => {
+  if (planifie) return;
+  planifie = true;
+  requestAnimationFrame(() => { planifie = false; marquerSectionLue(); });
+}, { passive: true });
+addEventListener("resize", marquerSectionLue, { passive: true });
+marquerSectionLue();
+</script>
+<script type="module" src="src/impression.js"></script>
+<script type="module" src="src/socle.js"></script>
+<script type="module" src="src/curseurs.js"></script>
+<script type="module" src="src/cours-ch1.js"></script>
+<script type="module" src="src/tableaux.js"></script>
 </body></html>

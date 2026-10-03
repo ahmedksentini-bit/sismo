@@ -1,6 +1,7 @@
-// src/parcours.js — plan du cours : chapitres et bancs dans l'ordre de lecture, ancres d'adresse, leçons (cours/).
-// Données pures, utilisées par src/onglets.js (barre des bancs, fil du parcours) et cours/ (sommaire), vérifiées par
-// les tests contre labo.html.
+// src/parcours.js — plan des travaux pratiques : parties du cours (CHAPITRES, A à D) et bancs dans l'ordre de lecture,
+// ancres d'adresse, chapitre du cours associé à chaque banc (LECONS ; le banc de rang n est le TP du chapitre n).
+// Données pures, utilisées par src/onglets.js (barre des bancs, fil du parcours) et src/app.js (redirection des
+// anciennes ancres) ; vérifiées par les tests contre labo.html et data/chapitres.json.
 const Parcours = (() => {
   'use strict';
   const CHAPITRES = [
