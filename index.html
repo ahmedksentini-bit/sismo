@@ -39,7 +39,7 @@
 <main>
   <section class="banniere">
     <div>
-      <p class="eyebrow">Lire un sismogramme · bancs interactifs</p>
+      <p class="eyebrow" id="parcours-chapitre">Chapitre 1 sur 4 · Lire les sismogrammes · banc 1 sur 6</p>
       <h1>Lecteur de sismogramme</h1>
       <p class="chapeau" id="chapeau-station">Une station trois composantes enregistre un séisme. Pointez les ondes P et S, mesurez l'amplitude
         sur le Wood-Anderson simulé : le lecteur en déduit la distance, l'heure d'origine, la magnitude locale et la direction de la source.</p>
@@ -75,6 +75,7 @@
         donne le déplacement cible de la méthode N2. Est-il juste ? Sept calculs temporels non linéaires du même bâtiment répondent, étage par étage.</p>
       <p class="chapeau" id="chapeau-isolation" hidden>Posé sur des isolateurs, le bâtiment change de période et d'amortissement : l'accélération transmise chute,
         le déplacement se reporte dans les appuis. Linéarisation équivalente, boucle de l'isolateur et calculs temporels non linéaires face à la base fixe.</p>
+      <nav class="parcours" aria-label="Parcours du cours"><button type="button" class="parcours-lien" id="parcours-prec" hidden></button><button type="button" class="parcours-lien" id="parcours-suiv"></button></nav>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>

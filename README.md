@@ -96,9 +96,10 @@ src/banc-poussee.js     banc « poussée progressive »
 src/banc-isolation.js   banc « isolation »
 src/banc-mecanisme.js   banc « mécanisme »
 src/banc-source.js      banc « source »
-src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
+src/parcours.js         plan du cours : quatre chapitres, ordre des bancs, ancres d'adresse
+src/onglets.js          onglets et fil du parcours (chapitre, banc précédent et suivant) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, références (117 tests)
+                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, parcours, références (120 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)

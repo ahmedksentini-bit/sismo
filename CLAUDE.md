@@ -65,7 +65,8 @@ la virgule décimale.
     (géodésie, le fond de la zone recevant χ·(Ṁ0 − Ṁfailles)). Rrup « à la OpenQuake »
     (`rrupSphere` : nœuds, Terre sphérique) ne sert qu'à comparer la désagrégation.
 16. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
-    (ses canvas ont une largeur nulle) et se construit à sa première ouverture.
+    (ses canvas ont une largeur nulle) et se construit à sa première ouverture. Le plan du cours (chapitres,
+    ordre, ancres) vit dans `src/parcours.js` ; un nouveau banc s'y ajoute, dans l'ordre de la barre (testé).
 17. **Spectre conditionnel** (`Psha.spectreConditionnel`) : Lin et al. (2013) comme le post-traitement
     `conditional_spectrum` d'OpenQuake, corrélation de Baker et Jayaram (2008), poids
     ws = λu·P(Sa(T*) > x | u)/λ(P) avec λ(P) = −ln(1 − P)/T ; la moyenne de l'arbre pondère les taux, comme
@@ -110,7 +111,7 @@ la virgule décimale.
     saturation, Q(f), κ, amplification du site) ; Mw = (log10 M0 − 9,05)/1,5 et Δσ de la relation de Brune du
     générateur ; la correction de Reff dépend de Mw : itérée. La vérité est le Mw et le Δσ du générateur ; le
     banc se limite à Mw ≤ 6 (au-delà, fc passe sous 0,2 Hz et la fenêtre S ne suffit plus). La barre des bancs
-    passe à la ligne (dix-huit onglets) : ne pas la remettre sur une seule ligne forcée.
+    passe à la ligne (dix-sept onglets) : ne pas la remettre sur une seule ligne forcée.
 25. **Intensité** (`src/sismo/intensite.js`) : conventions d'eqsig (référence `tests/references/intensite.json`,
     `tools/eqsig/`) : trapèzes, Arias avec g = 9,81 m/s², bornes de durée aux indices strictement compris entre les
     fractions de Ia (Trifunac et Brady 1975). Les indicateurs de la banque sont calculés à l'échelle 1 : Arias se
