@@ -96,3 +96,8 @@ la virgule décimale.
     γw = 9,8, contraintes cumulées vers le bas avec pré-forage à 17 kN/m³, CRR7,5 = 4 au-dessus de la nappe et pour
     Ic > 2,6 (FS = 2,25), FS plafonné à 2. L'annexe B de l'EN 1998-5 n'est pas recopiée de mémoire : seule la
     valeur recommandée λ = 0,8 (FS ≥ 1,25) est citée.
+22. **Inélastique** (`src/sismo/inelastique.js`) : ressort bilinéaire cinématique (bornes de pente α·k décalées de
+    ±(1 − α)·fy, comme Steel01 sans écrouissage isotrope), c = 2ξω constant, Newmark à accélération moyenne avec
+    Newton depuis l'état validé, sous-pas ≤ T/20 comme le spectre élastique (limite élastique testée). Référence
+    OpenSeesPy (`tools/opensees/`). N2 : déplacement cible de l'annexe B de l'EN 1998-1:2004 sur le système
+    équivalent ; Rμ = plus petit R qui atteint la ductilité visée (non-unicité de μ(R)).

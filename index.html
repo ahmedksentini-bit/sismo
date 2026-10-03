@@ -27,6 +27,7 @@
     <button type="button" data-onglet="selection" aria-pressed="false">Accélérogrammes</button>
     <button type="button" data-onglet="site" aria-pressed="false">Site</button>
     <button type="button" data-onglet="liquefaction" aria-pressed="false">Liquéfaction</button>
+    <button type="button" data-onglet="ductilite" aria-pressed="false">Ductilité</button>
   </nav>
 </header>
 
@@ -57,6 +58,8 @@
         verticales, une rigidité qui chute avec la déformation : fonction de transfert, spectres en surface et classes de sol de l'Eurocode 8.</p>
       <p class="chapeau" id="chapeau-liquefaction" hidden>Sous la nappe, un sable lâche secoué perd sa résistance. Sollicitation cyclique CSR contre
         résistance CRR lue au pénétromètre (Boulanger et Idriss 2014) : coefficient de sécurité, couches liquéfiables, indice LPI et tassement.</p>
+      <p class="chapeau" id="chapeau-ductilite" hidden>Un ouvrage dimensionné avec un coefficient de comportement plastifie : combien se déplace-t-il ?
+        Oscillateur élastoplastique sous sept accélérogrammes, spectres de ductilité et méthode N2 de l'Eurocode 8 face aux calculs temporels.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -864,6 +867,72 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-ductilite" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Oscillateur élastoplastique">
+        <h2>Oscillateur élastoplastique<small>Boucle force–déplacement et déplacement au cours du temps de l'enregistrement choisi ; tirets : déplacement de plastification uy</small></h2>
+        <canvas id="du-hyst" aria-label="Boucle d'hystérésis et déplacement au cours du temps"></canvas>
+      </section>
+      <section class="carte" aria-label="Spectres de ductilité">
+        <h2>Spectres de ductilité à résistance constante<small>Ductilité demandée μ quand la résistance vaut la demande élastique divisée par R, pour les sept enregistrements ; règles : égaux déplacements (μ = R) et celle de la méthode N2 sous TC</small></h2>
+        <canvas id="du-mu" aria-label="Ductilité demandée en fonction de la période"></canvas>
+        <p class="legende"><span><i style="background:var(--muted);opacity:.5"></i>enregistrements</span><span><i style="background:var(--blue)"></i>moyenne</span><span><i class="tirets" style="border-color:var(--teal)"></i>μ = R</span><span><i class="tirets" style="border-color:var(--pick-p)"></i>règle N2 : μ = 1 + (R − 1)·TC/T</span></p>
+      </section>
+      <section class="carte" aria-label="Méthode N2">
+        <h2>Méthode N2 (EN 1998-1:2004, annexe B)<small>Format accélération–déplacement : spectre élastique, spectre inélastique de la ductilité N2, capacité élastique parfaitement plastique ; triangle : déplacement cible ; points et trait : calculs temporels et leur moyenne</small></h2>
+        <canvas id="du-n2" aria-label="Méthode N2 en format accélération-déplacement"></canvas>
+        <p class="aide">Oscillateur bilinéaire à écrouissage cinématique, ξ = 5 %, Newmark à accélération moyenne avec itérations de Newton ; vérifié contre OpenSeesPy (Steel01)
+          à 10⁻⁸ près sur tout l'historique. Chaque accélérogramme est mis à l'échelle pour que Sa(T) = Se(T).</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="du-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="du-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="du-afficheurs"></div></section>
+      <section class="carte" id="du-panneau-explorer" aria-label="Réglages">
+        <p class="sous-titre">Ouvrage</p>
+        <div class="champ"><label for="du-t">Période T <output id="du-t-v"></output></label><input type="range" id="du-t" min="-1.3" max="0.477" step="0.005"></div>
+        <div class="champ"><label for="du-r">Facteur de réduction R (qu) <output id="du-r-v"></output></label><input type="range" id="du-r" min="1" max="8" step="0.1"></div>
+        <div class="champ"><label for="du-alpha">Écrouissage α <output id="du-alpha-v"></output></label><input type="range" id="du-alpha" min="0" max="0.1" step="0.01"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Séisme (EN 1998-1:2004, type 1)</p>
+        <div class="champ"><label for="du-ag">ag <output id="du-ag-v"></output></label><input type="range" id="du-ag" min="0.05" max="0.5" step="0.01"></div>
+        <div class="champ"><span class="etiquette">Classe de sol</span><div class="segments" role="group" aria-label="Classe de sol"><button type="button" data-du-sol="A">A</button><button type="button" data-du-sol="B">B</button><button type="button" data-du-sol="C">C</button><button type="button" data-du-sol="D">D</button><button type="button" data-du-sol="E">E</button></div></div>
+        <div class="segments" role="group" aria-label="Scénario" style="margin-bottom:10px">
+          <button type="button" data-du-scenario="0">M 5,5 à 10 km</button><button type="button" data-du-scenario="1">M 6,5 à 20 km</button><button type="button" data-du-scenario="2">M 7,2 à 40 km</button>
+        </div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="du-tirage">Autres accélérogrammes</button></div>
+      </section>
+      <section class="carte" id="du-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="du-exo-num"></span>
+        <p class="enonce">Pour ce système équivalent, calculez qu et le déplacement cible d*t de la méthode N2, et dites quelle règle s'applique.</p>
+        <div id="du-exo-donnees"></div>
+        <div class="champ"><label for="du-r-qu">qu</label><input type="text" id="du-r-qu" inputmode="decimal" autocomplete="off" placeholder="ex. 3,2"></div>
+        <div class="champ"><label for="du-r-dt">d*t (cm)</label><input type="text" id="du-r-dt" inputmode="decimal" autocomplete="off" placeholder="ex. 4,5"></div>
+        <div class="champ"><span class="etiquette">Règle</span>
+          <div class="segments" role="group" aria-label="Règle"><button type="button" data-du-rep="égaux déplacements" aria-pressed="false">Égaux déplacements</button><button type="button" data-du-rep="périodes courtes" aria-pressed="false">Périodes courtes</button><button type="button" data-du-rep="élastique" aria-pressed="false">Élastique</button></div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="du-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="du-nouvel-exo">Nouvel exercice</button></div>
+        <div id="du-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Enregistrements">
+        <p class="sous-titre">Calculs temporels</p>
+        <div class="table-defile"><table class="resultats" id="du-table"></table></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Égaux déplacements</b> : au-delà de TC, l'ouvrage plastifié se déplace à peu près comme l'ouvrage élastique ; la ductilité demandée vaut R.</li>
+          <li><b>Périodes courtes</b> : sous TC, la ductilité demandée dépasse R, parfois de loin ; la méthode N2 l'exprime par μ = 1 + (R − 1)·TC/T.</li>
+          <li><b>Dispersion</b> : d'un accélérogramme à l'autre, le déplacement varie du simple au double ; d'où au moins 3 calculs (le plus défavorable) ou 7 (la moyenne).</li>
+          <li><b>EN 1998-1:2004</b> : l'annexe B (informative) donne le déplacement cible de l'analyse en poussée progressive ; le coefficient de comportement q réduit le spectre de calcul.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -892,6 +961,7 @@
 <script type="module" src="src/banc-selection.js"></script>
 <script type="module" src="src/banc-site.js"></script>
 <script type="module" src="src/banc-liquefaction.js"></script>
+<script type="module" src="src/banc-ductilite.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
