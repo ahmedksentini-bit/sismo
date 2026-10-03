@@ -373,6 +373,92 @@ const Psha = (() => {
     return out;
   }
 
+  // ── Spectre moyen conditionnel (CMS) ──
+  // Corrélation des ε entre deux périodes, Baker et Jayaram (2008), comme hazardlib (PGA : T = 0).
+  function correlationBJ2008(Ta, Tb) {
+    if (Math.abs(Ta - Tb) < 1e-10) return 1;
+    const tmin = Math.min(Ta, Tb), tmax = Math.max(Ta, Tb);
+    const c1 = 1 - Math.cos(Math.PI / 2 - 0.366 * Math.log(tmax / Math.max(tmin, 0.109)));
+    let c2 = 0;
+    if (tmax < 0.2) c2 = 1 - 0.105 * (1 - 1 / (1 + Math.exp(100 * tmax - 5))) * ((tmax - tmin) / (tmax - 0.0099));
+    const c3 = tmax < 0.109 ? c2 : c1;
+    const c4 = c1 + 0.5 * (Math.sqrt(c3) - c3) * (1 + Math.cos((Math.PI * tmin) / 0.109));
+    if (tmax < 0.109) return c2;
+    if (tmin > 0.109) return c1;
+    if (tmax < 0.2) return Math.min(c2, c4);
+    return c4;
+  }
+  const periodeImt = imt => (imt === 'PGA' ? 0 : imt);
+
+  // Spectre conditionnel à Sa(T*) = x, x étant le niveau de probabilité P (en `dureeVie` ans), selon Lin et al.
+  // (2013) comme OpenQuake : chaque rupture u (et chaque loi) pèse w = λu·P(Sa(T*) > x | u) / λ(P), avec
+  // λ(P) = −ln(1 − P)/T ; ε_u est l'écart réduit qui donne x ; à chaque période,
+  //   ln CMS(T) = Σ w·(μ + ρ·ε·σ) / Σ w,   σ_CMS²(T) = Σ w·(σ²(1 − ρ²) + (μ + ρεσ − ln CMS)²) / Σ w.
+  // OpenQuake écrit ces sommes sans les diviser par Σ w (≈ 1) : `oq` les donne telles quelles.
+  // Sans `cle`, taux moyens pondérés sur l'arbre ; avec `cle`, une seule réalisation. Renvoie aussi M̄, R̄ (Rjb), ε̄.
+  function spectreConditionnel(modele, imtRef, x, P, { cle = null } = {}) {
+    const sf = tableSurvie(modele.troncature), lnx = Math.log(x), site = modele.site, vars = variantes(modele), imts = modele.imts;
+    const rho = imts.map(i => correlationBJ2008(periodeImt(imtRef), periodeImt(i)));
+    const lamCible = -Math.log(1 - P) / modele.dureeVie;
+    const [vSel, dmSel, gSel] = cle ? cle.split('|') : [];
+    const wV = vars.map(v => (cle ? (v.id === vSel ? 1 : 0) : v.poids));
+    const wDm = modele.dMmax.map((d, i) => (cle ? (i === +dmSel ? 1 : 0) : d.poids));
+    const wG = modele.gmpe.map((g, i) => (cle ? (i === +gSel ? 1 : 0) : g.poids));
+    // Taux moyens par classe de magnitude : zones (par point) et failles (par rupture flottante)
+    const tauxMoyens = loi => {
+      const t = new Map();
+      vars.forEach((v, iv) => modele.dMmax.forEach((dm, idm) => {
+        const w = wV[iv] * wDm[idm], l = w ? loi(v, dm.d) : null;
+        if (!l) return;
+        for (const c of mfdGR({ ...l, pas: modele.pasMfd })) { const k = c.M.toFixed(6); t.set(k, { M: c.M, t: (t.has(k) ? t.get(k).t : 0) + w * c.taux }); }
+      }));
+      return [...t.values()];
+    };
+    const ruptures = []; // { taux, M, R, rake }
+    modele.zones.forEach((z, iz) => {
+      const pts = z.points || discretiser(z.polygone, modele.pasGrille), mags = tauxMoyens((v, d) => loiZone(modele, v, iz, d));
+      for (const p of pts) {
+        const R = Math.hypot(p.x - site.x, p.y - site.y);
+        if (R > modele.distanceMax) continue;
+        for (const { M, t } of mags) ruptures.push({ taux: t / pts.length, M, R, rake: z.rake });
+      }
+    });
+    (modele.failles || []).forEach((f, jf) => {
+      const g = geomFaille(modele, f);
+      for (const { M, t } of tauxMoyens((v, d) => loiFaille(modele, v, jf, d))) {
+        const rups = Faille.ruptures(g, M, f.rake, f.rapport || 1);
+        for (const rup of rups) { const R = Faille.rjb(g, rup, site); if (R <= modele.distanceMax) ruptures.push({ taux: t / rups.length, M, R, rake: f.rake }); }
+      }
+    });
+    // Pondération de chaque (rupture, loi) ; les grandeurs ne sont évaluées que si la rupture contribue
+    const termes = [];
+    let c0 = 0, sM = 0, sR = 0, sE = 0;
+    modele.gmpe.forEach((gm, ig) => {
+      if (!wG[ig]) return;
+      const loi = Gmpe.LOIS[gm.id];
+      for (const u of ruptures) {
+        const ref = loi.calculer({ M: u.M, Rjb: u.R, vs30: site.vs30, rake: u.rake }, imtRef);
+        const eps = (lnx - ref.ln) / ref.sigma, w = (wG[ig] * u.taux * sf(eps)) / lamCible;
+        if (!(w > 0)) continue;
+        const t1 = imts.map((imt, m) => {
+          const r = imt === imtRef ? ref : loi.calculer({ M: u.M, Rjb: u.R, vs30: site.vs30, rake: u.rake }, imt);
+          return { mu: r.ln + rho[m] * eps * r.sigma, sig: r.sigma };
+        });
+        termes.push({ w, t1 });
+        c0 += w; sM += w * u.M; sR += w * u.R; sE += w * eps;
+      }
+    });
+    const c1 = imts.map((_, m) => termes.reduce((s, t) => s + t.w * t.t1[m].mu, 0));
+    const ecart = (centre, m) => termes.reduce((s, t) => s + t.w * (t.t1[m].sig ** 2 * (1 - rho[m] ** 2) + (t.t1[m].mu - centre) ** 2), 0);
+    const ln = c1.map(v => v / c0);
+    return {
+      imts, rho, x, P, sommePoids: c0,
+      moyenne: ln.map(Math.exp), ecart: ln.map((l, m) => Math.sqrt(ecart(l, m) / c0)),
+      oq: { moyenne: c1.map(Math.exp), ecart: c1.map((v, m) => Math.sqrt(ecart(v, m))) },
+      mMoy: sM / c0, rMoy: sR / c0, epsMoy: sE / c0,
+    };
+  }
+
   // Modèle d'école (aucune donnée régionale) : un site au rocher, une zone proche peu active et une
   // zone lointaine plus active, en km autour du site ; foyers à 10 km de profondeur (sans effet sur les
   // lois en Rjb, seulement sur la distance hypocentrale), et la faille F dans la zone A, qui porte les
@@ -409,6 +495,6 @@ const Psha = (() => {
     return m;
   }
 
-  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite };
+  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite, correlationBJ2008, spectreConditionnel };
 })();
 export default Psha;

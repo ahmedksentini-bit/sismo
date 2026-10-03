@@ -50,7 +50,7 @@ la virgule décimale.
     « variante|ΔMmax|loi ». Un fractile peut sauter de
     quelques % quand deux réalisations quasi égales changent d'ordre : le test vérifie
     l'algorithme sur les courbes d'OpenQuake. Après tout changement du modèle d'école,
-    relancer `npm run references` (OpenQuake, ~5 min).
+    relancer `npm run references` (OpenQuake, ~10 min).
 14. **Géodésie** (`src/sismo/geodesie.js`) : le champ vrai ne dépend que de x (faille de
     Savage et Burford, bande de raccourcissement uniforme) ; ε̇ en ns/an (1 mm/an/km = 1000 ns/an) ;
     e1h est l'axe le plus compressif, comme HMTK ; Kostrov sous la forme de Savage et Simpson
@@ -65,3 +65,10 @@ la virgule décimale.
     (`rrupSphere` : nœuds, Terre sphérique) ne sert qu'à comparer la désagrégation.
 16. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.
+17. **Spectre conditionnel** (`Psha.spectreConditionnel`) : Lin et al. (2013) comme le post-traitement
+    `conditional_spectrum` d'OpenQuake, corrélation de Baker et Jayaram (2008), poids
+    ws = λu·P(Sa(T*) > x | u)/λ(P) avec λ(P) = −ln(1 − P)/T ; la moyenne de l'arbre pondère les taux, comme
+    les réalisations (linéaire). Le site affiche le spectre normalisé par Σ ws, donc CMS(T*) = x et σ(T*) = 0
+    (testé) ; `oq` rend les sommes non normalisées qu'écrit OpenQuake. OpenQuake 3.26 relie mal groupes de
+    sources et réalisations au-delà de dix modèles de sources (ordre de `numpy.unique` sur des chaînes) :
+    `tools/oq/psha.py` réagrège avec ses briques, jamais lire `cs-stats` tel quel.

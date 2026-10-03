@@ -151,3 +151,39 @@ test('OpenQuake : désagrégation magnitude-distance, moyenne et réalisations (
     for (const r of D.realisations) comparer(matrice(Psha.desagregation(modele, imtJS(imt), x, { ...opts, cle: r.cle })), r.poe[imt], `${imt} ${r.cle}`);
   }
 });
+
+// Spectre conditionnel (Lin et al. 2013) : OpenQuake somme c0 = Σ ws, c1 = Σ ws·(μ + ρεσ) et
+// c2 = Σ ws·(σ²(1 − ρ²) + (μ + ρεσ − c1)²) sans diviser par c0 ; le moteur les rend dans `oq`. Les références
+// sont réagrégées par tools/oq/psha.py (OpenQuake 3.26 relie mal groupes et réalisations au-delà de dix
+// modèles de sources : voir extraire_cs).
+const CS = oq.spectreConditionnel, kRef = modele.imts.indexOf(1);
+test('corrélation de Baker et Jayaram (2008), comme hazardlib', () => {
+  const { periodes, rho } = CS.correlation;
+  periodes.forEach((a, i) => periodes.forEach((b, j) => assert.ok(Math.abs(Psha.correlationBJ2008(a, b) - rho[i][j]) < 1e-9, `ρ(${a}, ${b})`)));
+});
+
+test('OpenQuake : spectre conditionnel de chaque réalisation (Σ ws < 0,05 %, ln < 0,002)', () => {
+  assert.equal(CS.realisations.length, 108);
+  for (const r of CS.realisations) CS.poes.forEach((p, ip) => {
+    const js = Psha.spectreConditionnel(modele, 1, CS.niveaux[ip], p, { cle: r.cle });
+    assert.ok(Math.abs(js.sommePoids / r.c0[ip] - 1) < 5e-4, `${r.cle} P = ${p} : Σ ws ${js.sommePoids} contre ${r.c0[ip]}`);
+    js.oq.moyenne.forEach((v, k) => assert.ok(Math.abs(Math.log(v) - r.c1[ip][k]) < 2e-3, `${r.cle} P = ${p} T = ${modele.imts[k]}`));
+  });
+});
+
+// À T*, ρ = 1 : chaque rupture donne exactement ln x, d'où CMS(T*) = x et σ(T*) = 0 une fois normalisé ;
+// le √c2 d'OpenQuake n'y vaut que |ln x|·|c0 − 1|·√c0 (≈ 0,01) : comparaison en absolu.
+test('OpenQuake : spectre conditionnel moyen, et CMS(T*) = x', () => {
+  CS.poes.forEach((p, ip) => {
+    const x = CS.niveaux[ip], js = Psha.spectreConditionnel(modele, 1, x, p), o = CS.moyenne[ip];
+    assert.ok(Math.abs(js.sommePoids / o.c0 - 1) < 5e-4, `P = ${p} : Σ ws ${js.sommePoids} contre ${o.c0}`);
+    modele.imts.forEach((imt, k) => {
+      assert.ok(Math.abs(Math.log(js.oq.moyenne[k]) - o.c1[k]) < 1e-3, `P = ${p} T = ${imt} : ln`);
+      const e = k === kRef ? Math.abs(js.oq.ecart[k] - Math.sqrt(o.c2[k])) : Math.abs(js.oq.ecart[k] / Math.sqrt(o.c2[k]) - 1);
+      assert.ok(e < 1e-3, `P = ${p} T = ${imt} : dispersion`);
+    });
+    assert.ok(Math.abs(js.moyenne[kRef] / x - 1) < 1e-12 && js.ecart[kRef] < 1e-9);
+    // Le spectre conditionnel reste sous le spectre à probabilité uniforme loin de T*
+    for (const k of [0, 2, 12]) assert.ok(js.moyenne[k] < Psha.niveauPourProba(res.niveaux, res.moyenne[k], p));
+  });
+});

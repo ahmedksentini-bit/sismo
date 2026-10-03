@@ -68,6 +68,9 @@ import Psha from './sismo/psha.js';
     etat.uhs = { moy: uhs(res.moyenne), q16: uhs(res.fractiles[0.16]), q84: uhs(res.fractiles[0.84]) };
     etat.desag = etat.uhs.moy[etat.k] > 0 ? Psha.desagregation(etat.modele, BASE.imts[etat.k], etat.uhs.moy[etat.k]) : null;
     etat.sens = Psha.sensibilite(res, etat.modele, etat.k, poeCible());
+    // Spectre moyen conditionnel à la grandeur choisie, au niveau de l'UHS moyen
+    const xk = etat.uhs.moy[etat.k];
+    etat.cms = xk > 0 ? Psha.spectreConditionnel(etat.modele, BASE.imts[etat.k], xk, poeCible()) : null;
   }
 
   // ── Dessin ──────────────────────────────────────────────────────────────
@@ -250,6 +253,48 @@ import Psha from './sismo/psha.js';
     $('#al-legende-ec8').textContent = pga > 0 ? `sol ${sol} (Vs30 ${milliers(etat.r.site.vs30)} m/s)${enExercice() ? '' : `, ag = ${g3(ag)} g`}` : '';
   }
 
+  // Spectre moyen conditionnel (CMS) face à l'UHS : il touche l'UHS à T* et passe dessous ailleurs
+  function dessinerCMS() {
+    const cv = $('#al-cms');
+    if (cv.clientWidth < 50) return;
+    const { ctx, W, H } = preparer(cv), etroit = cv.clientWidth < 600, m = { g: 52, d: 14, h: etroit ? 46 : 30, b: 30 }, Tmax = 3, c = etat.cms;
+    ctx.font = `10.5px ${MONO}`; ctx.fillStyle = COUL.muted;
+    // en exercice, CMS(T*) = x et le scénario M̄, R̄ donneraient les réponses
+    const absent = enExercice() ? 'spectre conditionnel affiché après la vérification' : !c ? 'probabilité visée non atteinte' : '';
+    if (absent) { ctx.textAlign = 'center'; ctx.fillText(absent, W / 2, H / 2); return; }
+    const haut = c.moyenne.map((v, k) => v * Math.exp(c.ecart[k])), bas = c.moyenne.map((v, k) => v * Math.exp(-c.ecart[k]));
+    let ymax = Math.max(...etat.uhs.moy, ...haut) * 1.08;
+    const pas = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1].find(p => ymax / p <= 6) || 1;
+    const X = T => m.g + (T / Tmax) * (W - m.g - m.d), Y = v => H - m.b - (Math.min(v, ymax) / ymax) * (H - m.h - m.b);
+    ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1;
+    for (let T = 0; T <= Tmax + 1e-9; T += 0.5) { const x = Math.round(X(T)) + 0.5; ctx.beginPath(); ctx.moveTo(x, m.h); ctx.lineTo(x, H - m.b); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(virg(T, T % 1 ? 1 : 0), x, H - m.b + 5); }
+    for (let v = 0; v <= ymax + 1e-9; v += pas) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(m.g, y); ctx.lineTo(W - m.d, y); ctx.stroke(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(virg(v, pas < 0.1 ? 2 : 1), m.g - 6, y); }
+    // au-dessus des courbes, qui descendent vers les longues périodes
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText('période T (s)', W - m.d - 4, m.h + 2);
+    ctx.textAlign = 'left'; ctx.fillText('Sa (g), ξ = 5 %', m.g + 6, m.h + 2);
+    const ligne = (vals, coul, w, tirets) => {
+      ctx.strokeStyle = coul; ctx.lineWidth = w; ctx.setLineDash(tirets || []); ctx.beginPath();
+      BASE.imts.forEach((_, k) => (k ? ctx.lineTo(X(periode(k)), Y(vals[k])) : ctx.moveTo(X(periode(k)), Y(vals[k]))));
+      ctx.stroke(); ctx.setLineDash([]);
+    };
+    ctx.save(); ctx.beginPath(); ctx.rect(m.g, m.h, W - m.g - m.d, H - m.h - m.b); ctx.clip();
+    // bande ± σ du spectre conditionnel
+    ctx.fillStyle = COUL.blue; ctx.globalAlpha = 0.14; ctx.beginPath();
+    BASE.imts.forEach((_, k) => (k ? ctx.lineTo(X(periode(k)), Y(haut[k])) : ctx.moveTo(X(periode(k)), Y(haut[k]))));
+    for (let k = BASE.imts.length - 1; k >= 0; k--) ctx.lineTo(X(periode(k)), Y(bas[k]));
+    ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    ligne(etat.uhs.moy, COUL['pick-p'], 2, [6, 4]);
+    ligne(c.moyenne, COUL.blue, 2.8);
+    ctx.fillStyle = COUL.blue;
+    BASE.imts.forEach((_, k) => { ctx.beginPath(); ctx.arc(X(periode(k)), Y(c.moyenne[k]), 3, 0, 2 * Math.PI); ctx.fill(); });
+    // période de conditionnement
+    const Ts = periode(etat.k);
+    ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(Ts), m.h + 16); ctx.lineTo(X(Ts), H - m.b); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+    texte(ctx, `T* = ${nomImt(etat.k)} · ${g3(etat.uhs.moy[etat.k])} g à Tr ${milliers(periodeRetour())} ans`, m.g, 14, COUL.ink, `800 12px ${POLICE}`);
+    texte(ctx, `scénario : M̄ ${virg(c.mMoy, 1)} · R̄ ${virg(c.rMoy, 0)} km · ε̄ ${virg(c.epsMoy, 2)}`, etroit ? m.g : W - m.d, etroit ? 31 : 14, COUL.blue, `800 12px ${POLICE}`, etroit ? 'left' : 'right');
+  }
+
   // Désagrégation : carte de chaleur magnitude × distance épicentrale
   function dessinerDesag() {
     const cv = $('#al-desag');
@@ -358,7 +403,7 @@ import Psha from './sismo/psha.js';
     $$('[data-al-proba]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alProba === etat.proba.join('|'))));
     $$('[data-al-imt]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alImt === etat.k)));
   }
-  function dessiner() { lireCouleurs(); dessinerCarte(); dessinerCourbe(); dessinerUHS(); dessinerDesag(); dessinerTornade(); }
+  function dessiner() { lireCouleurs(); dessinerCarte(); dessinerCourbe(); dessinerUHS(); dessinerCMS(); dessinerDesag(); dessinerTornade(); }
   function tout() { majControles(); dessiner(); majAfficheurs(); }
   function recalculer() {
     const t0 = performance.now();
@@ -458,7 +503,7 @@ import Psha from './sismo/psha.js';
     });
     const redessiner = () => { if (etat.res && !$('#banc-alea').hidden) dessiner(); };
     const ro = new ResizeObserver(redessiner);
-    for (const id of ['#al-carte', '#al-courbe', '#al-uhs', '#al-desag', '#al-tornade']) ro.observe($(id));
+    for (const id of ['#al-carte', '#al-courbe', '#al-uhs', '#al-cms', '#al-desag', '#al-tornade']) ro.observe($(id));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     new MutationObserver(redessiner).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
