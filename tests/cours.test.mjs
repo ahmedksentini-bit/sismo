@@ -260,3 +260,42 @@ test('chapitre 10 : les exemples chiffrés du texte', async () => {
   assert.equal(Math.round(d.rMoy), 14);
   for (const t of ['médiane de 0,176 g', 'vaut 19 %', 'PGA = <strong>0,126 g</strong> à 475 ans et 0,248 g', 'M̄ = 5,2 et R̄ = 14 km', 'monte qu\'à 0,133 g', 'descend à 0,055 g']) assert.ok(cours.includes(t), t);
 });
+
+test('chapitre 11 : les exemples chiffrés du texte', async () => {
+  const I = (await import('../src/sismo/intensite.js')).default;
+  // Arias d'une sinusoïde de 0,2 g pendant 5 s (cycles entiers) : π·A²·D/(4g) ≈ 1,54 m/s
+  const A = 0.2 * 9.81, dt = 0.001, n = 5000, acc = Float64Array.from({ length: n + 1 }, (_, i) => A * Math.sin(2 * Math.PI * 2 * i * dt));
+  const ia = I.indicateurs(acc, dt).arias, formule = Math.PI * A * A * 5 / (4 * 9.81);
+  assert.ok(Math.abs(ia - formule) / formule < 1e-6);
+  assert.equal(formule.toFixed(2), '1.54');
+  for (const t of ['≈ 1,54 m/s', 'au moins <strong>3</strong>', '<strong>90 %</strong>', 'moins 7 calculs, la plus défavorable sinon']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 12 : les exemples chiffrés du texte', async () => {
+  const S = (await import('../src/sismo/site.js')).default, A = (await import('../src/sismo/accelerogramme.js')).default;
+  const col = S.colonne([{ h: 20, vs: 200, ip: 0, poids: 17.5 }], { vs: 1000, poids: 22, xi: 0.01 }), etat = { G: col.couches.map(c => c.G0), xi: col.couches.map(() => 0.02) };
+  let pic = 0;
+  for (let fr = 2; fr < 3; fr += 0.001) pic = Math.max(pic, S.cabs(S.transfert(col, etat, fr)));
+  const I = 17.5 * 200 / (22 * 1000);
+  assert.equal(I.toFixed(2), '0.16');
+  assert.equal((1 / (I + Math.PI * 0.02 / 2)).toFixed(1), '5.2');
+  assert.equal(pic.toFixed(1), '5.2');
+  const c1 = S.classeEC8([{ h: 20, vs: 200 }], { vs: 1000 });
+  assert.equal(Math.round(c1.vs30), 273);
+  assert.equal(c1.classe, 'E');
+  // profil d'école du banc « site »
+  const poids = vs => (vs < 200 ? 17.5 : vs < 300 ? 18.5 : vs < 450 ? 19.5 : 20.5);
+  const prof = [[4, 160, 30], [8, 220, 15], [12, 320, 0], [10, 450, 0]].map(([h, vs, ip]) => ({ h, vs, ip, poids: poids(vs) })), roc = { vs: 1200, poids: 22, xi: 0.01 };
+  const cl = S.classeEC8(prof, roc);
+  assert.deepEqual([Math.round(cl.vs30), cl.classe, S.frequenceQuartOnde(prof).toFixed(1)], [267, 'C', '2.1']);
+  const rec = A.simuler({ M: 6.5, R: 20, graine: 271828 });
+  let p = 0;
+  for (const v of rec.acc) p = Math.max(p, Math.abs(v));
+  const surf = (pga, lineaire) => {
+    const acc = new Float64Array(rec.acc.length + Math.round(10 / rec.dt));
+    for (let i = 0; i < rec.acc.length; i++) acc[i] = rec.acc[i] / p * pga;
+    return S.calculer(S.colonne(prof, roc), acc, rec.dt, lineaire ? { lineaire: true } : { tolerance: 1e-3, iterMax: 30 }).surface.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+  };
+  assert.deepEqual([surf(0.05).toFixed(2), surf(0.25).toFixed(2), surf(0.25, true).toFixed(2), surf(0.5).toFixed(2)], ['0.14', '0.46', '0.89', '0.76']);
+  for (const t of ['= <strong>2,5 Hz</strong>', '≈ <strong>5,2</strong>', 'Vs30 = 273 m/s, est de classe E', 'Vs30 = 267 m/s (classe C)', '0,46 g (1,9)', 'en prédirait 0,89 g']) assert.ok(cours.includes(t), t);
+});
