@@ -21,6 +21,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Liquéfaction** | sondage CPT d'école (profils types, nappe réglable), séisme (amax, M) ; méthode simplifiée de Boulanger et Idriss (2014) : CSR, CRR(qc1Ncs)·MSF·Kσ, Ic et teneur en fines, coefficient de sécurité ; indice LPI d'Iwasaki et tassement de Zhang et al. (2002) ; variante SPT dans le moteur ; vérifié contre liquepy ; mode exercice noté |
 | **Ductilité** | oscillateur élastoplastique (écrouissage cinématique) de période T et de résistance Se(T)/R sous sept accélérogrammes calés sur le spectre de l'EN 1998-1:2004 à T ; boucle d'hystérésis, déplacement au cours du temps et résiduel ; spectres de ductilité à résistance constante face aux règles des égaux déplacements et de la méthode N2 ; déplacement cible N2 (annexe B) en format accélération–déplacement face à la moyenne des calculs temporels ; vérifié contre OpenSeesPy ; mode exercice noté |
 | **Mécanisme** | séisme d'école de type choisi et réseau de 6 à 30 stations ; premières arrivées P sur les verticales (Pg montante ou Pn descendante), polarités lues ; sphère focale en projection de Schmidt (hémisphère inférieur), plans nodaux et quadrants du modèle réglé, désaccords, axes P et T, type de faille ; inversion par recherche exhaustive et famille de solutions ; vérifié contre ObsPy ; mode exercice noté |
+| **Source** | séisme de Mw et de chute de contrainte choisies, quatre stations de 30 à 140 km ; fenêtre S, spectre de déplacement brut et corrigé (expansion géométrique, Q(f), κ, site), modèle de Brune ajusté à la main ou par moindres carrés en ln ; M0, Mw, fc et Δσ par station, face à ML ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
 Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
@@ -63,6 +64,7 @@ src/sismo/accelerogramme.js accélérogrammes synthétiques : fenêtre S stochas
 src/sismo/selection.js    sélection et mise à l'échelle sur une cible, échanges gloutons, contrôle
                           EN 1998-1:2004 § 3.2.3.1.2 (4)
 src/sismo/isolignes.js    isolignes d'une grille (carrés marchants), niveaux ronds
+src/sismo/source.js       spectre des ondes S corrigé du trajet, modèle de Brune, M0, Mw, Δσ
 src/sismo/mecanisme.js    mécanisme au foyer : double couple, plans, axes, rayonnement P, Schmidt, inversion
 src/sismo/inelastique.js  oscillateur bilinéaire (Newmark, Newton), ductilité, facteur Rμ, méthode N2
 src/sismo/liquefaction.js déclenchement de la liquéfaction (CPT, SPT), LPI, tassement, sondage d'école
@@ -81,9 +83,10 @@ src/banc-site.js        banc « site »
 src/banc-liquefaction.js banc « liquéfaction »
 src/banc-ductilite.js   banc « ductilité »
 src/banc-mecanisme.js   banc « mécanisme »
+src/banc-source.js      banc « source »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, liquéfaction, inélastique, mécanisme, références (92 tests)
+                        site, isolignes, liquéfaction, inélastique, mécanisme, source, références (95 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy et ObsPy (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)

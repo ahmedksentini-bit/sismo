@@ -106,3 +106,8 @@ la virgule décimale.
     direction opposée). Référence ObsPy (`tools/obspy/`, NED → USE). La vérité des exercices est le mécanisme du
     générateur ; les lectures sont le signe du premier extrême de la trace bruitée (comme un analyste), non le
     signe du rayonnement.
+24. **Source** (`src/sismo/source.js`) : mêmes constantes que le générateur (Rθφ = 0,63, F = 2, Reff de
+    saturation, Q(f), κ, amplification du site) ; Mw = (log10 M0 − 9,05)/1,5 et Δσ de la relation de Brune du
+    générateur ; la correction de Reff dépend de Mw : itérée. La vérité est le Mw et le Δσ du générateur ; le
+    banc se limite à Mw ≤ 6 (au-delà, fc passe sous 0,2 Hz et la fenêtre S ne suffit plus). La barre des bancs
+    passe à la ligne (quinze onglets) : ne pas la remettre sur une seule ligne forcée.
