@@ -61,6 +61,12 @@ main { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 2
 .banniere .eyebrow { margin: 0 0 4px; color: var(--cyan); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .banniere h1 { margin: 0; font-size: clamp(28px, 4.2vw, 40px); line-height: 1.08; text-wrap: balance; }
 .banniere p.chapeau { max-width: 62ch; margin: 8px 0 0; color: var(--muted); }
+.parcours { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.parcours-lien { font: inherit; font-size: 13px; font-weight: 700; padding: 6px 13px; border: 1px solid var(--soft-line); border-radius: 999px; background: var(--soft); color: var(--blue-ink); cursor: pointer; }
+.parcours-lien:hover { border-color: var(--cyan); }
+.parcours-lien:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.topbar nav.mode-switch button[data-debut-chapitre] { margin-left: 10px; }
+.topbar nav.mode-switch .saut { display: none; }
 .live-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: 1px solid var(--soft-line); border-radius: 999px; background: var(--soft); color: var(--blue-ink); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .live-badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px color-mix(in srgb, var(--teal) 25%, transparent); }
 .live-badge.calcul i { background: var(--amp); }
@@ -331,6 +337,8 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 }
 @media (max-width: 560px) {
   .topbar nav.mode-switch { width: 100%; flex-wrap: wrap; }
+  .topbar nav.mode-switch .saut { display: block; flex-basis: 100%; height: 0; }
+  .topbar nav.mode-switch button[data-debut-chapitre] { margin-left: 0; }
   .topbar nav.mode-switch button { flex: 1 1 auto; padding: 7px 8px; }
 }
 @media (max-width: 480px) {
