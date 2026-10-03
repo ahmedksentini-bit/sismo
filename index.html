@@ -16,20 +16,26 @@
     <span><strong>Sismologie</strong><small>Aléa sismique · Eurocode 8</small></span>
   </div>
   <nav class="mode-switch" aria-label="Bancs">
-    <button type="button" id="onglet-station" aria-pressed="true">Une station</button>
-    <button type="button" id="onglet-reseau" aria-pressed="false">Réseau · localisation</button>
+    <button type="button" data-onglet="station" aria-pressed="true">Station</button>
+    <button type="button" data-onglet="reseau" aria-pressed="false">Réseau</button>
+    <button type="button" data-onglet="sismometre" aria-pressed="false">Sismomètre</button>
+    <button type="button" data-onglet="profil" aria-pressed="false">Profil</button>
   </nav>
 </header>
 
 <main>
   <section class="banniere">
     <div>
-      <p class="eyebrow">Lire un sismogramme · prototype de bancs</p>
+      <p class="eyebrow">Lire un sismogramme · bancs interactifs</p>
       <h1>Lecteur de sismogramme</h1>
       <p class="chapeau" id="chapeau-station">Une station trois composantes enregistre un séisme. Pointez les ondes P et S, mesurez l'amplitude
         sur le Wood-Anderson simulé : le lecteur en déduit la distance, l'heure d'origine, la magnitude locale et la direction de la source.</p>
       <p class="chapeau" id="chapeau-reseau" hidden>Quatre stations enregistrent le même séisme. Pointez P et S sur chacune : les cercles de distance,
         le diagramme de Wadati et une recherche sur grille localisent l'épicentre, la profondeur et l'heure d'origine.</p>
+      <p class="chapeau" id="chapeau-sismometre" hidden>Un sismomètre est une masse suspendue dans un bâti posé sur le sol. Selon sa fréquence propre
+        et son amortissement, le stylet recopie le déplacement du sol ou son accélération : c'est la même équation que celle d'un ouvrage.</p>
+      <p class="chapeau" id="chapeau-profil" hidden>Douze stations alignées de 15 à 345 km enregistrent un séisme superficiel. Rangées par distance,
+        leurs premières arrivées dessinent deux droites : leurs pentes et leur intersection donnent les vitesses et l'épaisseur de la croûte.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -207,7 +213,112 @@
     </aside>
   </div>
 
-  <section class="carte" style="margin-top:16px" aria-label="Repères de lecture">
+  <div class="poste" id="banc-sismometre" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Sismomètre">
+        <div class="outils">
+          <div class="groupe" role="group" aria-label="Mouvement du sol">
+            <button type="button" class="outil neutre" data-s-exc="sinus" aria-pressed="true">Sol sinusoïdal</button>
+            <button type="button" class="outil neutre" data-s-exc="lacher" aria-pressed="false">Lâcher de la masse</button>
+            <button type="button" class="outil neutre" data-s-exc="seisme" aria-pressed="false">Séisme simulé</button>
+          </div>
+          <div class="groupe" role="group" aria-label="Animation">
+            <button type="button" class="outil neutre" id="s-marche">Pause</button>
+            <button type="button" class="outil neutre" id="s-ralenti" aria-pressed="false">Ralenti ×¼</button>
+            <button type="button" class="outil neutre" id="s-relancer">Relancer</button>
+          </div>
+        </div>
+        <canvas id="s-scene" aria-label="Sismomètre : bâti, masse, ressort, amortisseur et stylet"></canvas>
+        <canvas id="s-courbes" aria-label="Enregistrement du stylet comparé au mouvement du sol"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>stylet x</span><span><i style="background:var(--blue)"></i>−ug (déplacement du sol)</span><span><i class="tirets" style="border-color:var(--amp)"></i>−üg/ω₀² (accélération du sol)</span></p>
+        <p class="aide" id="s-aide"></p>
+      </section>
+      <section class="carte" aria-label="Réponse en fréquence">
+        <h2>Réponse en fréquence<small>Rouge : |X / Ug| ; ambre : |X·ω₀² / Üg| ; points : fréquence du sol</small></h2>
+        <canvas id="s-reponse" aria-label="Réponse en fréquence de l'instrument"></canvas>
+        <p class="aide">Au-dessus de f₀, la masse reste immobile dans le repère fixe : X ≈ −Ug, l'instrument lit le <b>déplacement</b>.
+          En dessous, le ressort impose son mouvement : X ≈ −Üg/ω₀², il lit l'<b>accélération</b>. Avec ξ ≈ 0,7, la courbe ne présente pas de pic.</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <section class="carte" aria-label="Réglages de l'instrument">
+        <p class="sous-titre">Instrument</p>
+        <div class="prereglages" role="group" aria-label="Préréglages">
+          <button type="button" data-s-prereglage="woodAnderson">Wood-Anderson</button>
+          <button type="button" data-s-prereglage="courtePeriode">Courte période</button>
+          <button type="button" data-s-prereglage="longuePeriode">Longue période</button>
+          <button type="button" data-s-prereglage="accelerometre">Accéléromètre</button>
+          <button type="button" data-s-prereglage="peuAmorti">Peu amorti</button>
+        </div>
+        <div class="champ"><label for="s-f0">Fréquence propre f₀ <output id="s-f0-v"></output></label><input type="range" id="s-f0" min="0" max="1000" step="1"></div>
+        <div class="champ"><label for="s-xi">Amortissement ξ <output id="s-xi-v"></output></label><input type="range" id="s-xi" min="0" max="1.5" step="0.01"></div>
+        <div class="champ" id="s-champ-f"><label for="s-f">Fréquence du sol f <output id="s-f-v"></output></label><input type="range" id="s-f" min="0" max="1000" step="1"></div>
+        <div class="afficheurs deux" id="s-afficheurs"></div>
+      </section>
+      <section class="carte" aria-label="Expériences guidées">
+        <p class="sous-titre">Expériences guidées</p>
+        <ol class="experiences">
+          <li>« Courte période », sol à 5 Hz : la masse reste presque immobile dans le repère fixe ; le stylet recopie −ug.</li>
+          <li>Même instrument, sol à 0,2 Hz : le stylet suit les tirets ambre, −üg/ω₀². L'instrument est devenu un accéléromètre.</li>
+          <li>« Peu amorti », puis f = f₀ : résonance, l'amplitude est multipliée par 1/(2ξ) = 10. Remontez ξ à 0,7 : plus de pic.</li>
+          <li>« Lâcher de la masse » : comptez les oscillations ; leur décroissance d'un cycle à l'autre mesure ξ.</li>
+          <li>« Wood-Anderson » (T₀ = 0,8 s, ξ = 0,8) : au-dessus de 1,25 Hz il donne le déplacement du sol. C'est l'instrument de référence de ML.</li>
+          <li>La même équation régit un bâtiment sur le sol : en balayant f₀, on construit son spectre de réponse.</li>
+        </ol>
+      </section>
+    </aside>
+  </div>
+
+  <div class="poste" id="banc-profil" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Profil par distance">
+        <div class="outils">
+          <div class="groupe" role="group" aria-label="Droites">
+            <button type="button" class="outil p" data-p-outil="g" aria-pressed="true"><span class="pastille"></span>Droite Pg</button>
+            <button type="button" class="outil s" data-p-outil="n" aria-pressed="false"><span class="pastille"></span>Droite Pn</button>
+            <button type="button" class="outil neutre" id="p-effacer">Effacer les droites</button>
+          </div>
+          <label class="filtre-court" for="p-reduction">Réduction
+            <select id="p-reduction"><option value="0">aucune</option><option value="6">6 km/s</option><option value="8" selected>8 km/s</option></select></label>
+          <label class="filtre-court" for="p-ampli">Amplitude
+            <select id="p-ampli"><option value="p" selected>P renforcée</option><option value="trace">par trace</option></select></label>
+          <span class="curseur-lecture" id="p-curseur">—</span>
+        </div>
+        <canvas id="p-section" aria-label="Profil sismique : traces verticales rangées par distance"></canvas>
+        <p class="aide" id="p-aide"></p>
+      </section>
+      <section class="carte" aria-label="Lectures du profil">
+        <h2>Lectures<small>Calculées à partir de vos deux droites</small></h2>
+        <div class="afficheurs" id="p-afficheurs"></div>
+        <div class="etapes" id="p-etapes"></div>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="p-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="p-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" id="p-panneau-explorer" aria-label="Modèle de croûte">
+        <p class="sous-titre">Croûte simulée</p>
+        <div class="champ"><label for="p-H">Épaisseur de la croûte H <output id="p-H-v"></output></label><input type="range" id="p-H" min="20" max="50" step="1"></div>
+        <div class="champ"><label for="p-v1">Vitesse P de la croûte V₁ <output id="p-v1-v"></output></label><input type="range" id="p-v1" min="5.6" max="6.6" step="0.05"></div>
+        <div class="champ"><label for="p-v2">Vitesse P du manteau V₂ <output id="p-v2-v"></output></label><input type="range" id="p-v2" min="7.6" max="8.4" step="0.05"></div>
+        <label class="case"><input type="checkbox" id="p-hodo" checked> Hodochrones théoriques Pg, Pn, Sg</label>
+        <div class="actions" style="margin-top:12px"><button type="button" class="bouton secondaire" id="p-tirage">Nouveau tirage du signal</button></div>
+        <p class="verite" id="p-verite"></p>
+      </section>
+      <section class="carte" id="p-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="p-exo-num"></span>
+        <p class="enonce">Un séisme superficiel (h = 5 km, Mw 5) est enregistré par douze stations alignées. Tracez la droite des ondes
+          directes Pg puis celle des ondes réfractées Pn. Déduisez-en les vitesses, l'épaisseur de la croûte et la distance de croisement.</p>
+        <div class="actions"><button type="button" class="bouton primaire" id="p-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="p-nouvel-exo">Nouvel exercice</button></div>
+        <div id="p-corrige"></div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
       <li><strong>Quoi ?</strong>Le code de voie le dit : <b>HH</b> = vélocimètre (vitesse), <b>HN</b> = accéléromètre. La dernière lettre donne la composante : Z, N, E.</li>
@@ -226,5 +337,8 @@
 <noscript>Activez JavaScript pour utiliser le lecteur.</noscript>
 <script type="module" src="src/lecteur-station.js"></script>
 <script type="module" src="src/lecteur-reseau.js"></script>
+<script type="module" src="src/banc-sismometre.js"></script>
+<script type="module" src="src/banc-profil.js"></script>
+<script type="module" src="src/onglets.js"></script>
 </body>
 </html>

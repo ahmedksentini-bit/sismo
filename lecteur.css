@@ -174,6 +174,22 @@ select, input[type="number"] { width: 100%; min-width: 0; padding: 8px 10px; bor
 .notes-loc b { color: var(--ink); }
 #r-residus td.ecart { color: var(--bad); font-weight: 800; }
 
+/* Banc sismomètre */
+#s-scene { display: block; width: 100%; height: 270px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#s-courbes { display: block; width: 100%; height: 190px; margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#s-reponse { display: block; width: 100%; height: 280px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; color: var(--muted); font-size: 12.5px; }
+.legende i { display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; }
+.legende i.tirets { height: 0; border-top: 3px dashed; border-radius: 0; }
+.prereglages { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.prereglages button { padding: 6px 10px; border: 1px solid var(--input-line); border-radius: 9px; background: var(--paper); font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.prereglages button:hover { border-color: var(--cyan); }
+.afficheurs.deux { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.experiences { display: grid; gap: 8px; margin: 0; padding-left: 20px; font-size: 13.5px; }
+
+/* Banc profil */
+#p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
+
 @media (max-width: 1100px) {
   .poste { grid-template-columns: minmax(0, 1fr); }
   .reperes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -181,6 +197,8 @@ select, input[type="number"] { width: 100%; min-width: 0; padding: 8px 10px; bor
 @media (max-width: 760px) {
   .afficheurs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #traces { height: 330px; }
+  #p-section { height: 480px; }
+  #s-scene { height: 250px; }
   .hodo-cadre { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .curseur-lecture { margin-left: 0; width: 100%; }
 }

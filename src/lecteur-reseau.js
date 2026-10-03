@@ -520,24 +520,16 @@ import Sismo from './sismo/signal.js';
     else { etat.outil = 'P'; plusTard(regenerer); }
   }
 
-  // ── Onglets : une station / réseau ──────────────────────────────────────
-  function ouvrir(banc) {
-    const reseau = banc === 'reseau';
-    $('#banc-station').hidden = reseau; $('#banc-reseau').hidden = !reseau;
-    $('#chapeau-station').hidden = reseau; $('#chapeau-reseau').hidden = !reseau;
-    $('#onglet-station').setAttribute('aria-pressed', String(!reseau));
-    $('#onglet-reseau').setAttribute('aria-pressed', String(reseau));
-    try { history.replaceState(null, '', reseau ? '#localisation' : '#station'); } catch (e) { /* adresse figée : sans conséquence */ }
-    if (reseau && !etat.pret) {
+  // ── Ouverture du banc : les onglets sont gérés par src/onglets.js ─────
+  window.addEventListener('banc:ouvert', e => {
+    if (e.detail !== 'reseau') return;
+    if (!etat.pret) {
       etat.pret = true;
       construireTraces(); brancher(); majCurseurs();
       $('#r-carte').classList.add('deplacable');
       plusTard(regenerer);
-    } else if (reseau) {
+    } else {
       tout();
     }
-  }
-  $('#onglet-station').addEventListener('click', () => ouvrir('station'));
-  $('#onglet-reseau').addEventListener('click', () => ouvrir('reseau'));
-  if (location.hash === '#localisation') ouvrir('reseau');
+  });
 })();

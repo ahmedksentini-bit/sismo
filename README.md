@@ -5,15 +5,18 @@ sismique réglementaire de l'**Eurocode 8**, première et deuxième génération
 Même architecture et même habillage que les sites de fondations et de géotechnique
 routière de ksr-infra : application web **statique**, aucun framework, aucune compilation.
 
-## État : prototype des bancs « Lire un sismogramme »
+## État : bancs du chapitre « Lire un sismogramme »
 
 | Banc | Rôle |
 |---|---|
 | **Une station** | sismogramme trois composantes (vélocimètre `HH` ou accéléromètre `HN`) ; vitesse, accélération, déplacement ou Wood-Anderson simulé ; filtres de Butterworth causaux ; rotation Z/R/T ; pointés P et S, amplitude Wood-Anderson ; distance par S − P, heure d'origine, ML (IASPEI 2013), azimut de la source par le mouvement de la P ; mode exercice noté |
 | **Réseau · localisation** | quatre stations sur un même axe des temps ; cercles de distance, diagramme de Wadati, localisation par recherche sur grille (x, y, h, t₀), zone compatible, gap azimutal ; épicentre déplaçable en exploration ; mode exercice noté |
+| **Sismomètre** | masse, ressort et amortisseur dans un bâti animé ; sol sinusoïdal, lâcher de la masse ou séisme simulé ; préréglages (Wood-Anderson, courte et longue période, accéléromètre) ; réponse en fréquence en déplacement et en accélération ; mesure du régime permanent |
+| **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
-Chaque banc a un mode **Explorer** (vérité terrain affichée) et un mode **Exercice**
-(séisme tiré au hasard, numéroté, corrigé avec tolérances).
+Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
+**Exercice** (séisme tiré au hasard, numéroté, corrigé avec tolérances). Les ancres
+`#localisation`, `#sismometre` et `#profil` ouvrent directement le banc voulu.
 
 ## Lancer
 
@@ -30,9 +33,15 @@ src/sismo/signal.js     solveurs purs et testés (aucun accès au DOM)
                           FFT, Butterworth causal, Wood-Anderson, modèle de croûte,
                           temps de trajet Pg/Pn/Sg/Sn, méthode stochastique de Boore,
                           bruit de site, capteurs, ML, azimut, localisation, Wadati
+src/sismo/oscillateur.js  oscillateur à un degré de liberté : réponse en fréquence,
+                          Newmark à accélération moyenne, instruments de référence
+src/sismo/refraction.js   droites t = tᵢ + Δ/V, épaisseur de la croûte, croisement
 src/lecteur-station.js  banc « une station »
-src/lecteur-reseau.js   banc « réseau » et onglets
-tests/                  signal.test.mjs, localisation.test.mjs
+src/lecteur-reseau.js   banc « réseau »
+src/banc-sismometre.js  banc « sismomètre »
+src/banc-profil.js      banc « profil par distance »
+src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
+tests/                  signal, localisation, bancs (17 tests)
 ```
 
 ## Modèle des signaux
