@@ -88,6 +88,20 @@
       de kilomètres, avec des oscillations de plus longue période.</li>
   </ul>
 
+  <h3>Les ondes traversent le globe</h3>
+  <p>Les ondes P et S d'un séisme ne restent pas dans la croûte : elles plongent dans la Terre, et c'est en les
+     suivant que les sismologues ont découvert ses couches. Sous une <strong>croûte</strong> de quelques dizaines
+     de kilomètres s'étend le <strong>manteau</strong>, solide, jusqu'à 2 891 km ; puis le <strong>noyau
+     externe</strong>, liquide, jusqu'à 5 154 km ; au centre, la <strong>graine</strong>, solide. La vitesse
+     croît avec la profondeur : les rais se courbent et remontent vers la surface. Un liquide ne transmet pas le
+     cisaillement : les ondes S s'arrêtent au noyau, que seules les ondes P traversent.</p>
+  <div class="figure-cours" id="globeCh1"></div>
+  <p class="method-note">Coupe du globe calculée avec le modèle de Terre ak135, pour un foyer à 10 km : à droite,
+     les rais P jusqu'à 98° puis, au-delà de la zone d'ombre, les rais qui ont traversé le noyau (PKP, PKIKP) ; à
+     gauche, les rais S, arrêtés par le noyau liquide, et les SKS, convertis en ondes P dans le noyau. Le chapitre 6
+     détaille ces <strong>phases</strong> et leurs noms. Ce chapitre-ci s'en tient aux séismes proches, à moins de
+     quelques centaines de kilomètres.</p>
+
   <div class="calc" id="calcSismo">
     <h3>Un séisme vu par une station</h3>
     <p class="method-note">Un séisme de magnitude 4 à 10 km de profondeur, enregistré sans bruit en
@@ -827,7 +841,71 @@
 </section>
 
 <section id="ch6" class="card">
-  <h2>6 · La structure de la croûte</h2>
+  <h2>6 · La structure de la Terre</h2>
+
+  <h3>Le globe en couches</h3>
+  <p>Tout ce que l'on sait de l'intérieur de la Terre, ou presque, vient des ondes sismiques. Leurs temps de
+     trajet, relevés sur des milliers de séismes, ont révélé des couches séparées par des discontinuités où la
+     vitesse change brusquement :</p>
+  <div class="table-large"><table class="resultats" id="tabCouches"></table></div>
+  <p>La <strong>croûte</strong> (Mohorovičić, 1909) a 30 à 40 km d'épaisseur sous les continents, 7 km sous les
+     océans. Le <strong>manteau</strong>, solide mais lentement convectif, est marqué à 410 et 660 km par des
+     changements de minéraux (zone de transition). Le <strong>noyau</strong> (Oldham, 1906 ; Gutenberg en fixe la
+     profondeur vers 2 900 km en 1913) est <strong>liquide</strong> dans sa partie externe : les ondes S n'y passent
+     pas, et la vitesse des ondes P y chute de 13,7 à 8,0 km/s. La <strong>graine</strong> solide, au centre, a été
+     découverte par Inge Lehmann en 1936, grâce à des ondes faibles arrivant dans la zone d'ombre.</p>
+
+  <h3>Des rais courbes et les noms des phases</h3>
+  <p>Dans une Terre sphérique dont la vitesse v(r) croît vers le bas, la loi de Snell se conserve le long du rai
+     sous la forme p = r·sin i / v, constante : le <strong>paramètre de rai</strong>. Le rai plonge, se redresse et
+     remonte là où r/v = p. À chaque discontinuité, il se réfracte ou se réfléchit, et l'onde peut changer de nature
+     (P en S, S en P). Chaque trajet est une <strong>phase</strong>, désignée par les lettres de ses segments :</p>
+  <ul class="liste-cours">
+    <li><strong>P</strong>, <strong>S</strong> : onde P ou S dans le manteau (et la croûte) ;</li>
+    <li><strong>c</strong> : réflexion sur le noyau — <strong>PcP</strong>, <strong>ScS</strong> ;</li>
+    <li><strong>K</strong> : onde P dans le noyau externe — <strong>PKP</strong>, et <strong>SKS</strong>, onde S
+      convertie en P à l'entrée du noyau puis reconvertie en S à la sortie ;</li>
+    <li><strong>I</strong> : onde P dans la graine — <strong>PKIKP</strong> ; <strong>i</strong> : réflexion sur la
+      graine — <strong>PKiKP</strong> ;</li>
+    <li>en minuscules, <strong>p</strong> et <strong>s</strong> : départ vers le haut d'un foyer profond, puis
+      réflexion à la surface (pP, sP : les « phases de profondeur », dont le retard sur P mesure la profondeur du foyer).</li>
+  </ul>
+
+  <h3>La zone d'ombre</h3>
+  <p>Les rais P qui rasent le noyau émergent vers 100° de l'épicentre. Plus raides, ils entrent dans le noyau, où
+     la vitesse chute : ils s'y réfractent vers le centre et ressortent beaucoup plus loin, au-delà de 145° (PKP).
+     Entre les deux s'étend la <strong>zone d'ombre</strong> de P, où n'arrivent que des ondes diffractées par le noyau
+     et les ondes faibles qui ont traversé ou effleuré la graine (PKIKP, PKiKP). Pour les ondes S, l'ombre est totale
+     au-delà de 100° : le noyau liquide ne les transmet pas, seule SKS y arrive, convertie.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Séisme superficiel (10 km), station à 60° (6 700 km) : P arrive après <strong>10 min 6,7 s</strong>, S après
+       18 min 19,2 s, soit S − P = 8 min 12,5 s ; PcP, réfléchie sur le noyau, suit P de 46 s. À 150°, la première onde
+       est PKIKP (19 min 45,7 s), suivie des deux branches de PKP. La règle d ≈ 8,4 × (S − P) du chapitre 1 ne vaut
+       plus : elle donnerait 4 100 km au lieu de 6 700.</p></div>
+
+  <div class="calc" id="calcGlobe">
+    <h3>Les phases à travers le globe</h3>
+    <p class="method-note">Modèle de Terre ak135 (Kennett, Engdahl et Buland, 1995). Rais tracés dans une Terre à
+       symétrie sphérique ; temps et paramètres de rai vérifiés contre TauP (ObsPy) à 0,02 s près.</p>
+    <div class="data-grid">
+      <div class="field"><label for="glH">Profondeur du foyer</label>
+        <div class="input-wrap"><select id="glH"><option value="10">10 km</option><option value="100">100 km</option><option value="300">300 km</option><option value="600">600 km</option></select></div></div>
+      <div class="field"><label for="glD">Distance de la station Δ</label>
+        <div class="input-wrap"><input id="glD" type="text" inputmode="decimal" value="60" data-curseur="1 180 1"><span class="unit">°</span></div></div>
+      <div class="field"><label for="glVue">Rais tracés</label>
+        <div class="input-wrap"><select id="glVue"><option value="station">vers la station</option><option value="eventail">éventails P, PKP, S et SKS</option></select></div></div>
+    </div>
+    <div class="figure" id="glFig"></div>
+    <div id="glTab"></div>
+    <div class="figure" id="glHodo"></div>
+    <p class="final-result" id="glOut"></p>
+  </div>
+
+  <h3>Les tables de temps de trajet</h3>
+  <p>Les temps de trajet de toutes ces phases, calculés dans un modèle de Terre moyen — Jeffreys et Bullen (1940),
+     puis iasp91 et ak135 —, servent aux agences internationales pour localiser les séismes lointains et pour
+     identifier les phases sur les enregistrements, comme l'écart S − P sert à la station locale. Le reste du
+     chapitre revient à la croûte, où se joue la localisation des séismes proches.</p>
 
   <h3>Les hodochrones</h3>
   <p>Alignons des stations sur un profil, de quelques kilomètres à quelques centaines de kilomètres du
@@ -953,6 +1031,8 @@
       <li>Au-delà de la distance de croisement (≈ 140 km pour la croûte du cours), Pn est la première
         arrivée.</li>
       <li>Même méthode en sismique réfraction de site, en mètres et en millisecondes.</li>
+      <li>Globe : croûte, manteau (410 et 660 km), noyau externe liquide (2 891 km), graine (5 154 km) ; phases P, S,
+        PcP, ScS, PKP, SKS, PKIKP ; zone d'ombre de P entre ~100° et ~145°.</li>
     </ul></div>
 
   <div class="actions"><a class="primary" href="index.html#ch6">Exercices du chapitre</a>

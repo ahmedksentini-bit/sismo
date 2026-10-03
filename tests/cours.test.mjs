@@ -191,6 +191,24 @@ test('chapitre 6 : les exemples chiffrés du texte', async () => {
   for (const t of ['<strong>5,95 s</strong>', 'Pn apparaît à 61 km', '<strong>141 km</strong>', '≈ <strong>6,2 m</strong>', 'au-delà de 16 m']) assert.ok(cours.includes(t), t);
 });
 
+test('chapitre 6 : le globe, les phases et la zone d\'ombre', async () => {
+  const G = (await import('../src/sismo/globe.js')).default;
+  const t = (ph, d) => G.arrivees(ph, 10, d)[0].temps, mmss = s => `${Math.floor(s / 60)} min ${(s % 60).toFixed(1).replace('.', ',')} s`;
+  assert.equal(mmss(t('P', 60)), '10 min 6,7 s');
+  assert.equal(mmss(t('S', 60)), '18 min 19,2 s');
+  assert.equal(mmss(t('S', 60) - t('P', 60)), '8 min 12,5 s');
+  assert.equal(Math.round(t('PcP', 60) - t('P', 60)), 46);
+  assert.equal(mmss(t('PKIKP', 150)), '19 min 45,7 s');
+  assert.ok(['P', 'PKP', 'PKiKP', 'PKIKP'].every(ph => G.arrivees(ph, 10, 150).every(a => a.temps >= t('PKIKP', 150))));
+  assert.equal(Math.round(8.4 * (t('S', 60) - t('P', 60)) / 100) * 100, 4100);
+  assert.equal(Math.round(60 * Math.PI * G.R / 180 / 100) * 100, 6700);
+  // zone d'ombre : plus de P directe au-delà de ~100°, PKP à partir de ~145°
+  assert.equal(G.arrivees('P', 10, 99).length > 0 && G.arrivees('P', 10, 101).length, 0);
+  assert.ok(G.arrivees('PKP', 10, 144).length === 0 && G.arrivees('PKP', 10, 146).length > 0);
+  for (const x of ['après <strong>10 min 6,7 s</strong>', '18 min 19,2 s, soit S − P = 8 min 12,5 s', 'suit P de 46 s', 'PKIKP (19 min 45,7 s)',
+    'donnerait 4 100 km au lieu de 6 700', 'entre ~100° et ~145°']) assert.ok(cours.includes(x), x);
+});
+
 test('chapitre 7 : les exemples chiffrés du texte', async () => {
   const S = (await import('../src/sismo/spectre.js')).default;
   const se = (T, type = 1) => S.ec8(T, { type, sol: 'C', ag: 0.2 });

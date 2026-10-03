@@ -1,9 +1,11 @@
-// Exercices du chapitre 6 : la structure de la croûte. Les temps d'arrivée « lus » sortent des temps de
-// trajet du modèle (Sismo.temps, modèle de croûte tiré au hasard) ; les réponses appliquent les formules du
-// cours aux lectures arrondies.
+// Exercices du chapitre 6 : la structure de la Terre. Les temps d'arrivée « lus » sortent des temps de
+// trajet des modèles (Sismo.temps pour la croûte tirée au hasard, Globe.arrivees pour ak135) ; les réponses
+// appliquent les formules du cours aux lectures arrondies.
 import { fr, frd, nombre, choixMelange, donnee } from "./alea.js";
 import Sismo from "../sismo/signal.js";
 import Refraction from "../sismo/refraction.js";
+import Globe from "../sismo/globe.js";
+import { globe, raisVers } from "../globe-figure.js";
 
 export default [
   {
@@ -64,6 +66,33 @@ export default [
           choixMelange(a, "Pour lire correctement la vitesse du substratum, la ligne de géophones doit…",
             ["s'étendre à 2 ou 3 fois la distance de croisement", "rester plus courte que la distance de croisement", "être enterrée sous le substratum", "être parallèle à la nappe"],
             "Il faut plusieurs géophones au-delà du croisement pour tracer la seconde droite."),
+        ],
+      };
+    },
+  },
+  {
+    id: "ch6-globe", titre: "Ondes P et S à travers le globe", difficulte: 2,
+    generer(a) {
+      const h = a.choix([10, 100, 300, 600]), D = a.entier(30, 90), X = a.entier(110, 140), R = Globe.R, v0 = Globe.modele[0][1];
+      const [P] = Globe.arrivees("P", h, D), [S] = Globe.arrivees("S", h, D);
+      const tP = +P.temps.toFixed(1), tS = +S.temps.toFixed(1), i = +P.depart.toFixed(1);
+      const v = +((R - h) * Math.sin(P.depart / 180 * Math.PI) / P.p).toFixed(2);
+      const dkm = D * Math.PI * R / 180, regle = 8.4 * (tS - tP);
+      const p = (R - h) * Math.sin(i / 180 * Math.PI) / v, i0 = Math.asin(p * v0 / R) * 180 / Math.PI;
+      const loin = Object.keys(Globe.PHASES).flatMap((ph) => Globe.arrivees(ph, h, X).map((x) => x.phase)).filter((x, k, t) => t.indexOf(x) === k);
+      const mmss = (t) => `${Math.floor(t / 60)} min ${frd(t % 60, 1)} s`;
+      return {
+        enonce: `Un séisme se produit à ${h} km de profondeur. Une station située à ${D}° de l'épicentre lit l'onde P après ${mmss(tP)} et l'onde S après ${mmss(tS)} (temps depuis l'origine, modèle ak135). Le rai P quitte le foyer sous ${frd(i, 1)}° de la verticale, où Vp = ${frd(v, 2)} km/s ; sous la station, Vp = ${frd(v0, 1)} km/s. Rayon de la Terre : ${fr(R, 4)} km.`,
+        donnees: [donnee("profondeur h", `${h} km`), donnee("distance Δ", `${D}°`), donnee("tP, tS", `${mmss(tP)}, ${mmss(tS)}`), donnee("départ du rai P", `${frd(i, 1)}°, Vp = ${frd(v, 2)} km/s`)],
+        figure: globe({ rais: [...raisVers("S", h, D), ...raisVers("P", h, D)], stations: [{ distance: D, nom: `${D}°` }], h, largeur: 380, titre: "Rais P (bleu) et S (rouge)" }),
+        questions: [
+          nombre("Distance épicentrale le long de la surface ?", dkm, "km", `Δ = ${D}° × π × ${fr(R, 4)} / 180 = ${fr(dkm, 4)} km.`, { rel: 0.01 }),
+          nombre("Quelle distance donnerait la règle locale d ≈ 8,4 × (S − P) ?", regle, "km", `S − P = ${frd(tS - tP, 1)} s, d ≈ 8,4 × ${frd(tS - tP, 1)} = ${fr(regle, 4)} km au lieu de ${fr(dkm, 4)} : les rais plongent dans un manteau plus rapide, S − P croît moins vite que la distance. Aux distances télésismiques, on lit les tables de temps de trajet.`, { rel: 0.02 }),
+          nombre("Paramètre de rai p de l'onde P, en s/° ?", p * Math.PI / 180, "s/°", `p = r·sin i / v = (${fr(R, 4)} − ${h}) × sin ${frd(i, 1)}° / ${frd(v, 2)} = ${fr(p, 4)} s/rad, soit ${frd(p * Math.PI / 180, 2)} s/° : c'est aussi la pente de l'hodochrone de P à ${D}°.`, { rel: 0.02 }),
+          nombre("Angle d'incidence du rai P sous la station ?", i0, "°", `p se conserve le long du rai : sin i₀ = p·v₀/R = ${fr(p, 4)} × ${frd(v0, 1)} / ${fr(R, 4)} = ${frd(Math.sin(i0 * Math.PI / 180), 3)}, i₀ = ${frd(i0, 1)}°${h > 10 ? " : le rai remonte plus raide qu'il n'est parti, la vitesse étant plus faible en surface" : ""}.`, { abs: 0.5 }),
+          choixMelange(a, `Pour le même séisme, une station à ${X}° enregistre…`,
+            [`des ondes passées par le noyau (${loin.join(", ")}), mais ni P ni S directes`, `les ondes P et S directes, comme à ${D}°`, "l'onde S directe seulement", "aucune onde de volume"],
+            `La station est dans la zone d'ombre : les rais P directs émergent avant 100° et les ondes S ne traversent pas le noyau liquide. Arrivent seulement ${loin.join(", ")} (et l'onde P diffractée, faible).`),
         ],
       };
     },

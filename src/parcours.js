@@ -24,7 +24,7 @@ const Parcours = (() => {
     mecanisme: { titre: 'Le mécanisme au foyer', fichier: 'cours.html#ch3', duree: 25 },
     source: { titre: 'La taille de la source : moment et Mw', fichier: 'cours.html#ch4', duree: 25 },
     sismometre: { titre: 'Comment fonctionne un sismomètre', fichier: 'cours.html#ch5', duree: 20 },
-    profil: { titre: 'La structure de la croûte', fichier: 'cours.html#ch6', duree: 20 },
+    profil: { titre: 'La structure de la Terre', fichier: 'cours.html#ch6', duree: 30 },
     spectre: { titre: 'Le spectre de réponse et l\'Eurocode 8', fichier: 'cours.html#ch7', duree: 30 },
     sismicite: { titre: 'Catalogue et loi de Gutenberg-Richter', fichier: 'cours.html#ch8', duree: 25 },
     geodesie: { titre: 'Déformation de la croûte et taux de séismes', fichier: 'cours.html#ch9', duree: 25 },
