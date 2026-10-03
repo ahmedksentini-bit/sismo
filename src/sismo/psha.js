@@ -396,7 +396,7 @@ const Psha = (() => {
           ajustement: { b: 0.9, sigmaB: 0.06, lamPivot: 1.2, mPivot: 4 } },
       ].map(z => ({ ...z, ab: branchesAB(z.ajustement) })),
       dMmax: [{ d: -0.3, poids: 0.3 }, { d: 0, poids: 0.5 }, { d: 0.3, poids: 0.2 }],
-      gmpe: [{ id: 'akkar2014', poids: 0.5 }, { id: 'bindi2014', poids: 0.5 }],
+      gmpe: [{ id: 'akkar2014', poids: 1 / 3 }, { id: 'bindi2014', poids: 1 / 3 }, { id: 'boore2014', poids: 1 / 3 }],
       // Faille F : la faille cartographiée de la zone A (banc « géodésie »), décrochement vertical bloqué
       // jusqu'à 12 km, 80 km de long ; glissement géologique 0,8 mm/an ; Mmax : rupture de toute la faille.
       failles: [{ id: 'f1', nom: 'Faille F', zone: 0, trace: [[-10, -40], [-10, 40]], pendage: 90, zHaut: 0, zBas: 12, rake: 0,

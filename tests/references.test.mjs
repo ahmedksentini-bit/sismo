@@ -34,6 +34,18 @@ test('Akkar et al. (2014) identique à hazardlib (AkkarEtAlRjb2014) : médiane e
   assert.ok(ecartMax < 1e-8, `écart maximal en ln : ${ecartMax.toExponential(2)} (${ref.cas.length} cas × ${ref.imts.length} grandeurs)`);
 });
 
+test('Boore et al. (2014) identique à hazardlib (BooreEtAl2014, sans bassin) : médiane et σ', () => {
+  const ref = lire('gmpe_boore2014.json'), loi = Gmpe.LOIS.boore2014;
+  let ecartMax = 0;
+  for (const c of ref.cas) {
+    ref.imts.forEach((imt, j) => {
+      const r = loi.calculer({ M: c.M, Rjb: c.Rjb, vs30: c.vs30, rake: c.rake }, imt);
+      ecartMax = Math.max(ecartMax, Math.abs(r.ln - c.ln[j]), Math.abs(r.sigma - c.sigma[j]));
+    });
+  }
+  assert.ok(ecartMax < 1e-8, `écart maximal en ln : ${ecartMax.toExponential(2)} (${ref.cas.length} cas × ${ref.imts.length} grandeurs)`);
+});
+
 test('Bindi et al. (2014) identique à hazardlib (BindiEtAl2014Rjb) : médiane et σ', () => {
   const ref = lire('gmpe_bindi2014.json'), loi = Gmpe.LOIS.bindi2014;
   let ecartMax = 0;

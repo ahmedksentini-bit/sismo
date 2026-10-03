@@ -1,8 +1,8 @@
 """tools/oq/references.py — valeurs de référence calculées par OpenQuake (hazardlib et HMTK).
 
 Écrit tests/references/*.json, que `npm test` compare aux solveurs du site :
-- gmpe_akkar2014.json, gmpe_bindi2014.json : médianes et écarts types d'AkkarEtAlRjb2014 et de
-  BindiEtAl2014Rjb sur une grille (M, Rjb, Vs30, style, période) ;
+- gmpe_akkar2014.json, gmpe_bindi2014.json, gmpe_boore2014.json : médianes et écarts types
+  d'AkkarEtAlRjb2014, de BindiEtAl2014Rjb et de BooreEtAl2014 sur une grille (M, Rjb, Vs30, style, période) ;
 - hmtk.json : déclusterage de Gardner et Knopoff et estimateur de Weichert sur tests/references/catalogue.csv ;
 - geodesie.json : invariants des taux de déformation (GeodeticStrain d'HMTK) ; taux de moment d'une
   Gutenberg-Richter tronquée et valeur a qui équilibre un taux de moment (TruncatedGRMFD de hazardlib) ;
@@ -18,6 +18,7 @@ import numpy as np
 from openquake.hazardlib import contexts, imt as IMT
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
@@ -35,11 +36,16 @@ REF = RACINE / 'tests' / 'references'
 COMPLETUDE = [[1990, 3.0], [1964, 4.0], [1930, 5.0], [1900, 6.0]]
 
 
-def gmpe(classe=AkkarEtAlRjb2014, imts=('PGA', 'PGV', 0.01, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0)):
+DISTANCES = (0.0, 1.0, 5.0, 10.0, 30.0, 100.0, 200.0)
+VS30 = (200.0, 400.0, 750.0, 900.0, 1100.0)
+
+
+def gmpe(classe=AkkarEtAlRjb2014, imts=('PGA', 'PGV', 0.01, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0),
+         distances=DISTANCES, vs30=VS30):
     g = classe()
     imts = list(imts)
-    grille = [(M, R, v, rake) for M in (4.0, 5.0, 6.0, 6.75, 7.0, 8.0) for R in (0.0, 1.0, 5.0, 10.0, 30.0, 100.0, 200.0)
-              for v in (200.0, 400.0, 750.0, 900.0, 1100.0) for rake in (0.0, -90.0, 90.0)]
+    grille = [(M, R, v, rake) for M in (4.0, 5.0, 6.0, 6.75, 7.0, 8.0) for R in distances
+              for v in vs30 for rake in (0.0, -90.0, 90.0)]
     ctx = contexts.RuptureContext()
     ctx.mag = np.array([c[0] for c in grille]); ctx.rjb = np.array([c[1] for c in grille])
     ctx.vs30 = np.array([c[2] for c in grille]); ctx.rake = np.array([c[3] for c in grille])
@@ -137,10 +143,12 @@ def main():
     entete = {'outil': f'OpenQuake {openquake.engine.__version__}'}
     (REF / 'gmpe_akkar2014.json').write_text(json.dumps({**entete, **gmpe()}, ensure_ascii=False), encoding='utf-8')
     (REF / 'gmpe_bindi2014.json').write_text(json.dumps({**entete, **gmpe(BindiEtAl2014Rjb, ('PGA', 'PGV', 0.02, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0))}, ensure_ascii=False), encoding='utf-8')
+    (REF / 'gmpe_boore2014.json').write_text(json.dumps({**entete, **gmpe(BooreEtAl2014, ('PGA', 'PGV', 0.02, 0.04, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0),
+                                                                                          DISTANCES + (300.0,), VS30 + (250.0, 1600.0))}, ensure_ascii=False), encoding='utf-8')
     (REF / 'hmtk.json').write_text(json.dumps({**entete, **hmtk()}, ensure_ascii=False), encoding='utf-8')
     (REF / 'geodesie.json').write_text(json.dumps({**entete, **geodesie()}, ensure_ascii=False), encoding='utf-8')
     (REF / 'failles.json').write_text(json.dumps({**entete, **failles()}, ensure_ascii=False), encoding='utf-8')
-    print('écrit tests/references/gmpe_akkar2014.json, gmpe_bindi2014.json, hmtk.json, geodesie.json et failles.json')
+    print('écrit tests/references/gmpe_akkar2014.json, gmpe_bindi2014.json, gmpe_boore2014.json, hmtk.json, geodesie.json et failles.json')
 
 
 if __name__ == '__main__':

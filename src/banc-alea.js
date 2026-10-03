@@ -28,7 +28,7 @@ import Psha from './sismo/psha.js';
   const reglagesDefaut = () => ({
     site: { x: 0, y: 0, vs30: 800 },
     zones: BASE.zones.map(z => ({ lam: z.ajustement.lamPivot, b: z.ajustement.b, mmax: z.mmax })),
-    incAB: true, incMmax: true, poidsAkkar: 0.5,
+    incAB: true, incMmax: true, lois: Object.fromEntries(BASE.gmpe.map(g => [g.id, true])),
     geo: { actif: true, poids: 0.5, moments: BASE.taux.find(t => t.id === 'geodesie').moments.slice(), source: 'champ GNSS du modèle d\'école' },
     faille: { actif: true, glissement: BASE.failles[0].glissement },
   });
@@ -44,7 +44,8 @@ import Psha from './sismo/psha.js';
       return { ...z, points: POINTS[i], mmax: p.mmax, ajustement: aj,
         ab: r.incAB ? Psha.branchesAB(aj) : [{ a: Math.log10(p.lam) + p.b * aj.mPivot, b: p.b, poids: 1 }] };
     });
-    const gmpe = [{ id: 'akkar2014', poids: r.poidsAkkar }, { id: 'bindi2014', poids: 1 - r.poidsAkkar }].filter(g => g.poids > 1e-9);
+    // Lois retenues, à poids égaux
+    const ids = BASE.gmpe.map(g => g.id).filter(id => r.lois[id]), gmpe = ids.map(id => ({ id, poids: 1 / ids.length }));
     const wGeo = r.geo.actif ? r.geo.poids : 0;
     const taux = [{ id: 'catalogue', nom: 'Catalogue', poids: 1 - wGeo }];
     if (wGeo > 0) taux.push({ id: 'geodesie', nom: 'Géodésie', poids: wGeo, couplage: Psha.COUPLAGE, moments: r.geo.moments });
@@ -351,7 +352,9 @@ import Psha from './sismo/psha.js';
     $('#al-faille').checked = r.faille.actif; $('#al-glissement').value = r.faille.glissement; $('#al-glissement').disabled = !r.faille.actif;
     const mF = Psha.momentFaille(BASE, { ...BASE.failles[0], glissement: r.faille.glissement });
     $('#al-glissement-v').textContent = `${virg(r.faille.glissement, 2)} mm/an · Ṁ0 ${sci(mF)} N·m/an`;
-    $('#al-poids').value = r.poidsAkkar; $('#al-poids-v').textContent = `${virg(r.poidsAkkar, 2)} / ${virg(1 - r.poidsAkkar, 2)}`;
+    $$('[data-al-loi]').forEach(c => { c.checked = r.lois[c.dataset.alLoi]; });
+    const nL = Object.values(r.lois).filter(Boolean).length;
+    $('#al-lois-v').textContent = nL > 1 ? `${nL} lois, poids 1/${nL} chacune` : 'une seule loi : pas d\'incertitude épistémique sur le mouvement du sol';
     $$('[data-al-proba]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alProba === etat.proba.join('|'))));
     $$('[data-al-imt]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alImt === etat.k)));
   }
@@ -374,7 +377,7 @@ import Psha from './sismo/psha.js';
         { lam: Math.round(u.entre(0.1, 0.5) * 100) / 100, b: Math.round(u.entre(0.9, 1.1) * 100) / 100, mmax: Math.round(u.entre(6, 6.8) * 10) / 10 },
         { lam: Math.round(u.entre(0.6, 3) * 10) / 10, b: Math.round(u.entre(0.8, 1) * 100) / 100, mmax: Math.round(u.entre(7, 7.6) * 10) / 10 },
       ],
-      incAB: true, incMmax: true, poidsAkkar: 0.5, geo: { ...reglagesDefaut().geo, actif: false }, faille: { ...reglagesDefaut().faille, actif: false },
+      incAB: true, incMmax: true, lois: reglagesDefaut().lois, geo: { ...reglagesDefaut().geo, actif: false }, faille: { ...reglagesDefaut().faille, actif: false },
     };
     etat.proba = [0.1, 50]; etat.verifie = false; etat.dom = null;
     $('#al-exo-num').textContent = 'Exercice n° ' + numero;
@@ -425,7 +428,11 @@ import Psha from './sismo/psha.js';
     $('#al-faille').addEventListener('change', e => { etat.r.faille.actif = e.target.checked; recalculer(); });
     $('#al-glissement').addEventListener('input', e => { etat.r.faille.glissement = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-poids-geo').addEventListener('input', e => { etat.r.geo.poids = parseFloat(e.target.value); majControles(); planifier(); });
-    $('#al-poids').addEventListener('input', e => { etat.r.poidsAkkar = parseFloat(e.target.value); majControles(); planifier(); });
+    $$('[data-al-loi]').forEach(c => c.addEventListener('change', () => {
+      etat.r.lois[c.dataset.alLoi] = c.checked;
+      if (!Object.values(etat.r.lois).some(Boolean)) { etat.r.lois[c.dataset.alLoi] = true; c.checked = true; return; } // au moins une loi
+      recalculer();
+    }));
     $('#al-defaut').addEventListener('click', () => { etat.r = reglagesDefaut(); etat.geoRecu = null; recalculer(); });
     $$('[data-al-dom]').forEach(b => b.addEventListener('click', () => { etat.dom = +b.dataset.alDom; $$('[data-al-dom]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
     $('#al-mode-explorer').addEventListener('click', () => changerMode('explorer'));

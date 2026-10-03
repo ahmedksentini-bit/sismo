@@ -37,7 +37,7 @@ from openquake.hazardlib.mfd import TruncatedGRMFD  # noqa: E402
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 REF = RACINE / 'tests' / 'references'
-GSIM = {'akkar2014': 'AkkarEtAlRjb2014', 'bindi2014': 'BindiEtAl2014Rjb'}
+GSIM = {'akkar2014': 'AkkarEtAlRjb2014', 'bindi2014': 'BindiEtAl2014Rjb', 'boore2014': 'BooreEtAl2014'}
 TRT = 'Active Shallow Crust'
 NRML = '<?xml version="1.0" encoding="utf-8"?>\n<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">\n{}\n</nrml>\n'
 
