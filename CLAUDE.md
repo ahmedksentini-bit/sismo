@@ -28,5 +28,10 @@ la virgule décimale.
    moyenne (`Oscillateur.integrer` ou `Oscillateur.pas`, identiques pas à pas, testé).
 9. **Profil** : les temps sont comptés depuis l'origine ; la réduction (t − Δ/V) n'est
    qu'un affichage, les droites sont toujours calculées en temps vrais.
-10. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+10. **Spectre de réponse** : Sa = ω²·Sd (pseudo-accélération). Pas d'intégration
+    ≤ T/20 (sous-pas par interpolation linéaire) ; le calcul progressif de l'animation
+    et le calcul d'un bloc donnent le même spectre (testé). Le spectre EC8 affiché est
+    celui de l'EN 1998-1:2004 (valeurs recommandées) ; la 2ᵉ génération viendra du
+    texte de l'EN 1998-1-1:2024, pas de mémoire.
+11. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.
