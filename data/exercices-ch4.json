@@ -1,0 +1,237 @@
+{
+ "chapitre": "ch4",
+ "exercices": [
+  {
+   "id": "ch4-moment",
+   "titre": "Moment sismique et magnitude d'une rupture",
+   "difficulte": 1,
+   "graine": 3404921201,
+   "enonce": "Une rupture de 15 km de long sur 15 km de large a glissé en moyenne de 2,70 m, dans une croûte de rigidité μ = 32 GPa.",
+   "donnees": [
+    {
+     "label": "L × W",
+     "valeur": "15 km × 15 km"
+    },
+    {
+     "label": "D",
+     "valeur": "2,70 m"
+    },
+    {
+     "label": "μ",
+     "valeur": "32 GPa"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Moment sismique M₀ (en 10¹⁸ N·m) ?",
+     "type": "nombre",
+     "unite": "10¹⁸ N·m",
+     "reponse": 19.44,
+     "explication": "M₀ = μ·L·W·D = 32·10⁹ × 15 000 × 15 000 × 2,70 = 1,94·10^19 N·m.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Magnitude de moment Mw ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 6.8258,
+     "explication": "Mw = (log₁₀ M₀ − 9,05)/1,5 = (19,29 − 9,05)/1,5 = 6,83.",
+     "tolerance": 0.05
+    },
+    {
+     "texte": "Moment d'un séisme de magnitude Mw + 1 (en 10¹⁸ N·m) ?",
+     "type": "nombre",
+     "unite": "10¹⁸ N·m",
+     "reponse": 614.747,
+     "explication": "Une unité de Mw multiplie M₀ par 10^1,5 ≈ 31,6 : 6,15·10^20 N·m.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Pourquoi préfère-t-on Mw à ML pour les grands séismes ?",
+     "type": "choix",
+     "options": [
+      "Mw est toujours plus grande que ML",
+      "Mw mesure la taille physique de la rupture et ne sature pas",
+      "ML dépend de la profondeur, Mw non",
+      "Mw se lit directement sur le Wood-Anderson"
+     ],
+     "reponse": 1,
+     "explication": "ML lit une amplitude autour de 1,25 Hz ; au-delà de 6 à 6,5, la fréquence coin passe sous cette fréquence et ML sature. Mw vient du moment, lu sur les basses fréquences."
+    }
+   ]
+  },
+  {
+   "id": "ch4-brune",
+   "titre": "Magnitude et chute de contrainte par le spectre de Brune",
+   "difficulte": 2,
+   "graine": 4010895409,
+   "enonce": "Le spectre de déplacement des ondes S d'un séisme, corrigé du trajet, du filtre κ et du site, est ajusté par un modèle de Brune : plateau Ω₀ = 2,52·10^-3 m·s (spectre ramené à R₀ = 1 km du foyer), fréquence coin fc = 2,6 Hz. On prend ρ = 2 800 kg/m³, β = 3 500 m/s, Rθφ = 0,63 et F = 2.",
+   "donnees": [
+    {
+     "label": "Ω₀",
+     "valeur": "2,52·10^-3 m·s"
+    },
+    {
+     "label": "fc",
+     "valeur": "2,6 Hz"
+    },
+    {
+     "label": "ρ, β",
+     "valeur": "2 800 kg/m³, 3 500 m/s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Moment sismique M₀ (en 10¹⁵ N·m) ?",
+     "type": "nombre",
+     "unite": "10¹⁵ N·m",
+     "reponse": 3.01719,
+     "explication": "M₀ = Ω₀·4πρβ³·R₀/(Rθφ·F) = 2,52·10^-3 × 4π × 2 800 × 3 500³ × 1 000 / 1,26 = 3,02·10^15 N·m.",
+     "toleranceRel": 0.04
+    },
+    {
+     "texte": "Magnitude de moment Mw ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 4.2864,
+     "explication": "Mw = (log₁₀ 3,02·10^15 − 9,05)/1,5 = 4,29 (séisme simulé : Mw 4,3).",
+     "tolerance": 0.06
+    },
+    {
+     "texte": "Chute de contrainte Δσ (MPa) ?",
+     "type": "nombre",
+     "unite": "MPa",
+     "reponse": 10.4745,
+     "explication": "De fc = 0,49·β·(Δσ/M₀)^(1/3) : Δσ = M₀·(fc/(0,49·β))³ = 3,02·10^15 × (2,6 / 1 717)³ = 10 MPa (séisme simulé : 13,5 MPa ; Δσ dépend du cube de fc, d'où sa faible précision).",
+     "toleranceRel": 0.1
+    },
+    {
+     "texte": "Si l'on oubliait de corriger le spectre du filtre κ, la fréquence coin ajustée serait…",
+     "type": "choix",
+     "options": [
+      "trop haute",
+      "inchangée",
+      "trop basse : κ abaisse les hautes fréquences, comme une rupture plus grande",
+      "nulle"
+     ],
+     "reponse": 2,
+     "explication": "κ coupe les hautes fréquences : le spectre non corrigé décroît plus tôt, ce que l'ajustement attribue à une fréquence coin plus basse (et Δσ trop faible)."
+    }
+   ]
+  },
+  {
+   "id": "ch4-echelle",
+   "titre": "Taille de rupture et glissement moyen",
+   "difficulte": 1,
+   "graine": 1805793801,
+   "enonce": "Un séisme de magnitude Mw 6,8 rompt une faille dont la longueur vaut 3 fois la largeur. On prend μ = 30 GPa et la loi médiane de Wells et Coppersmith (1994), toutes failles confondues : log₁₀ A = −3,49 + 0,91·Mw (A en km²).",
+   "donnees": [
+    {
+     "label": "Mw",
+     "valeur": "6,8"
+    },
+    {
+     "label": "L / W",
+     "valeur": "3"
+    },
+    {
+     "label": "μ",
+     "valeur": "30 GPa"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Surface de rupture médiane A ?",
+     "type": "nombre",
+     "unite": "km²",
+     "reponse": 498.884,
+     "explication": "log₁₀ A = −3,49 + 0,91 × 6,8 = 2,698, A = 499 km².",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Longueur de la rupture L ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 38.6866,
+     "explication": "W = √(A/3) = 12,9 km, L = 3·W = 38,7 km.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Glissement moyen D ?",
+     "type": "nombre",
+     "unite": "m",
+     "reponse": 1.18817,
+     "explication": "M₀ = 10^(1,5 × 6,8 + 9,05) = 1,78·10^19 N·m ; D = M₀/(μA) = 1,78·10^19 / (3·10¹⁰ × 499 000 000) = 1,19 m.",
+     "toleranceRel": 0.04
+    },
+    {
+     "texte": "Une unité de magnitude de plus multiplie la surface de rupture médiane par environ…",
+     "type": "choix",
+     "options": [
+      "2",
+      "1 000",
+      "8",
+      "32"
+     ],
+     "reponse": 2,
+     "explication": "10^0,91 ≈ 8 : la surface est multipliée par 8, le glissement moyen par 4 environ (32 / 8), le moment par 32."
+    }
+   ]
+  },
+  {
+   "id": "ch4-saturation",
+   "titre": "Fréquence coin et saturation de ML",
+   "difficulte": 2,
+   "graine": 3889786645,
+   "enonce": "Deux séismes de même chute de contrainte Δσ = 9,5 MPa ont pour magnitudes Mw 6,0 et Mw 7,0 (β = 3 500 m/s, modèle de Brune).",
+   "donnees": [
+    {
+     "label": "Δσ",
+     "valeur": "9,5 MPa"
+    },
+    {
+     "label": "Magnitudes",
+     "valeur": "6,0 et 7,0"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Fréquence coin du séisme de magnitude 6,0 ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 0.349975,
+     "explication": "M₀ = 10^(1,5 × 6,0 + 9,05) = 1,12·10^18 N·m ; fc = 0,49 × 3 500 × (9,5·10⁶ / M₀)^(1/3) = 0,35 Hz.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Fréquence coin du séisme de magnitude 7,0 ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 0.110672,
+     "explication": "fc varie comme M₀^(−1/3) : divisée par 10^0,5 ≈ 3,16, soit 0,111 Hz.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Rapport des spectres à 1,25 Hz (fréquence du Wood-Anderson), du plus grand au plus petit ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 3.38364,
+     "explication": "Ω ∝ M₀/(1 + (f/fc)²) : 276 / 81,6 (en 10¹⁵ N·m) = 3,38, au lieu de 31,6 sur le plateau : ML sature.",
+     "toleranceRel": 0.04
+    },
+    {
+     "texte": "ML commence à saturer quand…",
+     "type": "choix",
+     "options": [
+      "la chute de contrainte dépasse 10 MPa",
+      "la fréquence coin dépasse 10 Hz",
+      "la station est à plus de 100 km",
+      "la fréquence coin passe sous 1,25 Hz"
+     ],
+     "reponse": 3,
+     "explication": "Au-delà de fc, le Wood-Anderson lit la pente en 1/f², où l'amplitude ne croît plus que comme M₀^(1/3)."
+    }
+   ]
+  }
+ ]
+}

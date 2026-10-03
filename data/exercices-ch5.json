@@ -1,0 +1,219 @@
+{
+ "chapitre": "ch5",
+ "exercices": [
+  {
+   "id": "ch5-proprietes",
+   "titre": "Fréquence propre et amortissement d'un instrument",
+   "difficulte": 1,
+   "graine": 3348998945,
+   "enonce": "La masse d'un sismomètre vaut 1,4 kg ; son ressort a une raideur de 13,8 N/m et son amortisseur un coefficient de 6,15 N·s/m.",
+   "donnees": [
+    {
+     "label": "m",
+     "valeur": "1,4 kg"
+    },
+    {
+     "label": "k",
+     "valeur": "13,8 N/m"
+    },
+    {
+     "label": "c",
+     "valeur": "6,15 N·s/m"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Fréquence propre f₀ ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 0.499684,
+     "explication": "ω₀ = √(k/m) = √(13,8 / 1,4) = 3,14 rad/s ; f₀ = ω₀/2π = 0,5 Hz.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Taux d'amortissement ξ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.699587,
+     "explication": "ξ = c/(2mω₀) = 6,15 / (2 × 1,4 × 3,14) = 0,700.",
+     "tolerance": 0.02
+    },
+    {
+     "texte": "Au-dessus de quelle fréquence l'instrument lit-il le déplacement du sol (r = f/f₀ ≥ 3) ?",
+     "type": "nombre",
+     "unite": "Hz",
+     "reponse": 1.49905,
+     "explication": "3·f₀ = 1,5 Hz : la masse y reste immobile, X ≈ −Ug.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Pourquoi amortir un sismomètre vers ξ = 0,7 ?",
+     "type": "choix",
+     "options": [
+      "pour supprimer les ondes S",
+      "pour augmenter sa sensibilité à f₀",
+      "pour qu'il lise l'accélération à toutes les fréquences",
+      "pour une réponse plate, sans pic de résonance autour de f₀"
+     ],
+     "reponse": 3,
+     "explication": "À ξ ≈ 0,7, la réponse en fréquence passe d'un régime à l'autre sans pic ; peu amorti, l'instrument amplifierait d'un facteur 1/(2ξ) le mouvement à f₀."
+    }
+   ]
+  },
+  {
+   "id": "ch5-decrement",
+   "titre": "Amortissement par le décrément logarithmique",
+   "difficulte": 2,
+   "graine": 1401695677,
+   "enonce": "Un oscillateur écarté de 20 mm puis lâché passe par deux maxima successifs de 14,60 mm et 10,66 mm, séparés de 1,300 s.",
+   "donnees": [
+    {
+     "label": "Maxima successifs",
+     "valeur": "14,60 et 10,66 mm"
+    },
+    {
+     "label": "Intervalle",
+     "valeur": "1,300 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Décrément logarithmique δ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.314523,
+     "explication": "δ = ln(14,60 / 10,66) = 0,3145.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Taux d'amortissement ξ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.0499953,
+     "explication": "ξ = δ/√(4π² + δ²) ≈ δ/2π = 0,0501 (amortissement de l'oscillateur simulé : 0,050).",
+     "toleranceRel": 0.05
+    },
+    {
+     "texte": "Période propre non amortie T₀ ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 1.29837,
+     "explication": "T₀ = Td·√(1 − ξ²) = 1,300 × √(1 − 0,050²) ≈ 1,298 s : pour un faible amortissement, Td et T₀ se confondent.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Combien de cycles faut-il pour diviser l'amplitude par deux ?",
+     "type": "nombre",
+     "unite": "cycles",
+     "reponse": 2.2038,
+     "explication": "Chaque cycle divise l'amplitude par e^δ : n = ln 2/δ = 2,20 cycles.",
+     "toleranceRel": 0.05
+    }
+   ]
+  },
+  {
+   "id": "ch5-reponse",
+   "titre": "Ce que lit un instrument",
+   "difficulte": 2,
+   "graine": 1444323674,
+   "enonce": "Un instrument Wood-Anderson (f₀ = 1,25 Hz, ξ = 0,8) est posé sur un sol qui oscille à 6,25 Hz avec une amplitude de 1,0 mm.",
+   "donnees": [
+    {
+     "label": "Instrument",
+     "valeur": "f₀ = 1,25 Hz, ξ = 0,8"
+    },
+    {
+     "label": "Sol",
+     "valeur": "6,25 Hz, 1,0 mm"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Rapport r = f/f₀ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 5,
+     "explication": "r = 6,25 / 1,25 = 5.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Amplitude du déplacement de la masse par rapport au bâti ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 0.988212,
+     "explication": "|X/Ug| = r²/√((1 − r²)² + (2ξr)²) = 0,988 ; X = 0,988 mm.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "À cette fréquence, l'instrument lit…",
+     "type": "choix",
+     "options": [
+      "l'accélération du sol",
+      "le déplacement du sol",
+      "la vitesse de propagation des ondes",
+      "un mélange : il faut corriger de la réponse de l'instrument"
+     ],
+     "reponse": 1,
+     "explication": "r ≥ 3 : la masse reste immobile, X ≈ −Ug (0,988)."
+    }
+   ]
+  },
+  {
+   "id": "ch5-ouvrage",
+   "titre": "Du sismomètre à l'ouvrage",
+   "difficulte": 1,
+   "graine": 2718158023,
+   "enonce": "Questions sur l'oscillateur, du sismomètre à l'ouvrage.",
+   "questions": [
+    {
+     "texte": "Un ouvrage est dangereusement sollicité quand…",
+     "type": "choix",
+     "options": [
+      "sa période propre tombe dans les périodes fortes du mouvement du sol",
+      "sa période est très différente de celle du sol",
+      "le sol est très raide",
+      "il est très amorti"
+     ],
+     "reponse": 0,
+     "explication": "C'est la résonance : l'amplification vaut 1/(2ξ), soit 10 pour ξ = 5 %, en régime établi."
+    },
+    {
+     "texte": "Le spectre de réponse d'un accélérogramme est…",
+     "type": "choix",
+     "options": [
+      "l'enveloppe de l'accélérogramme",
+      "le spectre de Fourier de l'accélérogramme",
+      "la plus grande réponse d'une famille d'oscillateurs de toutes périodes",
+      "la réponse d'un sismomètre de 1 Hz"
+     ],
+     "reponse": 2,
+     "explication": "On soumet à l'accélérogramme des oscillateurs de périodes variées, au même amortissement, et l'on porte leur réponse maximale : c'est le chapitre 7."
+    },
+    {
+     "texte": "Dans l'équation de l'oscillateur, le mouvement du sol intervient par…",
+     "type": "choix",
+     "options": [
+      "sa vitesse",
+      "son accélération üg",
+      "son déplacement ug",
+      "sa fréquence seule"
+     ],
+     "reponse": 1,
+     "explication": "Dans le repère du bâti, le sol n'apparaît que par la force d'inertie −m·üg."
+    },
+    {
+     "texte": "L'amortissement conventionnel des structures en béton armé, utilisé par le spectre de l'Eurocode 8, vaut…",
+     "type": "choix",
+     "options": [
+      "70 %",
+      "5 %",
+      "0,5 %",
+      "50 %"
+     ],
+     "reponse": 1,
+     "explication": "Les spectres réglementaires sont donnés pour ξ = 5 % ; un sismomètre est amorti à 70 % environ."
+    }
+   ]
+  }
+ ]
+}

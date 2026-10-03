@@ -124,3 +124,46 @@ test('chapitre 3 : les exemples chiffrés du texte', async () => {
   assert.deepEqual([pga(90), pga(0), pga(-90)].map(x => x.toFixed(3)), ['0.165', '0.148', '0.131']);
   for (const t of ['azimut 210°, pendage 40°', 'plan auxiliaire 300° / 55° / 90°', '0,165 g (inverse), 0,148 g (décrochement) et 0,131 g', 'émergent à 49°']) assert.ok(cours.includes(t), t);
 });
+
+test('chapitre 4 : les exemples chiffrés du texte', async () => {
+  const Faille = (await import('../src/sismo/faille.js')).default, A = (await import('../src/sismo/accelerogramme.js')).default;
+  const mo = Mw => 10 ** (1.5 * Mw + 9.05), mw = M0 => (Math.log10(M0) - 9.05) / 1.5;
+  const fc = (Mw, ds) => 0.4906 * Sismo.MODELE.vs1 * 1000 * Math.cbrt(ds * 1e6 / mo(Mw));
+  const M0 = 3e10 * 10e3 * 8e3 * 0.5;
+  assert.equal(M0, 1.2e18);
+  assert.equal(Math.log10(M0).toFixed(2), '18.08');
+  assert.equal(mw(M0).toFixed(1), '6.0');
+  assert.ok(Math.abs((Math.log10(M0) - 9.1) / 1.5 - mw(M0) + 0.0333) < 1e-3);
+  // relation de Brune du générateur, réécrite en unités SI
+  const ref = Sismo.source(5, Sismo.MODELE.vs1, 60).fc;
+  assert.ok(Math.abs(fc(5, 6) - ref) / ref < 1e-3);
+  assert.deepEqual([4, 5, 6, 7].map(M => +fc(M, 6).toPrecision(2)), [3, 0.95, 0.3, 0.095]);
+  assert.equal(Math.round(Faille.aireWC1994(6)), 93);
+  assert.equal(Math.round(Faille.aireWC1994(7) / 10) * 10, 760);
+  assert.equal((mo(6) / (3e10 * Faille.aireWC1994(6) * 1e6)).toFixed(1), '0.4');
+  assert.equal((mo(7) / (3e10 * Faille.aireWC1994(7) * 1e6)).toFixed(1), '1.6');
+  const r = [2, 5, 10].map(R => Math.exp(A.medianeLois(7, R, 'PGA') - A.medianeLois(6, R, 'PGA')));
+  assert.ok(r.every(x => x > 1.35 && x < 1.65));
+  for (const t of ['≈ <strong>6,0</strong>', 'A ≈ 93 km²', 'A ≈ 760 km²', '0,95 Hz pour Mw 5 ; 0,30 Hz pour Mw 6', '1,4 à 1,6 fois plus forte']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 5 : les exemples chiffrés du texte', async () => {
+  const O = (await import('../src/sismo/oscillateur.js')).default;
+  const w0 = Math.sqrt(79 / 2);
+  assert.equal(w0.toFixed(2), '6.28');
+  assert.equal((w0 / (2 * Math.PI)).toFixed(1), '1.0');
+  assert.equal((2 * 0.7 * 2 * w0).toFixed(1), '17.6');
+  // oscillations libres T0 = 1 s, ξ = 5 %, lâcher de 10 mm : maxima 7,3 puis 5,3 mm (Newmark)
+  const dt = 0.001, n = 3000, { x } = O.integrer(new Float64Array(n), dt, 1, 0.05, 10, 0), pics = [];
+  for (let i = 1; i < n - 1; i++) if (x[i] > x[i - 1] && x[i] >= x[i + 1]) pics.push(x[i]);
+  assert.deepEqual(pics.slice(0, 2).map(p => p.toFixed(1)), ['7.3', '5.3']);
+  assert.equal(Math.log(7.3 / 5.3).toFixed(2), '0.32');
+  assert.equal((0.32 / (2 * Math.PI)).toFixed(2), '0.05');
+  const r = (f, f0, xi) => O.reponse(f, f0, xi);
+  assert.equal(r(5, 1, 0.7).deplacement.toFixed(2), '1.00');
+  assert.equal(r(0.2, 1, 0.7).acceleration.toFixed(2), '1.00');
+  assert.equal(r(1, 1, 0.7).deplacement.toFixed(2), '0.71');
+  assert.equal(r(1, 1, 0.05).acceleration.toFixed(0), '10');
+  assert.equal(r(2, 1.25, 0.8).deplacement.toFixed(2), '0.85');
+  for (const t of ['f<sub>0</sub> = 1,0 Hz', '≈ 17,6 N·s/m', 'passe de 7,3 mm à 5,3 mm', '≈ 0,32', 'les deux valent 0,71', 'il en\n     rend encore 85 %']) assert.ok(cours.includes(t), t);
+});
