@@ -64,6 +64,9 @@ main { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 2
 .parcours { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .parcours-lien { font: inherit; font-size: 13px; font-weight: 700; padding: 6px 13px; border: 1px solid var(--soft-line); border-radius: 999px; background: var(--soft); color: var(--blue-ink); cursor: pointer; }
 .parcours-lien:hover { border-color: var(--cyan); }
+a.parcours-lien { text-decoration: none; }
+.parcours-lien.lecon { background: var(--blue); border-color: var(--blue); color: var(--paper); }
+.lien-cours { margin-left: 6px; padding: 6px 12px; border-radius: 10px; background: var(--blue); color: var(--paper); font-weight: 800; text-decoration: none; }
 .parcours-lien:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .topbar nav.mode-switch button[data-debut-chapitre] { margin-left: 10px; }
 .topbar nav.mode-switch .saut { display: none; }
