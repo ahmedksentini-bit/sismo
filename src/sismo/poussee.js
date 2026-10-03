@@ -77,23 +77,28 @@ const Poussee = (() => {
     return x;
   }
 
-  // Calcul temporel non linéaire : acc (m/s²) au pas dt ; ressorts d'étage (k_i, Vy_i, α) ; Rayleigh (ξ aux
-  // modes 1 et 2) sur la rigidité initiale ; Newmark (β = 1/4, γ = 1/2) et Newton sur le système couplé, sous-pas
-  // s = ⌈dt/(Tmin/20)⌉ (ou sousPas imposé), accélération interpolée linéairement. Renvoie le déplacement en tête et
-  // l'effort à la base aux instants du signal, les glissements et efforts d'étage maximaux, les glissements
-  // résiduels et les ductilités d'étage.
-  function temporel({ m, k, Vy, alpha = 0 }, acc, dt, { xi = 0.05, sousPas = null, tolerance = 1e-12 } = {}) {
-    const N = m.length, md = Batiment.modes({ m, k }), { a0, a1 } = rayleigh(md, xi);
+  // Calcul temporel non linéaire : acc (m/s²) au pas dt ; ressorts d'étage (k_i, Vy_i, α, éventuellement un α par
+  // étage) ; amortissement C = a0·M + amortisseurs d'étage c_i (kN·s/m) — par défaut Rayleigh sur la rigidité
+  // initiale (ξ aux modes 1 et 2), soit c_i = a1·k_i ; Newmark (β = 1/4, γ = 1/2) et Newton sur le système couplé,
+  // sous-pas s = ⌈dt/(Tmin/20)⌉ (ou sousPas imposé), accélération interpolée linéairement. Renvoie, aux instants du
+  // signal, le déplacement en tête, l'effort à la base, l'accélération absolue du dernier niveau et les historiques
+  // des glissements et des efforts d'étage ; les maxima, les glissements résiduels et les ductilités d'étage.
+  function temporel({ m, k, Vy, alpha = 0 }, acc, dt, { xi = 0.05, amortissement = null, sousPas = null, tolerance = 1e-12 } = {}) {
+    const N = m.length, md = Batiment.modes({ m, k });
+    let a0, c;
+    if (amortissement) ({ a0, c } = amortissement);
+    else { const r = rayleigh(md, xi); a0 = r.a0; c = k.map(ki => r.a1 * ki); }
     const s = sousPas || Math.max(...md.map(x => Spectre.sousPas(dt, x.T))), h = dt / s;
-    const ress = k.map((ki, i) => Inelastique.ressort(ki, Vy[i], alpha));
+    const ress = k.map((ki, i) => Inelastique.ressort(ki, Vy[i], Array.isArray(alpha) ? alpha[i] : alpha));
     const beta = 0.25, gam = 0.5, cu = 1 / (beta * h * h), cv = gam / (beta * h);
-    // C = a0·M + a1·K0 (tridiagonale)
-    const K0d = k.map((ki, i) => ki + (i + 1 < N ? k[i + 1] : 0)), K0o = k.map((_, i) => (i + 1 < N ? -k[i + 1] : 0));
-    const Cd = m.map((mi, i) => a0 * mi + a1 * K0d[i]), Co = K0o.map(x => a1 * x);
+    // C = a0·M + assemblage des amortisseurs d'étage (tridiagonale)
+    const Cd = m.map((mi, i) => a0 * mi + c[i] + (i + 1 < N ? c[i + 1] : 0)), Co = m.map((_, i) => (i + 1 < N ? -c[i + 1] : 0));
     const Cmul = v => v.map((x, i) => Cd[i] * x + (i ? Co[i - 1] * v[i - 1] : 0) + (i + 1 < N ? Co[i] * v[i + 1] : 0));
     let u = new Array(N).fill(0), v = new Array(N).fill(0), d0 = new Array(N).fill(0), f0 = new Array(N).fill(0);
     let a = m.map(() => -acc[0]);
-    const L = acc.length, toit = new Float64Array(L), base = new Float64Array(L);
+    const L = acc.length, toit = new Float64Array(L), base = new Float64Array(L), accTete = new Float64Array(L);
+    const G = m.map(() => new Float64Array(L)), E = m.map(() => new Float64Array(L));
+    accTete[0] = a[N - 1] + acc[0];
     const dMax = new Array(N).fill(0), fMax = new Array(N).fill(0);
     for (let i = 0; i < L - 1; i++) {
       for (let j = 1; j <= s; j++) {
@@ -121,10 +126,11 @@ const Poussee = (() => {
         u = un; a = an; d0 = dn; f0 = f;
         dn.forEach((x, n) => { dMax[n] = Math.max(dMax[n], Math.abs(x)); fMax[n] = Math.max(fMax[n], Math.abs(f[n])); });
       }
-      toit[i + 1] = u[N - 1]; base[i + 1] = f0[0];
+      toit[i + 1] = u[N - 1]; base[i + 1] = f0[0]; accTete[i + 1] = a[N - 1] + acc[i + 1];
+      for (let n = 0; n < N; n++) { G[n][i + 1] = d0[n]; E[n][i + 1] = f0[n]; }
     }
     const residuel = d0.map((x, n) => x - f0[n] / k[n]);
-    return { h, toit, base, dMax, fMax, residuel, mu: dMax.map((x, n) => x / (Vy[n] / k[n])), a0, a1 };
+    return { h, toit, base, accTete, glissements: G, efforts: E, dMax, fMax, residuel, mu: dMax.map((x, n) => x / (Vy[n] / k[n])), a0, c };
   }
 
   return { profil, capacite, resistances, equivalent, n2, rayleigh, thomas, temporel };

@@ -74,7 +74,7 @@ test('OpenSeesPy : poussée analytique et calcul temporel non linéaire du syst�
       assert.equal(c.critique, r.critique, `${b.nom} ${nom} étage critique`);
       proche(c.Fb / r.Fy, 1, 1e-12, `${b.nom} ${nom} Fb`); proche(c.dy / r.dy, 1, 1e-12, `${b.nom} ${nom} dy`);
     }
-    const t = P.temporel(b, acc, mod.dt);
+    const t = P.temporel(b, acc, mod.dt, { amortissement: b.amortissement || null });
     assert.equal(t.h, mod.dt / b.sousPas);
     const umax = Math.max(...o.toit.map(Math.abs));
     o.toit.forEach((v, i) => proche(t.toit[i], v, 1e-8 * umax, `${b.nom} toit ${i}`));

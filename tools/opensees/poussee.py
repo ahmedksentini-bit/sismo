@@ -7,7 +7,8 @@ isotrope) pour les étages.
   (DisplacementControl) jusqu'à deux fois le déplacement de plastification ; b = 10⁻³ pour que la rigidité ne
   s'annule pas. On relève l'étage critique (plus grand glissement final) et le point de plastification : le dernier état
   élastique mis à l'échelle jusqu'à ce qu'un premier étage atteigne sa résistance.
-- Temporel : amortissement de Rayleigh sur la rigidité initiale (ξ aux modes 1 et 2), UniformExcitation sur une
+- Temporel : amortissement de Rayleigh sur la rigidité initiale (ξ aux modes 1 et 2) ou, pour le bâtiment isolé,
+  amortisseurs d'étage (matériau Viscous en parallèle), UniformExcitation sur une
   série Path, Newmark (γ = 1/2, β = 1/4) et Newton au pas dt / sous-pas ; déplacement en tête aux instants du signal
   et glissements d'étage maximaux sur la grille fine.
 OpenSees n'est jamais embarqué dans le site.
@@ -30,8 +31,14 @@ def modele(b, durci=None):
     for i in range(n):
         ops.node(i + 1, 0.0)
         ops.mass(i + 1, b['m'][i])
-        ops.uniaxialMaterial('Steel01', i + 1, b['Vy'][i], b['k'][i], b['alpha'] if durci is None else durci)
-        ops.element('zeroLength', i + 1, i, i + 1, '-mat', i + 1, '-dir', 1, '-doRayleigh', 1)  # sinon pas d'amortissement de raideur
+        alpha = b['alpha'][i] if isinstance(b['alpha'], list) else b['alpha']
+        ops.uniaxialMaterial('Steel01', i + 1, b['Vy'][i], b['k'][i], alpha if durci is None else durci)
+        if durci is None and 'amortissement' in b:
+            # amortisseur d'étage en parallèle (pas de Rayleigh)
+            ops.uniaxialMaterial('Viscous', 100 + i + 1, b['amortissement']['c'][i], 1.0)
+            ops.element('zeroLength', i + 1, i, i + 1, '-mat', i + 1, 100 + i + 1, '-dir', 1, 1)
+        else:
+            ops.element('zeroLength', i + 1, i, i + 1, '-mat', i + 1, '-dir', 1, '-doRayleigh', 1)  # sinon pas d'amortissement de raideur
     return n
 
 
@@ -69,11 +76,12 @@ def temporel(b, acc, dt, xi):
     n = modele(b)
     lam = ops.eigen('-fullGenLapack', n) if n > 1 else ops.eigen('-fullGenLapack', 1)
     w = np.sqrt(np.array(lam))
-    if n > 1:
-        a0, a1 = 2 * xi * w[0] * w[1] / (w[0] + w[1]), 2 * xi / (w[0] + w[1])
-    else:
-        a0, a1 = 2 * xi * w[0], 0.0
-    ops.rayleigh(a0, 0.0, a1, 0.0)
+    if 'amortissement' not in b:
+        if n > 1:
+            a0, a1 = 2 * xi * w[0] * w[1] / (w[0] + w[1]), 2 * xi / (w[0] + w[1])
+        else:
+            a0, a1 = 2 * xi * w[0], 0.0
+        ops.rayleigh(a0, 0.0, a1, 0.0)
     ops.timeSeries('Path', 1, '-dt', dt, '-values', *acc)
     ops.pattern('UniformExcitation', 1, 1, '-accel', 1)
     ops.constraints('Plain')
