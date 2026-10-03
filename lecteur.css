@@ -273,6 +273,15 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #bt-temps-table tbody tr.vu td { background: var(--soft); }
 #bt-temps-table tbody tr.vu td:first-child { box-shadow: inset 3px 0 0 var(--cyan); }
 
+/* Banc poussée progressive */
+#pp-capacite, #pp-adrs, #pp-derives { display: block; width: 100%; height: 340px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#pp-temps { display: block; width: 100%; height: 220px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#pp-profils { flex-wrap: wrap; }
+#pp-etat { font: 600 12px var(--mono); color: var(--muted); }
+#pp-temps-table tbody tr { cursor: pointer; }
+#pp-temps-table tbody tr.vu td { background: var(--soft); }
+#pp-temps-table tbody tr.vu td:first-child { box-shadow: inset 3px 0 0 var(--cyan); }
+
 /* Banc profil */
 #p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
 
@@ -304,6 +313,8 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
   #bt-spectre { height: 290px; }
   #bt-efforts { height: 600px; }
   #bt-temps { height: 220px; }
+  #pp-capacite, #pp-adrs, #pp-derives { height: 300px; }
+  #pp-temps { height: 200px; }
   #s-scene { height: 250px; }
   .hodo-cadre { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .curseur-lecture { margin-left: 0; width: 100%; }

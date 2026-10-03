@@ -110,7 +110,7 @@ la virgule décimale.
     saturation, Q(f), κ, amplification du site) ; Mw = (log10 M0 − 9,05)/1,5 et Δσ de la relation de Brune du
     générateur ; la correction de Reff dépend de Mw : itérée. La vérité est le Mw et le Δσ du générateur ; le
     banc se limite à Mw ≤ 6 (au-delà, fc passe sous 0,2 Hz et la fenêtre S ne suffit plus). La barre des bancs
-    passe à la ligne (seize onglets) : ne pas la remettre sur une seule ligne forcée.
+    passe à la ligne (dix-sept onglets) : ne pas la remettre sur une seule ligne forcée.
 25. **Intensité** (`src/sismo/intensite.js`) : conventions d'eqsig (référence `tests/references/intensite.json`,
     `tools/eqsig/`) : trapèzes, Arias avec g = 9,81 m/s², bornes de durée aux indices strictement compris entre les
     fractions de Ia (Trifunac et Brady 1975). Les indicateurs de la banque sont calculés à l'échelle 1 : Arias se
@@ -121,3 +121,9 @@ la virgule décimale.
     deux étages ; modes retenus par 90 % et 5 % ; SRSS si Tj ≤ 0,9·Ti, sinon CQC ; dr = q·de ; θ avec Ptot = g·Σm. Le
     calcul temporel superpose tous les modes sur une grille fine commune (sous-pas du mode le plus court) : c'est le
     Newmark du système couplé à amortissement modal d'OpenSeesPy (`tools/opensees/batiment.py`, testé à 10⁻¹⁰).
+27. **Poussée** (`src/sismo/poussee.js`) : étages élastiques parfaitement plastiques ; la courbe de capacité est
+    bilinéaire (mécanisme de l'étage où Vy_i / S_i est minimal), donc l'idéalisation à aire égale de l'annexe B est
+    exacte. Profils « modal » Fi = mi·Φi (Φ du mode 1 normée au sommet) et « uniforme » Fi = mi (Γ = 1) ; dt = Γ·d*t
+    avec `Inelastique.n2`. Résistances = ω × efforts de l'analyse modale de calcul. Calcul temporel : Rayleigh sur la
+    rigidité initiale (ξ aux modes 1 et 2), Newmark et Newton couplés, sous-pas du mode le plus court ; OpenSees
+    exige `-doRayleigh` sur les zeroLength, sans quoi l'amortissement de raideur disparaît.

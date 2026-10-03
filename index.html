@@ -31,6 +31,7 @@
     <button type="button" data-onglet="liquefaction" aria-pressed="false">Liquéfaction</button>
     <button type="button" data-onglet="ductilite" aria-pressed="false">Ductilité</button>
     <button type="button" data-onglet="batiment" aria-pressed="false">Bâtiment</button>
+    <button type="button" data-onglet="poussee" aria-pressed="false">Poussée</button>
   </nav>
 </header>
 
@@ -69,6 +70,8 @@
         Oscillateur élastoplastique sous sept accélérogrammes, spectres de ductilité et méthode N2 de l'Eurocode 8 face aux calculs temporels.</p>
       <p class="chapeau" id="chapeau-batiment" hidden>Un bâtiment à étages vibre selon plusieurs modes. Périodes, déformées et masses effectives ; efforts par la méthode des
         forces latérales et par l'analyse modale spectrale de l'Eurocode 8, déplacements entre étages, et combinaisons modales confrontées à des calculs temporels.</p>
+      <p class="chapeau" id="chapeau-poussee" hidden>On pousse le bâtiment jusqu'à former un mécanisme : la courbe de capacité, ramenée à un oscillateur équivalent,
+        donne le déplacement cible de la méthode N2. Est-il juste ? Sept calculs temporels non linéaires du même bâtiment répondent, étage par étage.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -1034,6 +1037,88 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-poussee" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Courbes de capacité">
+        <h2>Courbes de capacité<small>Effort à la base en fonction du déplacement en tête, sous les deux profils de charge du § 4.3.3.4.2.2 ; triangles : déplacements cibles de la méthode N2, tirets : 150 % de la cible (§ 4.3.3.4.2.3) ; points : calculs temporels non linéaires (déplacement et effort maximaux), croix : leur moyenne</small></h2>
+        <canvas id="pp-capacite" aria-label="Courbes de capacité, déplacements cibles et calculs temporels"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>profil modal</span><span><i class="tirets" style="border-color:var(--teal)"></i>profil uniforme</span><span><i style="background:var(--muted)"></i>calculs temporels</span><span><i style="background:var(--pick-p)"></i>moyenne</span><span id="pp-etat"></span></p>
+      </section>
+      <section class="carte" aria-label="Méthode N2">
+        <h2>Méthode N2 (EN 1998-1:2004, annexe B)<small>Format accélération–déplacement : spectre élastique, droite de période T*, capacité élasto-plastique du système équivalent (F*/m*, d* = d/Γ) ; disque : demande élastique, triangle : déplacement cible d*t</small></h2>
+        <canvas id="pp-adrs" aria-label="Méthode N2 en format accélération-déplacement"></canvas>
+      </section>
+      <section class="carte" aria-label="Glissements d'étage">
+        <h2>Glissements d'étage<small>Déplacement relatif de chaque étage rapporté à sa hauteur : poussée au déplacement cible (modal, uniforme) face aux calculs temporels ; pointillés : glissement de plastification de chaque étage</small></h2>
+        <canvas id="pp-derives" aria-label="Glissements d'étage au déplacement cible et calculs temporels"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>poussée modale</span><span><i class="tirets" style="border-color:var(--teal)"></i>poussée uniforme</span><span><i style="background:var(--muted);opacity:.6"></i>calculs temporels</span><span><i style="background:var(--cyan)"></i>affiché</span><span><i style="background:var(--pick-p)"></i>moyenne</span></p>
+      </section>
+      <section class="carte" aria-label="Déplacement en tête">
+        <h2>Déplacement en tête au cours du temps<small>Calcul temporel non linéaire de l'accélérogramme choisi ; tirets : déplacement cible N2 du profil modal</small></h2>
+        <canvas id="pp-temps" aria-label="Déplacement en tête au cours du temps"></canvas>
+        <p class="aide">Étages élastiques parfaitement plastiques (résistance = ω fois l'effort de l'analyse modale de calcul), amortissement de Rayleigh de 5 % aux deux
+          premiers modes, Newmark et Newton sur le système couplé : vérifié contre OpenSeesPy (Steel01, zeroLength) à 10⁻⁸ près sur tout l'historique.</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="pp-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="pp-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="pp-afficheurs"></div></section>
+      <section class="carte" id="pp-panneau-explorer" aria-label="Réglages">
+        <p class="sous-titre">Bâtiment</p>
+        <div class="segments compact" role="group" aria-label="Profil" id="pp-profils" style="margin-bottom:10px">
+          <button type="button" data-pp-profil="ec8">Dimensionné EC8</button><button type="button" data-pp-profil="faible">Rez souple et faible</button><button type="button" data-pp-profil="toiture">Toiture lourde</button>
+        </div>
+        <div class="champ"><label for="pp-n">Nombre d'étages (3 m) <output id="pp-n-v"></output></label><input type="range" id="pp-n" min="1" max="10" step="1"></div>
+        <div class="champ"><label for="pp-m">Masse par niveau <output id="pp-m-v"></output></label><input type="range" id="pp-m" min="100" max="800" step="50"></div>
+        <div class="champ"><label for="pp-k">Rigidité d'étage <output id="pp-k-v"></output></label><input type="range" id="pp-k" min="1.5" max="3.5" step="0.01"></div>
+        <div class="champ"><label for="pp-q">q du dimensionnement <output id="pp-q-v"></output></label><input type="range" id="pp-q" min="1" max="6" step="0.1"></div>
+        <div class="champ"><label for="pp-omega">Surrésistance ω <output id="pp-omega-v"></output></label><input type="range" id="pp-omega" min="1" max="2.5" step="0.05"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Séisme (EN 1998-1:2004)</p>
+        <div class="champ"><label for="pp-ag">ag <output id="pp-ag-v"></output></label><input type="range" id="pp-ag" min="0.05" max="0.5" step="0.01"></div>
+        <div class="champ"><span class="etiquette">Classe de sol</span><div class="segments" role="group" aria-label="Classe de sol"><button type="button" data-pp-sol="A">A</button><button type="button" data-pp-sol="B">B</button><button type="button" data-pp-sol="C">C</button><button type="button" data-pp-sol="D">D</button><button type="button" data-pp-sol="E">E</button></div></div>
+        <div class="champ"><span class="etiquette">Type de spectre</span><div class="segments" role="group" aria-label="Type de spectre"><button type="button" data-pp-type="1">Type 1 · M 7 à 10 km</button><button type="button" data-pp-type="2">Type 2 · M 6 à 5 km</button></div></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="pp-tirage">Autres accélérogrammes</button></div>
+      </section>
+      <section class="carte" id="pp-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="pp-exo-num"></span>
+        <p class="enonce">Avec les masses, la déformée Φ (normée au sommet) et la courbe de capacité du profil modal, appliquez l'annexe B : facteur de
+          transformation Γ, période T* du système équivalent, déplacement cible au sommet et règle appliquée.</p>
+        <div id="pp-exo-donnees"></div>
+        <div class="champ"><label for="pp-r-gamma">Γ</label><input type="text" id="pp-r-gamma" inputmode="decimal" autocomplete="off" placeholder="ex. 1,27"></div>
+        <div class="champ"><label for="pp-r-t">T* (s)</label><input type="text" id="pp-r-t" inputmode="decimal" autocomplete="off" placeholder="ex. 0,62"></div>
+        <div class="champ"><label for="pp-r-dt">dt au sommet (cm)</label><input type="text" id="pp-r-dt" inputmode="decimal" autocomplete="off" placeholder="ex. 7,5"></div>
+        <div class="champ"><span class="etiquette">Règle</span>
+          <div class="segments" role="group" aria-label="Règle"><button type="button" data-pp-rep="égaux déplacements" aria-pressed="false">Égaux déplacements</button><button type="button" data-pp-rep="périodes courtes" aria-pressed="false">Périodes courtes</button><button type="button" data-pp-rep="élastique" aria-pressed="false">Élastique</button></div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="pp-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="pp-nouvel-exo">Nouvel exercice</button></div>
+        <div id="pp-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Méthode N2 pas à pas">
+        <p class="sous-titre">Méthode N2 pas à pas</p>
+        <div class="segments" role="group" aria-label="Profil affiché en accélération–déplacement" style="margin-bottom:10px"><button type="button" data-pp-vue="modal">Profil modal</button><button type="button" data-pp-vue="uniforme">Profil uniforme</button></div>
+        <div class="table-defile"><table class="resultats" id="pp-n2-table"></table></div>
+      </section>
+      <section class="carte" aria-label="Calculs temporels">
+        <p class="sous-titre">Calculs temporels non linéaires</p>
+        <div class="table-defile"><table class="resultats" id="pp-temps-table"></table></div>
+        <p class="aide" id="pp-temps-info"></p>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Deux profils</b> : l'EN 1998-1:2004 demande au moins un profil « uniforme » (forces proportionnelles aux masses) et un profil « modal » ; le premier charge la base, le second le haut, et l'étage qui plastifie peut changer.</li>
+          <li><b>Système équivalent</b> : Γ = m*/Σ mi·Φi² ramène la courbe à un oscillateur ; T* vient de la raideur idéalisée, puis la règle N2 donne d*t et dt = Γ·d*t au sommet.</li>
+          <li><b>Mécanisme d'étage</b> : un étage souple ou faible concentre la déformation ; le déplacement en tête peut rester correct alors que les glissements de cet étage explosent.</li>
+          <li><b>Modes supérieurs</b> : dimensionner les étages sur l'analyse modale laisse souvent les derniers niveaux justes ; le calcul temporel y montre des ductilités que la poussée sous-estime.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <div class="poste" id="banc-mecanisme" hidden>
     <div class="colonne">
       <section class="carte" aria-label="Sphère focale">
@@ -1175,6 +1260,7 @@
 <script type="module" src="src/banc-mecanisme.js"></script>
 <script type="module" src="src/banc-source.js"></script>
 <script type="module" src="src/banc-batiment.js"></script>
+<script type="module" src="src/banc-poussee.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
