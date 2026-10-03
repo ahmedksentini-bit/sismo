@@ -1,0 +1,227 @@
+{
+ "chapitre": "ch6",
+ "exercices": [
+  {
+   "id": "ch6-profil",
+   "titre": "Vitesses et épaisseur de la croûte par deux droites",
+   "difficulte": 2,
+   "graine": 1126151445,
+   "enonce": "Sur un profil, quatre stations lisent la première arrivée P d'un séisme localisé à 14 km de profondeur (temps depuis l'origine) : 45 km, 7,99 s ; 100 km, 17,11 s ; 170 km, 27,12 s ; 290 km, 42,50 s. Les deux premières sont avant le croisement (Pg), les deux dernières au-delà (Pn).",
+   "donnees": [
+    {
+     "label": "Pg à 45 km",
+     "valeur": "7,99 s"
+    },
+    {
+     "label": "Pg à 100 km",
+     "valeur": "17,11 s"
+    },
+    {
+     "label": "Pn à 170 km",
+     "valeur": "27,12 s"
+    },
+    {
+     "label": "Pn à 290 km",
+     "valeur": "42,50 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Vitesse de la croûte V₁ (pente des deux premières) ?",
+     "type": "nombre",
+     "unite": "km/s",
+     "reponse": 6.0307,
+     "explication": "V₁ = (100 − 45) / (17,11 − 7,99) = 6,03 km/s (modèle : 5,9 ; près du foyer Pg n'est pas encore droite).",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Vitesse du manteau V₂ ?",
+     "type": "nombre",
+     "unite": "km/s",
+     "reponse": 7.80234,
+     "explication": "V₂ = (290 − 170) / (42,50 − 27,12) = 7,80 km/s.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Temps d'intercept tᵢ de Pn ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 5.33167,
+     "explication": "tᵢ = t − Δ/V₂ = 27,12 − 170 / 7,80 = 5,33 s.",
+     "tolerance": 0.25
+    },
+    {
+     "texte": "Épaisseur de la croûte H ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 32.3384,
+     "explication": "cos iᶜ = √(1 − (V₁/V₂)²) = 0,634 ; H = (tᵢ·V₁/cos iᶜ + h)/2 = (5,33 × 6,03 / 0,634 + 14)/2 = 32,3 km (modèle : 31 km).",
+     "toleranceRel": 0.06
+    }
+   ]
+  },
+  {
+   "id": "ch6-croisement",
+   "titre": "Distance critique et distance de croisement",
+   "difficulte": 1,
+   "graine": 1765252106,
+   "enonce": "Une croûte de 25 km d'épaisseur (V₁ = 5,9 km/s) repose sur un manteau à V₂ = 8,1 km/s. Le séisme est à 13 km de profondeur.",
+   "donnees": [
+    {
+     "label": "V₁, V₂",
+     "valeur": "5,9 et 8,1 km/s"
+    },
+    {
+     "label": "H, h",
+     "valeur": "25 km, 13 km"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Angle critique iᶜ ?",
+     "type": "nombre",
+     "unite": "°",
+     "reponse": 46.752,
+     "explication": "sin iᶜ = V₁/V₂ = 0,728, iᶜ = 46,8°.",
+     "tolerance": 0.5
+    },
+    {
+     "texte": "Temps d'intercept tᵢ ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 4.29675,
+     "explication": "tᵢ = (2H − h)·cos iᶜ/V₁ = (50 − 13) × 0,685 / 5,9 = 4,30 s.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Distance critique, où Pn apparaît ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 39.3349,
+     "explication": "(2H − h)·tan iᶜ = 37 × 1,063 = 39 km.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "À 54 km, la première onde P est…",
+     "type": "choix",
+     "options": [
+      "l'onde de Rayleigh",
+      "Pn",
+      "Sg",
+      "Pg"
+     ],
+     "reponse": 3,
+     "explication": "Pg arrive à √(54² + 13²)/5,9 = 9,41 s, Pn à 54/8,1 + 4,30 = 10,96 s : la distance de croisement vaut 90 km."
+    }
+   ]
+  },
+  {
+   "id": "ch6-site",
+   "titre": "Sismique réfraction : profondeur du substratum",
+   "difficulte": 1,
+   "graine": 939310964,
+   "enonce": "Une ligne de géophones donne deux droites de premières arrivées : la première, issue de l'origine, de vitesse 650 m/s ; la seconde de vitesse 3200 m/s et d'ordonnée à l'origine 41,6 ms. Le tir est en surface.",
+   "donnees": [
+    {
+     "label": "V₁",
+     "valeur": "650 m/s"
+    },
+    {
+     "label": "V₂",
+     "valeur": "3200 m/s"
+    },
+    {
+     "label": "tᵢ",
+     "valeur": "41,6 ms"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Profondeur du substratum H ?",
+     "type": "nombre",
+     "unite": "m",
+     "reponse": 13.8079,
+     "explication": "cos iᶜ = √(1 − (650/3200)²) = 0,979 ; H = tᵢ·V₁/(2 cos iᶜ) = 0,0416 × 650 / (2 × 0,979) = 13,81 m.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Distance de croisement ?",
+     "type": "nombre",
+     "unite": "m",
+     "reponse": 33.9325,
+     "explication": "Les deux droites se coupent où x/V₁ = x/V₂ + tᵢ : x = tᵢ / (1/V₁ − 1/V₂) = 33,9 m.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Pour lire correctement la vitesse du substratum, la ligne de géophones doit…",
+     "type": "choix",
+     "options": [
+      "être parallèle à la nappe",
+      "être enterrée sous le substratum",
+      "s'étendre à 2 ou 3 fois la distance de croisement",
+      "rester plus courte que la distance de croisement"
+     ],
+     "reponse": 2,
+     "explication": "Il faut plusieurs géophones au-delà du croisement pour tracer la seconde droite."
+    }
+   ]
+  },
+  {
+   "id": "ch6-notions",
+   "titre": "Croûte, Moho et premières arrivées",
+   "difficulte": 1,
+   "graine": 4125634655,
+   "enonce": "Questions sur la structure de la croûte.",
+   "questions": [
+    {
+     "texte": "Pourquoi la règle d ≈ 8,4 × (S − P) surestime-t-elle la distance au-delà de 150 km ?",
+     "type": "choix",
+     "options": [
+      "parce que la première onde P y est Pn, passée par le manteau plus rapide",
+      "parce que les stations y saturent",
+      "parce que Vp/Vs y vaut 2",
+      "parce que l'onde S y disparaît"
+     ],
+     "reponse": 0,
+     "explication": "Au-delà du croisement, P arrive plus tôt que Pg : S − P est plus long que pour l'onde directe."
+    },
+    {
+     "texte": "Le Moho est…",
+     "type": "choix",
+     "options": [
+      "la limite entre le manteau et le noyau",
+      "le plan de faille d'un séisme",
+      "la base de la croûte, où la vitesse des ondes P passe d'environ 6 à 8 km/s",
+      "la surface de la nappe phréatique"
+     ],
+     "reponse": 2,
+     "explication": "Mohorovičić l'a découvert en 1909 par le dédoublement des premières arrivées."
+    },
+    {
+     "texte": "Sur des temps réduits t − Δ/8, l'onde Pn d'un manteau à 8 km/s apparaît…",
+     "type": "choix",
+     "options": [
+      "verticale",
+      "de pente 1/8",
+      "horizontale",
+      "invisible"
+     ],
+     "reponse": 2,
+     "explication": "La réduction retranche Δ/8 : une onde à 8 km/s devient horizontale. Les droites se calculent toujours sur les temps vrais."
+    },
+    {
+     "texte": "Pour le Vs30 et la classe de sol de l'Eurocode 8, on mesure surtout…",
+     "type": "choix",
+     "options": [
+      "les ondes S des terrains superficiels",
+      "la profondeur du Moho",
+      "les ondes P du manteau",
+      "la vitesse des ondes de Love à 100 km"
+     ],
+     "reponse": 0,
+     "explication": "La sismique réfraction en ondes P classe les terrains ; la classe de sol EC8 dépend de la vitesse des ondes S des 30 premiers mètres (chapitre 12)."
+    }
+   ]
+  }
+ ]
+}
