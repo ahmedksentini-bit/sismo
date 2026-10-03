@@ -36,5 +36,10 @@ la virgule décimale.
 11. **Sismicité** : magnitudes rangées par classes de 0,1 ; b d'Aki avec la correction
     d'Utsu (Mc − ΔM/2). Les taux et les probabilités de Poisson se calculent sur le
     catalogue déclusteré ; la vérité des exercices est la loi des chocs principaux.
-12. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et (à venir)
+    le moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
+    exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le
+    déclusterage suit les conventions de HMTK (année de 364,75 j, amas, pas de condition de
+    magnitude). OpenQuake n'est jamais embarqué dans le site (AGPL).
+13. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.

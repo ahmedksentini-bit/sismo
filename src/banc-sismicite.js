@@ -17,6 +17,7 @@ import Sismicite from './sismo/sismicite.js';
     pret: false, mode: 'explorer',
     explo: { b: 1.0, taux4: 2, Mmax: 7.5, repliques: true, graine: 5, completude: Sc.COMPLETUDE },
     exo: null, cat: [], garde: [], declus: true, debutAnalyse: 1990, Mc: 3.0,
+    methode: 'aki', table: [[1990, 3.0], [1964, 4.0], [1930, 5.0], [1900, 6.0]],
     m: 6, duree: 50, verifie: false,
   };
   const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
@@ -30,10 +31,21 @@ import Sismicite from './sismo/sismicite.js';
     if (etat.mode === 'exercice') $('#sc-corrige').innerHTML = '';
     tout();
   }
-  const retenus = () => etat.cat.filter((e, i) => e.t >= etat.debutAnalyse && (!etat.declus || etat.garde[i]));
+  const independants = () => etat.cat.filter((e, i) => !etat.declus || etat.garde[i]);
+  const retenus = () => independants().filter(e => e.t >= etat.debutAnalyse);
+  // Table de complétude rangée de la plus récente à la plus ancienne ; Mc de l'époque d'un séisme.
+  const tableTriee = () => etat.table.filter(r => Number.isFinite(r[0]) && Number.isFinite(r[1])).sort((a, b) => b[0] - a[0]);
+  const mcTable = t => { const tb = tableTriee(); for (const [a, mc] of tb) if (t >= a) return mc; return Infinity; };
+  // Aki : une seule période [début, fin] au-dessus de Mc. Weichert : toute la table de complétude.
   function analyse() {
-    const ev = retenus(), annees = FIN - etat.debutAnalyse;
-    return { ev, annees, r: Sc.recurrence(ev.map(e => e.M), etat.Mc, annees) };
+    if (etat.methode === 'aki') {
+      const ev = retenus(), annees = FIN - etat.debutAnalyse;
+      return { methode: 'aki', ev, annees, nRet: ev.filter(e => e.M >= etat.Mc - 1e-9).length, r: Sc.recurrence(ev.map(e => e.M), etat.Mc, annees) };
+    }
+    const tb = tableTriee(), ev = independants();
+    if (!tb.length || !ev.length) return { methode: 'weichert', nRet: 0, r: null };
+    const comp = Sc.comptagesCompletude(ev, tb, Sc.DM, FIN - 1), w = Sc.weichert(comp, 4);
+    return { methode: 'weichert', comp, nRet: comp.nobs.reduce((a, v) => a + v, 0), r: w };
   }
   // Loi vraie des chocs principaux (exponentielle tronquée à Mmax).
   function tauxVrai(m) {
@@ -85,10 +97,20 @@ import Sismicite from './sismo/sismicite.js';
       ctx.beginPath(); ctx.moveTo(g.m.g, y); ctx.lineTo(W - g.m.d, y); ctx.stroke();
       ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText('M' + M, g.m.g - 6, y);
     }
-    // Zone analysée
+    // Zone analysée : un rectangle (Aki) ou l'escalier de la table de complétude (Weichert)
     const x0 = g.X(etat.debutAnalyse), y0 = g.Y(etat.Mc);
-    ctx.fillStyle = COUL.soft; ctx.fillRect(x0, g.m.h, W - g.m.d - x0, y0 - g.m.h);
-    ctx.strokeStyle = COUL.blue; ctx.lineWidth = 1.5; ctx.strokeRect(x0 + 0.5, g.m.h + 0.5, W - g.m.d - x0 - 1, y0 - g.m.h);
+    if (etat.methode === 'aki') {
+      ctx.fillStyle = COUL.soft; ctx.fillRect(x0, g.m.h, W - g.m.d - x0, y0 - g.m.h);
+      ctx.strokeStyle = COUL.blue; ctx.lineWidth = 1.5; ctx.strokeRect(x0 + 0.5, g.m.h + 0.5, W - g.m.d - x0 - 1, y0 - g.m.h);
+    } else {
+      const tb = tableTriee();
+      ctx.strokeStyle = COUL.blue; ctx.lineWidth = 1.5;
+      tb.forEach(([a, mc], i) => {
+        const xa = g.X(Math.max(DEBUT, a)), xb = g.X(i === 0 ? FIN : tb[i - 1][0]);
+        ctx.fillStyle = COUL.soft; ctx.fillRect(xa, g.m.h, xb - xa, g.Y(mc) - g.m.h);
+        ctx.beginPath(); ctx.moveTo(xa, g.Y(mc) + 0.5); ctx.lineTo(xb, g.Y(mc) + 0.5); ctx.moveTo(xa + 0.5, g.m.h); ctx.lineTo(xa + 0.5, g.Y(mc)); ctx.stroke();
+      });
+    }
     // Complétude vraie (exploration ou corrigé)
     if (etat.mode === 'explorer' || etat.verifie) {
       const comp = parametres().completude;
@@ -97,7 +119,7 @@ import Sismicite from './sismo/sismicite.js';
       ctx.stroke(); ctx.restore();
     }
     // Séismes : taille selon M ; répliques retirées en ambre ; hors analyse estompés
-    const dans = (e, i) => e.t >= etat.debutAnalyse && e.M >= etat.Mc - 1e-9 && (!etat.declus || etat.garde[i]);
+    const dans = (e, i) => (!etat.declus || etat.garde[i]) && (etat.methode === 'aki' ? e.t >= etat.debutAnalyse && e.M >= etat.Mc - 1e-9 : e.M >= mcTable(e.t) - 1e-7);
     for (const passe of [0, 1]) {
       etat.cat.forEach((e, i) => {
         const garde = !etat.declus || etat.garde[i], ok = dans(e, i);
@@ -109,14 +131,18 @@ import Sismicite from './sismo/sismicite.js';
       });
     }
     ctx.globalAlpha = 1;
-    const etroit = W - g.m.d - x0 < 190;
-    texte(ctx, `analyse : depuis ${etat.debutAnalyse}, M ≥ ${virg(etat.Mc, 1)}`, etroit ? x0 - 6 : x0 + 6, g.m.h + 10, COUL.blue, `800 11px ${POLICE}`, etroit ? 'right' : 'left');
+    if (etat.methode === 'aki') {
+      const etroit = W - g.m.d - x0 < 190;
+      texte(ctx, `analyse : depuis ${etat.debutAnalyse}, M ≥ ${virg(etat.Mc, 1)}`, etroit ? x0 - 6 : x0 + 6, g.m.h + 10, COUL.blue, `800 11px ${POLICE}`, etroit ? 'right' : 'left');
+    } else {
+      texte(ctx, 'analyse : table de complétude (Weichert)', W - g.m.d - 6, g.m.h + 10, COUL.blue, `800 11px ${POLICE}`, 'right');
+    }
   }
   function dessinerFMD() {
     lireCouleurs();
     const cv = $('#sc-fmd');
     if (cv.clientWidth < 50 || !etat.cat.length) return;
-    const { ctx, W, H } = preparer(cv), m = { g: 52, d: 14, h: 14, b: 30 }, { ev, annees, r } = analyse();
+    const { ctx, W, H } = preparer(cv), m = { g: 52, d: 14, h: 14, b: 30 }, an = analyse(), r = an.r;
     ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
     const Mmin = Sc.MMIN - 0.1, Mmax = 8, y0 = -3, y1 = 3;
     const X = M => m.g + ((M - Mmin) / (Mmax - Mmin)) * (W - m.g - m.d), Y = lg => H - m.b - ((lg - y0) / (y1 - y0)) * (H - m.h - m.b);
@@ -126,30 +152,74 @@ import Sismicite from './sismo/sismicite.js';
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('M', W - m.d, H - m.b - 3);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('séismes par an', m.g + 6, m.h + 2);
     ctx.save(); ctx.beginPath(); ctx.rect(m.g, m.h, W - m.g - m.d, H - m.h - m.b); ctx.clip();
-    // Distribution : incrémentale (carrés) et cumulée (disques)
-    const inc = new Map();
-    for (const e of ev) { const k = Math.round(e.M * 10); inc.set(k, (inc.get(k) || 0) + 1); }
-    const cles = [...inc.keys()].sort((p, q) => p - q);
+    // Distribution : taux annuels par classe (carrés) et cumulés (disques). Avec Weichert, chaque
+    // classe a sa propre durée d'observation, celle de la table de complétude.
+    let classes = [];
+    if (an.methode === 'aki') {
+      const inc = new Map();
+      for (const e of an.ev) { const k = Math.round(e.M * 10); inc.set(k, (inc.get(k) || 0) + 1); }
+      classes = [...inc.keys()].sort((p, q) => p - q).map(k => [k / 10, inc.get(k) / an.annees, k / 10 >= etat.Mc - 1e-9]);
+    } else if (an.comp) {
+      classes = an.comp.centres.map((c, k) => [Math.round((c - Sc.DM / 2) * 10) / 10, an.comp.duree[k] ? an.comp.nobs[k] / an.comp.duree[k] : 0, true]).filter(c => c[1] > 0);
+    }
     let cumul = 0;
     const cum = [];
-    for (let i = cles.length - 1; i >= 0; i--) { cumul += inc.get(cles[i]); cum.unshift([cles[i] / 10, cumul]); }
-    for (const k of cles) { const v = inc.get(k) / annees; ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1; ctx.strokeRect(X(k / 10) - 3, Y(Math.log10(v)) - 3, 6, 6); }
-    for (const [M, n] of cum) { ctx.fillStyle = M >= etat.Mc - 1e-9 ? COUL.ink : COUL.muted; ctx.beginPath(); ctx.arc(X(M), Y(Math.log10(n / annees)), 3.2, 0, 2 * Math.PI); ctx.fill(); }
+    for (let i = classes.length - 1; i >= 0; i--) { cumul += classes[i][1]; cum.unshift([classes[i][0], cumul, classes[i][2]]); }
+    for (const [M, v] of classes) { ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1; ctx.strokeRect(X(M) - 3, Y(Math.log10(v)) - 3, 6, 6); }
+    for (const [M, v, ok] of cum) { ctx.fillStyle = ok ? COUL.ink : COUL.muted; ctx.beginPath(); ctx.arc(X(M), Y(Math.log10(v)), 3.2, 0, 2 * Math.PI); ctx.fill(); }
     // Loi vraie des chocs principaux et droite ajustée
     if (etat.mode === 'explorer' || etat.verifie) {
       ctx.strokeStyle = COUL.teal; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
       for (let M = Sc.MMIN; M <= parametres().Mmax - 0.02; M += 0.05) { const v = tauxVrai(M); if (M === Sc.MMIN) ctx.moveTo(X(M), Y(Math.log10(v))); else ctx.lineTo(X(M), Y(Math.log10(v))); }
       ctx.stroke(); ctx.setLineDash([]);
     }
+    const mDebut = an.methode === 'aki' ? etat.Mc : r ? r.m0 : null;
     if (r) {
       ctx.strokeStyle = COUL['pick-p']; ctx.lineWidth = 2.4; ctx.beginPath();
-      ctx.moveTo(X(etat.Mc), Y(Math.log10(r.taux(etat.Mc)))); ctx.lineTo(X(Mmax), Y(Math.log10(r.taux(Mmax)))); ctx.stroke();
+      ctx.moveTo(X(mDebut), Y(Math.log10(r.taux(mDebut)))); ctx.lineTo(X(Mmax), Y(Math.log10(r.taux(Mmax)))); ctx.stroke();
     }
     ctx.restore();
-    const xm = X(etat.Mc);
-    ctx.save(); ctx.strokeStyle = COUL.blue; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(xm, m.h); ctx.lineTo(xm, H - m.b); ctx.stroke(); ctx.restore();
-    texte(ctx, 'Mc', xm + 4, H - m.b - 10, COUL.blue, `800 11px ${POLICE}`);
+    if (an.methode === 'aki') {
+      const xm = X(etat.Mc);
+      ctx.save(); ctx.strokeStyle = COUL.blue; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(xm, m.h); ctx.lineTo(xm, H - m.b); ctx.stroke(); ctx.restore();
+      texte(ctx, 'Mc', xm + 4, H - m.b - 10, COUL.blue, `800 11px ${POLICE}`);
+    }
     if (r) texte(ctx, `log N = ${virg(r.a, 2)} − ${virg(r.b, 2)} M`, W - m.d - 8, m.h + 12, COUL['pick-p'], `800 12px ${MONO}`, 'right');
+  }
+
+  // Graphique de Stepp : σλ en fonction de la durée, en échelles logarithmiques ; tirets : pente −1/2.
+  const COULEURS_STEPP = ['ink', 'blue', 'teal', 'amp', 'pick-p'];
+  function dessinerStepp() {
+    lireCouleurs();
+    const cv = $('#sc-stepp');
+    if (cv.clientWidth < 50 || !etat.cat.length) return;
+    const { ctx, W, H } = preparer(cv), m = { g: 52, d: 14, h: 14, b: 30 };
+    ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
+    const courbes = Sc.stepp(independants(), { anneeFin: FIN });
+    const X = T => m.g + (Math.log10(T / 1) / Math.log10(150)) * (W - m.g - m.d), Y = lg => H - m.b - ((lg + 3) / 4) * (H - m.h - m.b);
+    ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1; ctx.font = `10.5px ${MONO}`; ctx.fillStyle = COUL.muted;
+    for (const T of [1, 2, 5, 10, 20, 50, 100]) { const x = Math.round(X(T)) + 0.5; ctx.beginPath(); ctx.moveTo(x, m.h); ctx.lineTo(x, H - m.b); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(String(T), x, H - m.b + 5); }
+    for (let lg = -3; lg <= 1; lg++) { const y = Math.round(Y(lg)) + 0.5; ctx.beginPath(); ctx.moveTo(m.g, y); ctx.lineTo(W - m.d, y); ctx.stroke(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(String(Math.pow(10, lg)).replace('.', ','), m.g - 6, y); }
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('durée T (ans, en remontant depuis 2025)', W - m.d, H - m.b - 3);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('σλ (par an)', m.g + 6, m.h + 2);
+    ctx.save(); ctx.beginPath(); ctx.rect(m.g, m.h, W - m.g - m.d, H - m.h - m.b); ctx.clip();
+    const legende = [];
+    courbes.forEach((c, k) => {
+      const coul = COUL[COULEURS_STEPP[k % COULEURS_STEPP.length]], pts = c.points.filter(p => p.n > 0);
+      if (!pts.length) return;
+      // Pente −1/2 ancrée sur la période récente où la classe a au moins 5 séismes
+      const ancre = pts.find(p => p.n >= 5) || pts[pts.length - 1];
+      ctx.strokeStyle = coul; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.beginPath();
+      ctx.moveTo(X(1), Y(Math.log10(ancre.sigma * Math.sqrt(ancre.T)))); ctx.lineTo(X(150), Y(Math.log10(ancre.sigma * Math.sqrt(ancre.T / 150)))); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth = 2; ctx.beginPath();
+      pts.forEach((p, i) => { if (i === 0) ctx.moveTo(X(p.T), Y(Math.log10(p.sigma))); else ctx.lineTo(X(p.T), Y(Math.log10(p.sigma))); });
+      ctx.stroke();
+      ctx.fillStyle = coul;
+      for (const p of pts) { ctx.beginPath(); ctx.arc(X(p.T), Y(Math.log10(p.sigma)), 2.8, 0, 2 * Math.PI); ctx.fill(); }
+      legende.push([`M ${virg(c.m0, 1)}–${virg(c.m1, 1)}`, coul]);
+    });
+    ctx.restore();
+    legende.forEach(([t, c], i) => texte(ctx, t, m.g + 10, H - m.b - 12 - 15 * (legende.length - 1 - i), c, `800 11px ${POLICE}`));
   }
 
   // ── Panneaux ────────────────────────────────────────────────────────────
@@ -157,11 +227,10 @@ import Sismicite from './sismo/sismicite.js';
     return `<div class="afficheur${valeur === '—' ? ' vide' : ''}"><span>${titre}</span><strong>${valeur}</strong><small>${detail || '&nbsp;'}</small></div>`;
   }
   function majAfficheurs() {
-    const { ev, annees, r } = analyse();
-    const nRet = ev.filter(e => e.M >= etat.Mc - 1e-9).length;
+    const an = analyse(), r = an.r;
     $('#sc-afficheurs').innerHTML = [
-      afficheur('Séismes retenus', milliers(nRet), `${annees} ans, M ≥ ${virg(etat.Mc, 1)}`),
-      afficheur('Valeur b', r ? virg(r.b, 2) : '—', r ? `± ${virg(r.sigma, 2)} (Shi et Bolt)` : 'trop peu de séismes'),
+      afficheur('Séismes retenus', milliers(an.nRet), an.methode === 'aki' ? `${an.annees} ans, M ≥ ${virg(etat.Mc, 1)}` : `${tableTriee().length} périodes de complétude`),
+      afficheur('Valeur b', r ? virg(r.b, 2) : '—', r ? `± ${virg(r.sigma, 2)} (${an.methode === 'aki' ? 'Aki, Shi et Bolt' : 'Weichert'})` : 'trop peu de séismes'),
       afficheur('λ(M ≥ 5)', r ? virg(r.taux(5), 3) + ' /an' : '—', r ? `un tous les ${virg(1 / r.taux(5), 0)} ans` : ''),
       afficheur('Période de retour M ≥ 6', r ? virg(1 / r.taux(6), 0) + ' ans' : '—', r ? `λ = ${virg(r.taux(6), 4)} /an` : ''),
     ].join('');
@@ -182,6 +251,9 @@ import Sismicite from './sismo/sismicite.js';
     $('#sc-rep').checked = e.repliques; $('#sc-declus').checked = etat.declus;
     $('#sc-debut').value = etat.debutAnalyse; $('#sc-debut-v').textContent = String(etat.debutAnalyse);
     $('#sc-mc').value = etat.Mc; $('#sc-mc-v').textContent = virg(etat.Mc, 1);
+    $$('[data-sc-methode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.scMethode === etat.methode)));
+    $('#sc-aki').hidden = etat.methode !== 'aki'; $('#sc-weichert').hidden = etat.methode !== 'weichert';
+    etat.table.forEach(([a, mc], i) => { $(`#sc-ta-${i}`).value = a; $(`#sc-tm-${i}`).value = mc; });
     $('#sc-m').value = etat.m; $('#sc-t').value = etat.duree;
   }
   function majVerite() {
@@ -191,7 +263,7 @@ import Sismicite from './sismo/sismicite.js';
       + `Catalogue : ${milliers(etat.cat.length)} séismes, dont ${milliers(nr)} répliques ; le déclusterage en retire ${nr ? virg((100 * retirees) / nr, 0) : 0} %. `
       + `Complétude (tirets) : ${p.completude.map(([a, mc]) => `M${virg(mc, 1)} dès ${a}`).join(', ')}.`;
   }
-  function tout() { majControles(); dessinerCatalogue(); dessinerFMD(); majAfficheurs(); majVerite(); }
+  function tout() { majControles(); dessinerCatalogue(); dessinerFMD(); dessinerStepp(); majAfficheurs(); majVerite(); }
 
   // ── Exercice ────────────────────────────────────────────────────────────
   function nouvelExercice() {
@@ -236,6 +308,11 @@ import Sismicite from './sismo/sismicite.js';
     $('#sc-debut').addEventListener('input', e => { etat.debutAnalyse = parseInt(e.target.value, 10); tout(); });
     $('#sc-mc').addEventListener('input', e => { etat.Mc = parseFloat(e.target.value); tout(); });
     $('#sc-mc-auto').addEventListener('click', () => { const ev = retenus(); if (ev.length) { etat.Mc = Sc.mcCourbureMax(ev.map(e => e.M)); tout(); } });
+    $$('[data-sc-methode]').forEach(b => b.addEventListener('click', () => { etat.methode = b.dataset.scMethode; tout(); }));
+    etat.table.forEach((_, i) => {
+      $(`#sc-ta-${i}`).addEventListener('change', e => { etat.table[i][0] = parseInt(e.target.value, 10); tout(); });
+      $(`#sc-tm-${i}`).addEventListener('change', e => { etat.table[i][1] = parseFloat(e.target.value); tout(); });
+    });
     $('#sc-m').addEventListener('input', e => { etat.m = parseFloat(e.target.value); majAfficheurs(); });
     $('#sc-t').addEventListener('input', e => { etat.duree = parseInt(e.target.value, 10); majAfficheurs(); });
     $('#sc-mode-explorer').addEventListener('click', () => changerMode('explorer'));
@@ -245,6 +322,7 @@ import Sismicite from './sismo/sismicite.js';
     // Un clic sur le catalogue fixe le début de l'analyse et Mc.
     const cv = $('#sc-catalogue');
     cv.addEventListener('click', e => {
+      if (etat.methode !== 'aki') return;
       const g = geoCat(cv), t = g.T(e.offsetX), M = g.M(e.offsetY);
       if (t < DEBUT || t > FIN || M < Sc.MMIN || M > 8) return;
       etat.debutAnalyse = Math.min(2015, Math.max(DEBUT, Math.round(t)));
@@ -256,9 +334,9 @@ import Sismicite from './sismo/sismicite.js';
       const g = geoCat(cv), t = g.T(e.offsetX), M = g.M(e.offsetY);
       $('#sc-curseur').textContent = t >= DEBUT && t <= FIN && M >= Sc.MMIN && M <= 8 ? `${Math.round(t)} · M ${virg(M, 1)} — cliquer pour analyser à partir d'ici` : '—';
     });
-    const redessiner = () => { if (etat.cat.length && !$('#banc-sismicite').hidden) { dessinerCatalogue(); dessinerFMD(); } };
+    const redessiner = () => { if (etat.cat.length && !$('#banc-sismicite').hidden) { dessinerCatalogue(); dessinerFMD(); dessinerStepp(); } };
     const ro = new ResizeObserver(redessiner);
-    ro.observe(cv); ro.observe($('#sc-fmd'));
+    ro.observe(cv); ro.observe($('#sc-fmd')); ro.observe($('#sc-stepp'));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     new MutationObserver(redessiner).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }

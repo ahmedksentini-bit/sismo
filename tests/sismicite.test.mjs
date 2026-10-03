@@ -45,3 +45,11 @@ test('Poisson : 10 % en 50 ans ↔ 475 ans ; 10 % en 10 ans ↔ 95 ans', () => {
   assert.ok(Math.abs(Sc.periodeRetour(0.1, 10) - 94.9) < 0.1);
   assert.ok(Math.abs(Sc.probabilite(1 / 475, 50) - 0.0999) < 1e-3);
 });
+
+test('Stepp : σλ·√T constant tant que la classe est complète, chute au-delà', () => {
+  const cat = Sc.genererCatalogue({ b: 1, taux4: 5, repliques: false, graine: 8, completude: [[1900, 5.5], [1964, 3.0]] });
+  const [c] = Sc.stepp(cat, { classes: [[3.5, 4]], anneeFin: 2025, durees: [10, 30, 60, 100] });
+  const k = c.points.map(p => p.sigma * Math.sqrt(p.T));
+  assert.ok(Math.abs(k[1] / k[0] - 1) < 0.25 && Math.abs(k[2] / k[0] - 1) < 0.25, `complet : ${k.map(v => v.toFixed(2)).join(' ; ')}`);
+  assert.ok(k[3] / k[0] < 0.85, `incomplet avant 1964 : ${(k[3] / k[0]).toFixed(2)}`);
+});
