@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import Psha from '../src/sismo/psha.js';
+import Geodesie from '../src/sismo/geodesie.js';
 
 const lire = nom => JSON.parse(readFileSync(new URL(`./references/${nom}`, import.meta.url), 'utf-8'));
 
@@ -49,10 +50,20 @@ test('fractiles pondérés comme hazardlib.stats.quantile_curve', () => {
   assert.equal(Psha.quantile(0.85, [0.15, 0.15, 0.15], [1 / 3, 1 / 3, 1 / 3]), 0.15);
 });
 
-test('arbre logique : énumération complète', () => {
+test('arbre logique : énumération complète, catalogue et géodésie', () => {
   const m = Psha.modeleDefaut(), rlz = Psha.realisations(m);
-  assert.equal(rlz.length, 3 * 3 * 3 * 2);
+  // (3 × 3 branches (a, b) du catalogue + 3 couplages χ) × 3 ΔMmax × 2 lois
+  assert.equal(rlz.length, (3 * 3 + 3) * 3 * 2);
   assert.ok(Math.abs(rlz.reduce((s, r) => s + r.poids, 0) - 1) < 1e-12);
+  assert.equal(new Set(rlz.map(r => r.cle)).size, rlz.length);
+  // Variante géodésique : le moment χ·Ṁ0 est conservé quand Mmax change, pas le taux
+  const g = Psha.variantes(m).find(v => v.id === 'g1');
+  for (const d of [-0.3, 0, 0.3]) {
+    const l = Psha.loiZone(m, g, 1, d);
+    assert.ok(Math.abs(Geodesie.momentGR(l) / (0.6 * m.taux[1].moments[1]) - 1) < 1e-12);
+  }
+  const c = Psha.variantes(m).find(v => v.id === 'c11');
+  assert.equal(Psha.loiZone(m, c, 0, 0.3).a, Psha.loiZone(m, c, 0, -0.3).a);
 });
 
 // ── Comparaison à OpenQuake ──
@@ -70,8 +81,8 @@ test('OpenQuake : mêmes niveaux, mêmes réalisations et mêmes poids', () => {
   assert.deepEqual(oq.niveaux.map(x => +x.toPrecision(6)), modele.niveaux.map(x => +x.toPrecision(6)));
   assert.equal(oq.realisations.length, res.realisations.length);
   for (const r of oq.realisations) {
-    const js = res.realisations.find(x => x.chemin.join() === r.chemin.join());
-    assert.ok(js, `réalisation ${r.chemin} absente`);
+    const js = res.realisations.find(x => x.cle === r.cle);
+    assert.ok(js, `réalisation ${r.cle} absente`);
     assert.ok(Math.abs(js.poids - r.poids) < 1e-6);
   }
 });
@@ -79,7 +90,7 @@ test('OpenQuake : mêmes niveaux, mêmes réalisations et mêmes poids', () => {
 test('OpenQuake : courbe d\'aléa de chaque réalisation (écart < 0,2 %)', () => {
   let pire = 0;
   for (const r of oq.realisations) {
-    const js = res.realisations.find(x => x.chemin.join() === r.chemin.join());
+    const js = res.realisations.find(x => x.cle === r.cle);
     modele.imts.forEach((imt, k) => { pire = Math.max(pire, ecartMax(js.poe[k], r.poe[imtOQ(imt)])); });
   }
   assert.ok(pire < 0.002, `écart maximal ${(pire * 100).toFixed(3)} %`);
@@ -134,6 +145,6 @@ test('OpenQuake : désagrégation magnitude-distance, moyenne et réalisations (
   for (const [imt, x] of Object.entries(D.niveaux)) {
     const opts = { largeurM: d0.largeurM, largeurR: d0.largeurR, distance: 'rrup' };
     comparer(matrice(Psha.desagregation(modele, imtJS(imt), x, opts)), D.moyenne[imt], `${imt} moyenne`);
-    for (const r of D.realisations) comparer(matrice(Psha.desagregation(modele, imtJS(imt), x, { ...opts, chemin: r.chemin })), r.poe[imt], `${imt} ${r.chemin}`);
+    for (const r of D.realisations) comparer(matrice(Psha.desagregation(modele, imtJS(imt), x, { ...opts, cle: r.cle })), r.poe[imt], `${imt} ${r.cle}`);
   }
 });

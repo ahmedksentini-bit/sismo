@@ -16,6 +16,7 @@ import Psha from './sismo/psha.js';
   const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
   const puissance = n => '10' + String(n).split('').map(c => SUP[c]).join('');
   // Accélération en g : trois chiffres significatifs
+  const sci = (x, d = 1) => { if (!(x > 0)) return '—'; const e = Math.floor(Math.log10(x)); return `${virg(x / Math.pow(10, e), d)}·${puissance(e)}`; };
   const g3 = x => (x >= 1 ? virg(x, 2) : x >= 0.1 ? virg(x, 3) : virg(x, 4));
 
   const BASE = Psha.modeleDefaut();
@@ -28,6 +29,7 @@ import Psha from './sismo/psha.js';
     site: { x: 0, y: 0, vs30: 800 },
     zones: BASE.zones.map(z => ({ lam: z.ajustement.lamPivot, b: z.ajustement.b, mmax: z.mmax })),
     incAB: true, incMmax: true, poidsAkkar: 0.5,
+    geo: { actif: true, poids: 0.5, moments: BASE.taux.find(t => t.id === 'geodesie').moments.slice(), source: 'champ GNSS du modèle d\'école' },
   });
   const etat = {
     pret: false, mode: 'explorer', r: reglagesDefaut(), zone: 0, proba: [0.1, 50], k: K_PGA,
@@ -42,7 +44,10 @@ import Psha from './sismo/psha.js';
         ab: r.incAB ? Psha.branchesAB(aj) : [{ a: Math.log10(p.lam) + p.b * aj.mPivot, b: p.b, poids: 1 }] };
     });
     const gmpe = [{ id: 'akkar2014', poids: r.poidsAkkar }, { id: 'bindi2014', poids: 1 - r.poidsAkkar }].filter(g => g.poids > 1e-9);
-    return { ...BASE, site: { ...r.site }, zones, dMmax: r.incMmax ? BASE.dMmax : [{ d: 0, poids: 1 }], gmpe };
+    const wGeo = r.geo.actif ? r.geo.poids : 0;
+    const taux = [{ id: 'catalogue', nom: 'Catalogue', poids: 1 - wGeo }];
+    if (wGeo > 0) taux.push({ id: 'geodesie', nom: 'Géodésie', poids: wGeo, couplage: Psha.COUPLAGE, moments: r.geo.moments });
+    return { ...BASE, site: { ...r.site }, zones, dMmax: r.incMmax ? BASE.dMmax : [{ d: 0, poids: 1 }], gmpe, taux };
   }
   // Probabilité visée P en t années → probabilité en 50 ans (durée des courbes) et période de retour.
   const periodeRetour = () => Psha.periodeRetour(etat.proba[0], etat.proba[1]);
@@ -275,7 +280,8 @@ import Psha from './sismo/psha.js';
     const { ctx, W, H } = preparer(cv), m = { g: Math.min(150, W * 0.3), d: 18, h: 22, b: 44 };
     const xMoy = etat.uhs.moy[etat.k];
     if (!(xMoy > 0)) return;
-    const court = t => t.replace(/ \((proche|lointaine)\)/, '').replace('Akkar, Sandıkkaya et Bommer', 'Akkar et al.').replace('Loi d\'atténuation', W < 520 ? 'Loi' : 'Loi d\'atténuation');
+    const court = t => t.replace(/ \((proche|lointaine)\)/, '').replace('Akkar, Sandıkkaya et Bommer', 'Akkar et al.')
+      .replace('Loi d\'atténuation', W < 520 ? 'Loi' : 'Loi d\'atténuation').replace('Modèle de taux', W < 520 ? 'Taux' : 'Modèle de taux');
     const lignes = etat.sens.map(e => ({ ...e, nom: court(e.nom), branches: e.branches.map(b => ({ ...b, libelle: court(b.libelle) })), min: Math.min(...e.branches.map(b => b.niveau)), max: Math.max(...e.branches.map(b => b.niveau)) }))
       .sort((p, q) => (q.max - q.min) - (p.max - p.min));
     const lo = Math.min(xMoy, ...lignes.map(l => l.min)) * 0.92, hi = Math.max(xMoy, ...lignes.map(l => l.max)) * 1.08;
@@ -307,7 +313,8 @@ import Psha from './sismo/psha.js';
     const u = etat.uhs, cache = enExercice(), d = etat.desag, n = etat.res.realisations.length;
     const val = (k, suff = ' g') => (cache || !(u.moy[k] > 0) ? '—' : g3(u.moy[k]) + suff);
     const frac = k => (cache || !(u.moy[k] > 0) ? 'fractiles masqués' : `16–84 % : ${g3(u.q16[k])} – ${g3(u.q84[k])}`);
-    const tailles = [...etat.modele.zones.map(z => z.ab.length), etat.modele.dMmax.length, etat.modele.gmpe.length];
+    const v = etat.res.variantes, nCat = v.filter(x => x.id[0] === 'c').length, nGeo = v.length - nCat;
+    const tailles = [nGeo ? `(${nCat} + ${nGeo})` : String(nCat), etat.modele.dMmax.length, etat.modele.gmpe.length];
     $('#al-afficheurs').innerHTML = [
       afficheur('PGA moyen', val(K_PGA), frac(K_PGA)),
       afficheur('Période de retour', milliers(periodeRetour()) + ' ans', `${virg(100 * etat.proba[0], 0)} % en ${etat.proba[1]} ans`),
@@ -316,7 +323,9 @@ import Psha from './sismo/psha.js';
       afficheur('Scénario dominant', cache || !d ? '—' : `M ${virg(d.mMoy, 1)}`, cache || !d ? nomImt(etat.k) : `R̄ = ${virg(d.rMoy, 0)} km, ${nomImt(etat.k)}`),
       afficheur('Réalisations', String(n), tailles.join(' × ')),
     ].join('');
-    $('#al-arbre').textContent = `${n} réalisations = ${tailles.join(' × ')} branches : (a, b) de la zone A, (a, b) de la zone B, Mmax, loi d'atténuation. Courbes calculées en ${milliers(etat.duree)} ms.`;
+    $('#al-arbre').textContent = `${n} réalisations = ${tailles.join(' × ')} : variantes de taux${nGeo ? ` (${nCat} du catalogue, ${nGeo} couplages géodésiques)` : ' du catalogue'}, Mmax, loi d'atténuation. Courbes calculées en ${milliers(etat.duree)} ms.`;
+    const g = etat.r.geo;
+    $('#al-geo-source').textContent = `Moments géodésiques : zone A ${sci(g.moments[0])}, zone B ${sci(g.moments[1])} N·m/an (${g.source}).`;
   }
   function majControles() {
     const r = etat.r, z = r.zones[etat.zone];
@@ -325,7 +334,9 @@ import Psha from './sismo/psha.js';
     $('#al-lam').value = Math.log10(z.lam); $('#al-lam-v').textContent = virg(z.lam, 2) + ' /an';
     $('#al-b').value = z.b; $('#al-b-v').textContent = virg(z.b, 2);
     $('#al-mmax').value = z.mmax; $('#al-mmax-v').textContent = virg(z.mmax, 1);
-    $('#al-inc-ab').checked = r.incAB; $('#al-inc-mmax').checked = r.incMmax;
+    $('#al-inc-ab').checked = r.incAB; $('#al-inc-mmax').checked = r.incMmax; $('#al-inc-geo').checked = r.geo.actif;
+    $('#al-poids-geo').value = r.geo.poids; $('#al-poids-geo-v').textContent = `${virg(r.geo.poids, 2)} / ${virg(1 - r.geo.poids, 2)}`;
+    $('#al-poids-geo').disabled = !r.geo.actif;
     $('#al-poids').value = r.poidsAkkar; $('#al-poids-v').textContent = `${virg(r.poidsAkkar, 2)} / ${virg(1 - r.poidsAkkar, 2)}`;
     $$('[data-al-proba]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alProba === etat.proba.join('|'))));
     $$('[data-al-imt]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alImt === etat.k)));
@@ -349,7 +360,7 @@ import Psha from './sismo/psha.js';
         { lam: Math.round(u.entre(0.1, 0.5) * 100) / 100, b: Math.round(u.entre(0.9, 1.1) * 100) / 100, mmax: Math.round(u.entre(6, 6.8) * 10) / 10 },
         { lam: Math.round(u.entre(0.6, 3) * 10) / 10, b: Math.round(u.entre(0.8, 1) * 100) / 100, mmax: Math.round(u.entre(7, 7.6) * 10) / 10 },
       ],
-      incAB: true, incMmax: true, poidsAkkar: 0.5,
+      incAB: true, incMmax: true, poidsAkkar: 0.5, geo: { ...reglagesDefaut().geo, actif: false },
     };
     etat.proba = [0.1, 50]; etat.verifie = false; etat.dom = null;
     $('#al-exo-num').textContent = 'Exercice n° ' + numero;
@@ -396,8 +407,10 @@ import Psha from './sismo/psha.js';
     $('#al-mmax').addEventListener('input', e => { etat.r.zones[etat.zone].mmax = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-inc-ab').addEventListener('change', e => { etat.r.incAB = e.target.checked; recalculer(); });
     $('#al-inc-mmax').addEventListener('change', e => { etat.r.incMmax = e.target.checked; recalculer(); });
+    $('#al-inc-geo').addEventListener('change', e => { etat.r.geo.actif = e.target.checked; recalculer(); });
+    $('#al-poids-geo').addEventListener('input', e => { etat.r.geo.poids = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-poids').addEventListener('input', e => { etat.r.poidsAkkar = parseFloat(e.target.value); majControles(); planifier(); });
-    $('#al-defaut').addEventListener('click', () => { etat.r = reglagesDefaut(); recalculer(); });
+    $('#al-defaut').addEventListener('click', () => { etat.r = reglagesDefaut(); etat.geoRecu = null; recalculer(); });
     $$('[data-al-dom]').forEach(b => b.addEventListener('click', () => { etat.dom = +b.dataset.alDom; $$('[data-al-dom]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
     $('#al-mode-explorer').addEventListener('click', () => changerMode('explorer'));
     $('#al-mode-exercice').addEventListener('click', () => changerMode('exercice'));
@@ -434,9 +447,16 @@ import Psha from './sismo/psha.js';
     $('#al-panneau-explorer').hidden = m !== 'explorer';
     $('#al-panneau-exercice').hidden = m !== 'exercice';
     if (m === 'exercice') nouvelExercice();
-    else { etat.r = reglagesDefaut(); etat.verifie = false; recalculer(); }
+    else { etat.r = reglagesDefaut(); if (etat.geoRecu) etat.r.geo = etat.geoRecu; etat.verifie = false; recalculer(); }
   }
 
+  // Moments estimés au banc « géodésie » : ils remplacent ceux du modèle d'école (hors exercice).
+  window.addEventListener('geodesie:moments', e => {
+    etat.geoRecu = { ...reglagesDefaut().geo, moments: e.detail.moments.slice(), source: e.detail.source };
+    if (etat.mode !== 'explorer') return; // appliqué au retour en exploration
+    etat.r.geo = { ...etat.r.geo, ...etat.geoRecu, actif: true, poids: etat.r.geo.poids };
+    if (etat.pret) recalculer();
+  });
   window.addEventListener('banc:ouvert', e => {
     if (e.detail !== 'alea') return;
     if (!etat.pret) { etat.pret = true; brancher(); recalculer(); }
