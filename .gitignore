@@ -1,0 +1,11 @@
+# Documents de référence (normes, Eurocode 8, guides AFPS) : soumis à droits,
+# ils ne doivent pas être publiés avec le site.
+docs/
+
+# Fichiers de travail
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+# Configuration locale de l'aperçu (Claude Code)
+.claude/
