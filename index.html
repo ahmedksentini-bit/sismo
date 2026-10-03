@@ -19,6 +19,7 @@
     <button type="button" data-onglet="station" aria-pressed="true">Station</button>
     <button type="button" data-onglet="reseau" aria-pressed="false">Réseau</button>
     <button type="button" data-onglet="mecanisme" aria-pressed="false">Mécanisme</button>
+    <button type="button" data-onglet="source" aria-pressed="false">Source</button>
     <button type="button" data-onglet="sismometre" aria-pressed="false">Sismomètre</button>
     <button type="button" data-onglet="profil" aria-pressed="false">Profil</button>
     <button type="button" data-onglet="spectre" aria-pressed="false">Spectre</button>
@@ -43,6 +44,8 @@
         le diagramme de Wadati et une recherche sur grille localisent l'épicentre, la profondeur et l'heure d'origine.</p>
       <p class="chapeau" id="chapeau-mecanisme" hidden>Sur chaque verticale, la première arrivée P monte ou descend. Reportées sur la sphère focale,
         ces polarités dessinent deux plans nodaux : le mécanisme au foyer, et le type de faille qui en découle.</p>
+      <p class="chapeau" id="chapeau-source" hidden>Le spectre des ondes S, débarrassé de l'atténuation du trajet, garde la signature de la source : un plateau
+        qui donne le moment sismique et Mw, un coude qui donne la taille de la rupture et la chute de contrainte.</p>
       <p class="chapeau" id="chapeau-sismometre" hidden>Un sismomètre est une masse suspendue dans un bâti posé sur le sol. Selon sa fréquence propre
         et son amortissement, le stylet recopie le déplacement du sol ou son accélération : c'est la même équation que celle d'un ouvrage.</p>
       <p class="chapeau" id="chapeau-profil" hidden>Douze stations alignées de 15 à 345 km enregistrent un séisme superficiel. Rangées par distance,
@@ -993,6 +996,58 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-source" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Sismogramme">
+        <h2>Enregistrement et fenêtre S<small>Vitesse horizontale de la station choisie dans le tableau ; zone teintée : fenêtre des ondes S analysée (de 0,5 s avant Sg à 1/fc + 0,05·R, 5 s au moins)</small></h2>
+        <canvas id="so-sismo" aria-label="Sismogramme et fenêtre S"></canvas>
+      </section>
+      <section class="carte" aria-label="Spectre de déplacement">
+        <h2>Spectre de déplacement à la source<small>Moyenne des deux horizontales, lissée en bandes de 1/6 d'octave : brut (tirets), puis corrigé de l'expansion géométrique, de Q(f), de κ et du site ; en bleu, le modèle de Brune Ω0/(1 + (f/fc)²)</small></h2>
+        <canvas id="so-spectre" aria-label="Spectre de déplacement et modèle de Brune"></canvas>
+        <p class="aide" id="so-lecture"></p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="so-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="so-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="so-afficheurs"></div></section>
+      <section class="carte" aria-label="Modèle de Brune">
+        <p class="sous-titre">Modèle de Brune (station choisie)</p>
+        <div class="champ"><label for="so-o0">Plateau Ω0 <output id="so-o0-v"></output></label><input type="range" id="so-o0" min="-4.5" max="0.5" step="0.01"></div>
+        <div class="champ"><label for="so-fc">Fréquence coin fc <output id="so-fc-v"></output></label><input type="range" id="so-fc" min="-1.3" max="1.3" step="0.005"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="so-ajuster">Ajuster (moindres carrés en ln)</button></div>
+        <div class="table-defile" style="margin-top:12px"><table class="resultats" id="so-table"></table></div>
+      </section>
+      <section class="carte" aria-label="Séisme">
+        <p class="sous-titre">Séisme (générateur)</p>
+        <div class="champ"><label for="so-mw">Mw <output id="so-mw-v"></output></label><input type="range" id="so-mw" min="3.5" max="6" step="0.1"></div>
+        <div class="champ"><label for="so-ds">Chute de contrainte Δσ <output id="so-ds-v"></output></label><input type="range" id="so-ds" min="0" max="1.5" step="0.01"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="so-autre">Autre tirage</button></div>
+      </section>
+      <section class="carte" id="so-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="so-exo-num"></span>
+        <p class="enonce">Ajustez le modèle de Brune sur la station affichée, puis donnez Mw (M0 = Ω0/C, Mw = (log10 M0 − 9,05)/1,5) et la fréquence coin.</p>
+        <div class="champ"><label for="so-r-mw">Mw</label><input type="text" id="so-r-mw" inputmode="decimal" autocomplete="off" placeholder="ex. 4,6"></div>
+        <div class="champ"><label for="so-r-fc">fc (Hz)</label><input type="text" id="so-r-fc" inputmode="decimal" autocomplete="off" placeholder="ex. 1,2"></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="so-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="so-nouvel-exo">Nouvel exercice</button></div>
+        <div id="so-corrige"></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Plateau</b> : aux basses fréquences, le spectre de déplacement est proportionnel au moment sismique M0 = μ·A·D ; Mw en découle et ne sature pas.</li>
+          <li><b>Coude</b> : la fréquence coin baisse quand la rupture grandit ; à moment égal, une fc plus haute signifie une rupture plus compacte, une chute de contrainte plus forte et davantage de hautes fréquences.</li>
+          <li><b>Corrections</b> : sans elles, l'atténuation du trajet (Q, κ) creuse les hautes fréquences et ferait croire à une fc trop basse.</li>
+          <li><b>ML et Mw</b> : ML se lit sur un Wood-Anderson vers 1 à 5 Hz ; pour les grands séismes, la fc passe sous cette bande et ML sature.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -1023,6 +1078,7 @@
 <script type="module" src="src/banc-liquefaction.js"></script>
 <script type="module" src="src/banc-ductilite.js"></script>
 <script type="module" src="src/banc-mecanisme.js"></script>
+<script type="module" src="src/banc-source.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>

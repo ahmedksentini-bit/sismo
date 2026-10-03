@@ -52,6 +52,9 @@ button, select, input { font: inherit; color: inherit; }
 .mode-switch { display: flex; gap: 5px; padding: 5px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
 .mode-switch button { padding: 8px 13px; border: 0; border-radius: 10px; background: none; color: var(--muted); font-weight: 800; cursor: pointer; }
 .mode-switch button[aria-pressed="true"] { background: var(--blue); color: var(--paper); }
+/* Barre des bancs : passe à la ligne plutôt que de déborder (quinze onglets) */
+.topbar nav.mode-switch { flex-wrap: wrap; max-width: 100%; }
+.topbar nav.mode-switch button { padding: 7px 9px; }
 
 main { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 22px 56px; }
 .banniere { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px 24px; margin-bottom: 18px; }
@@ -252,6 +255,12 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #me-types { flex-wrap: wrap; }
 #me-carte { display: block; width: 100%; height: 300px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 
+/* Banc source */
+#so-sismo { display: block; width: 100%; height: 220px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#so-spectre { display: block; width: 100%; height: 380px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#so-table tbody tr { cursor: pointer; }
+#so-table tbody tr.vu td { background: var(--soft); }
+
 /* Banc profil */
 #p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
 
@@ -278,6 +287,7 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
   #du-mu, #du-n2 { height: 280px; }
   #me-sphere { height: 360px; }
   #me-traces { height: 520px; }
+  #so-spectre { height: 320px; }
   #s-scene { height: 250px; }
   .hodo-cadre { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .curseur-lecture { margin-left: 0; width: 100%; }
