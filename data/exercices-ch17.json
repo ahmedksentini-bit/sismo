@@ -1,0 +1,235 @@
+{
+ "chapitre": "ch17",
+ "exercices": [
+  {
+   "id": "ch17-isolateur",
+   "titre": "Caractéristiques d'un isolateur bilinéaire",
+   "difficulte": 1,
+   "graine": 1828602217,
+   "enonce": "Un bâtiment de 1 200 t repose sur des isolateurs dont la période post-élastique vaut 2,7 s ; la force caractéristique Q vaut 4,0 % du poids et le déplacement de plastification 6 mm.",
+   "donnees": [
+    {
+     "label": "M",
+     "valeur": "1 200 t"
+    },
+    {
+     "label": "Tiso",
+     "valeur": "2,7 s"
+    },
+    {
+     "label": "Q/W",
+     "valeur": "4,0 %"
+    },
+    {
+     "label": "dy",
+     "valeur": "6 mm"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Raideur post-élastique K₂ = M·(2π/Tiso)² ?",
+     "type": "nombre",
+     "unite": "kN/m",
+     "reponse": 6498.5,
+     "explication": "1 200 × (2π/2,7)² = 6 499 kN/m.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Force caractéristique Q ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 470.88,
+     "explication": "Q = 0,040 × 1 200 × 9,81 = 470,9 kN.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Raideur initiale K₁ = K₂ + Q/dy ?",
+     "type": "nombre",
+     "unite": "kN/m",
+     "reponse": 84978.5,
+     "explication": "6 499 + 470,9/0,006 = 84 980 kN/m.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Énergie dissipée par un cycle d'amplitude 100 mm, ED = 4Q(d − dy) ?",
+     "type": "nombre",
+     "unite": "kJ",
+     "reponse": 177.051,
+     "explication": "4 × 470,9 × (0,100 − 0,006) = 177,1 kJ.",
+     "toleranceRel": 0.01
+    }
+   ]
+  },
+  {
+   "id": "ch17-equivalent",
+   "titre": "Une itération de la linéarisation équivalente",
+   "difficulte": 2,
+   "graine": 1351666609,
+   "enonce": "Un isolateur (masse portée 2 400 t) a pour raideur post-élastique K₂ = 21 480 kN/m, pour force caractéristique Q = 824 kN et pour déplacement de plastification dy = 6 mm. On essaie un déplacement d = 100 mm.",
+   "donnees": [
+    {
+     "label": "K₂",
+     "valeur": "21 480 kN/m"
+    },
+    {
+     "label": "Q",
+     "valeur": "824 kN"
+    },
+    {
+     "label": "dy",
+     "valeur": "6 mm"
+    },
+    {
+     "label": "d",
+     "valeur": "100 mm"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Force à ce déplacement F = Q + K₂·d ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 2972.53,
+     "explication": "824 + 21 480 × 0,100 = 2 973 kN.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Raideur effective Keff = F/d ?",
+     "type": "nombre",
+     "unite": "kN/m",
+     "reponse": 29725.3,
+     "explication": "2 973 / 0,100 = 29 730 kN/m.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Période effective Teff = 2π√(M/Keff) ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 1.78535,
+     "explication": "2π × √(2 400 / 29 730) = 1,79 s.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Amortissement effectif ξeff = ED/(2π·Keff·d²) (sans viscosité) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 16.5894,
+     "explication": "ED = 4Q(d − dy) = 309,8 kJ ; ξ = 309,8 / (2π × 29 730 × 0,100²) = 16,6 %.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch17-gain",
+   "titre": "Ce que gagne l'isolation",
+   "difficulte": 2,
+   "graine": 328832098,
+   "enonce": "Un bâtiment de période 0,5 s sur base fixe est isolé : période effective 2,1 s, amortissement effectif 15 %. Sol A (type 1 : S = 1,00, TC = 0,40 s, TD = 2,0 s), a_g = 0,19 g.",
+   "donnees": [
+    {
+     "label": "Base fixe",
+     "valeur": "T = 0,5 s"
+    },
+    {
+     "label": "Isolé",
+     "valeur": "Teff = 2,1 s, ξ = 15 %"
+    },
+    {
+     "label": "Sol, a_g",
+     "valeur": "A, 0,19 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Coefficient η ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.707107,
+     "explication": "η = √(10/(5 + 15)) = 0,707.",
+     "tolerance": 0.005
+    },
+    {
+     "texte": "Accélération spectrale du bâtiment isolé Se(Teff, ξ) ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.0609298,
+     "explication": "a_g·S·η·2,5·TC·TD/T² = 0,0609 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Rapport entre l'accélération sur base fixe et celle du bâtiment isolé ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 6.23668,
+     "explication": "Base fixe : Se(0,5 s) = 0,38 g ; rapport 6,24.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Déplacement de calcul de l'isolation Se·(Teff/2π)² ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 66.7695,
+     "explication": "0,0609 × 9,81 × (2,1/2π)² = 66,8 mm.",
+     "toleranceRel": 0.03
+    }
+   ]
+  },
+  {
+   "id": "ch17-notions",
+   "titre": "Concevoir un ouvrage isolé",
+   "difficulte": 1,
+   "graine": 3157419225,
+   "enonce": "Questions sur la conception des ouvrages isolés.",
+   "questions": [
+    {
+     "texte": "En contrepartie, l'isolation…",
+     "type": "choix",
+     "options": [
+      "augmente les efforts dans la superstructure",
+      "empêche tout déplacement",
+      "rend les fondations inutiles",
+      "concentre de grands déplacements dans les isolateurs"
+     ],
+     "reponse": 3,
+     "explication": "On échange de l'accélération contre du déplacement : joint libre et raccordements souples sont indispensables."
+    },
+    {
+     "texte": "Pour quel ouvrage l'isolation est-elle la moins intéressante ?",
+     "type": "choix",
+     "options": [
+      "un centre de secours",
+      "un hôpital rigide de quatre étages",
+      "un bâtiment patrimonial en maçonnerie",
+      "une structure déjà souple, de période supérieure à 1 s"
+     ],
+     "reponse": 3,
+     "explication": "Isoler une structure souple allonge peu sa période relative et ne réduit guère sa demande."
+    },
+    {
+     "texte": "La linéarisation équivalente se résout par itérations parce que…",
+     "type": "choix",
+     "options": [
+      "la masse varie avec le déplacement",
+      "Teff et ξeff dépendent du déplacement cherché",
+      "le spectre change à chaque itération de calcul",
+      "l'isolateur vieillit"
+     ],
+     "reponse": 1,
+     "explication": "On part d'un déplacement, on en tire Keff, Teff, ξeff, puis un nouveau déplacement, jusqu'à stabilité."
+    },
+    {
+     "texte": "Le noyau de plomb d'un appui en élastomère fretté sert…",
+     "type": "choix",
+     "options": [
+      "à alourdir l'appui",
+      "à rigidifier verticalement l'appui",
+      "à dissiper de l'énergie en se plastifiant (force caractéristique Q)",
+      "à protéger l'élastomère du feu"
+     ],
+     "reponse": 2,
+     "explication": "Le plomb donne la force caractéristique et l'amortissement hystérétique ; l'élastomère donne la raideur post-élastique."
+    }
+   ]
+  }
+ ]
+}

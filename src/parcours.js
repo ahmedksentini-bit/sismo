@@ -33,9 +33,9 @@ const Parcours = (() => {
     site: { titre: 'Les effets de site', fichier: 'cours.html#ch12', duree: 30 },
     liquefaction: { titre: 'La liquéfaction des sols', fichier: 'cours.html#ch13', duree: 25 },
     ductilite: { titre: 'Ductilité et coefficient de comportement', fichier: 'cours.html#ch14', duree: 25 },
-    batiment: { titre: 'Analyse modale d\'un bâtiment', fichier: null, duree: 30 },
-    poussee: { titre: 'Poussée progressive et méthode N2', fichier: null, duree: 30 },
-    isolation: { titre: 'L\'isolation à la base', fichier: null, duree: 25 },
+    batiment: { titre: 'Analyse modale d\'un bâtiment', fichier: 'cours.html#ch15', duree: 30 },
+    poussee: { titre: 'Poussée progressive et méthode N2', fichier: 'cours.html#ch16', duree: 30 },
+    isolation: { titre: 'L\'isolation à la base', fichier: 'cours.html#ch17', duree: 25 },
   };
   const ordre = CHAPITRES.flatMap(c => c.bancs);
   // Place d'un banc dans le cours : chapitre, rang dans le chapitre, bancs précédent et suivant.

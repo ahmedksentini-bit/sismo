@@ -1,0 +1,213 @@
+{
+ "chapitre": "ch15",
+ "exercices": [
+  {
+   "id": "ch15-deux",
+   "titre": "Modes d'un bâtiment de deux étages",
+   "difficulte": 2,
+   "graine": 3981859673,
+   "enonce": "Un bâtiment de deux étages porte 100 t à chaque plancher ; chaque étage a une raideur de 200 MN/m.",
+   "donnees": [
+    {
+     "label": "m₁ = m₂",
+     "valeur": "100 t"
+    },
+    {
+     "label": "k₁ = k₂",
+     "valeur": "200 MN/m"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Période du premier mode ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 0.227328,
+     "explication": "det(K − ω²M) = 0 donne ω² = (k/m)·(3 ∓ √5)/2 ; ω₁ = √(200 000 / 100 × 0,382) = 27,6 rad/s ; T₁ = 0,227 s.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Période du deuxième mode ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 0.0868315,
+     "explication": "ω₂² = (k/m)·(3 + √5)/2 ; T₂ = 0,0868 s, soit T₁/2,62.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Part de la masse totale dans le premier mode (en %) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 94.7214,
+     "explication": "Déformée φ₁ = (0,618 ; 1) ; m_eff = (Σmφ)²/Σmφ² = 189,4 t, soit 94,7 %.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Faut-il combiner les deux modes par CQC ?",
+     "type": "choix",
+     "options": [
+      "non : T₂ ≤ 0,9·T₁, la SRSS suffit",
+      "oui : toujours avec deux modes",
+      "non : un seul mode suffit toujours",
+      "oui : les périodes sont voisines"
+     ],
+     "reponse": 0,
+     "explication": "T₂/T₁ = 0,382 ≤ 0,9 : réponses indépendantes au sens du § 4.3.3.3.2."
+    }
+   ]
+  },
+  {
+   "id": "ch15-forces",
+   "titre": "Méthode des forces latérales",
+   "difficulte": 1,
+   "graine": 681681531,
+   "enonce": "Un bâtiment régulier de 4 étages de 3 m porte 340 t par plancher ; sa période fondamentale vaut T₁ = 0,75 s. Sol D (type 1, TC = 0,80 s), a_g = 0,30 g, q = 3, d'où Sd(T₁) = 0,338 g.",
+   "donnees": [
+    {
+     "label": "Étages",
+     "valeur": "4 × 3 m, 340 t"
+    },
+    {
+     "label": "T₁",
+     "valeur": "0,75 s"
+    },
+    {
+     "label": "Sd(T₁)",
+     "valeur": "0,338 g"
+    },
+    {
+     "label": "TC",
+     "valeur": "0,80 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Coefficient λ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.85,
+     "explication": "T₁ ≤ 2·TC = 1,60 s et 4 étages : λ = 0,85.",
+     "tolerance": 0.005
+    },
+    {
+     "texte": "Effort tranchant à la base Fb ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 3827.37,
+     "explication": "Fb = Sd·m·λ = 0,338 × 9,81 × 1 360 × 0,85 = 3 827 kN.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Force au dernier plancher (répartition selon z·m) ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 1530.95,
+     "explication": "Fₙ = Fb·zₙ/Σz = 3 827 × 12 / 30 = 1 531 kN.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "La méthode est-elle applicable ?",
+     "type": "choix",
+     "options": [
+      "oui : T₁ ≤ min(4·TC ; 2 s) et bâtiment régulier",
+      "non : T₁ dépasse la borne"
+     ],
+     "reponse": 0,
+     "explication": "Il faut T₁ ≤ min(4 × 0,80 ; 2) = 2,00 s et la régularité en élévation."
+    }
+   ]
+  },
+  {
+   "id": "ch15-combinaison",
+   "titre": "Combiner deux modes",
+   "difficulte": 1,
+   "graine": 151997349,
+   "enonce": "L'analyse modale d'un bâtiment donne à la base un effort de 1340 kN dans le mode 1 (T₁ = 0,80 s) et de 220 kN dans le mode 2 (T₂ = 0,24 s), amortissement 5 %.",
+   "donnees": [
+    {
+     "label": "Mode 1",
+     "valeur": "1340 kN, 0,80 s"
+    },
+    {
+     "label": "Mode 2",
+     "valeur": "220 kN, 0,24 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Combinaison SRSS ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 1357.94,
+     "explication": "√(1340² + 220²) = 1 358 kN.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Coefficient de corrélation CQC ρ₁₂ ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.00512769,
+     "explication": "r = T₂/T₁ = 0,300 ; ρ = 8ξ²(1 + r)r^1,5 / ((1 − r²)² + 4ξ²r(1 + r)²) = 0,0051.",
+     "tolerance": 0.005
+    },
+    {
+     "texte": "Combinaison CQC ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 1359.05,
+     "explication": "√(V₁² + V₂² + 2ρV₁V₂) = 1 359 kN : presque la SRSS.",
+     "toleranceRel": 0.01
+    }
+   ]
+  },
+  {
+   "id": "ch15-verifs",
+   "titre": "Limitation des dommages et coefficient θ",
+   "difficulte": 2,
+   "graine": 440604500,
+   "enonce": "Au premier étage (h = 3 m) d'un bâtiment, l'analyse sous le spectre de calcul (q = 2) donne un déplacement relatif d'étage dₑ = 2,1 mm et un effort tranchant V = 1 500 kN ; le poids total au-dessus vaut 5 700 kN.",
+   "donnees": [
+    {
+     "label": "dₑ",
+     "valeur": "2,1 mm"
+    },
+    {
+     "label": "q",
+     "valeur": "2"
+    },
+    {
+     "label": "V, P",
+     "valeur": "1 500 kN, 5 700 kN"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Déplacement relatif réel d_r = q·dₑ ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 4.2,
+     "explication": "2 × 2,1 = 4,2 mm.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Limitation des dommages pour des cloisons fragiles (d_r·ν ≤ 0,005·h, ν = 0,5) ?",
+     "type": "choix",
+     "options": [
+      "non vérifiée",
+      "vérifiée"
+     ],
+     "reponse": 1,
+     "explication": "d_r·ν = 2,1 mm contre 0,005 × 3 000 = 15 mm."
+    },
+    {
+     "texte": "Coefficient θ = P·d_r/(V·h) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.00532,
+     "explication": "θ = 5 700 × 0,0042 / (1 500 × 3) = 0,005 ≤ 0,10 : second ordre négligeable.",
+     "toleranceRel": 0.02
+    }
+   ]
+  }
+ ]
+}

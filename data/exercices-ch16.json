@@ -1,0 +1,223 @@
+{
+ "chapitre": "ch16",
+ "exercices": [
+  {
+   "id": "ch16-equivalent",
+   "titre": "Système équivalent à un degré de liberté",
+   "difficulte": 1,
+   "graine": 2043586188,
+   "enonce": "Un bâtiment de 3 étages a pour masses 330 t, 190 t, 310 t (du bas vers le haut) et pour déformée du premier mode, normée au sommet, Φ = 0,415 ; 0,615 ; 1,000. La poussée modale donne un effort à la base de 1400 kN pour 133 mm en tête.",
+   "donnees": [
+    {
+     "label": "Masses (t)",
+     "valeur": "330 ; 190 ; 310"
+    },
+    {
+     "label": "Φ",
+     "valeur": "0,415 ; 0,615 ; 1,000"
+    },
+    {
+     "label": "Point de la courbe",
+     "valeur": "1400 kN, 133 mm"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Masse du système équivalent m* = Σ mᵢΦᵢ ?",
+     "type": "nombre",
+     "unite": "t",
+     "reponse": 563.8,
+     "explication": "m* = 330 × 0,415 + 190 × 0,615 + 310 × 1,000 = 563,8 t.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Facteur de transformation Γ = m*/Σ mᵢΦᵢ² ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 1.28517,
+     "explication": "Σ mᵢΦᵢ² = 438,7 t ; Γ = 563,8 / 438,7 = 1,285.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Point correspondant du système équivalent : F* = Fb/Γ ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 1089.35,
+     "explication": "F* = 1400 / 1,285 = 1 089 kN.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "et d* = dₙ/Γ ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 103.488,
+     "explication": "d* = 133 / 1,285 = 103 mm.",
+     "toleranceRel": 0.01
+    }
+   ]
+  },
+  {
+   "id": "ch16-cible",
+   "titre": "Déplacement cible de la méthode N2",
+   "difficulte": 2,
+   "graine": 245068877,
+   "enonce": "Le système équivalent d'un bâtiment a pour masse m* = 750 t, pour résistance F*y = 2100 kN et pour déplacement élastique limite d*y = 14,5 mm ; Γ = 1,32. Spectre élastique de type 1, sol C (S = 1,15, TB = 0,20 s, TC = 0,60 s, TD = 2,0 s), a_g = 0,15 g.",
+   "donnees": [
+    {
+     "label": "m*, Γ",
+     "valeur": "750 t ; 1,32"
+    },
+    {
+     "label": "F*y, d*y",
+     "valeur": "2100 kN ; 14,5 mm"
+    },
+    {
+     "label": "Spectre",
+     "valeur": "sol C, a_g = 0,15 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Période T* = 2π√(m*·d*y/F*y) ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 0.452152,
+     "explication": "T* = 2π × √(750 × 0,0145 / 2100) = 0,452 s (t, m, kN).",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Accélération spectrale Se(T*) ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.43125,
+     "explication": "T* = 0,452 s, sol C : Se = 0,431 g.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Déplacement cible du système équivalent d*t ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 24.3307,
+     "explication": "d*et = Se·(T*/2π)² = 21,9 mm ; qu = Se·m*/F*y = 1,51 ; T* < TC et qu > 1 : d*t = (d*et/qu)·(1 + (qu − 1)·TC/T*) = 24,3 mm.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Déplacement cible en tête du bâtiment dt = Γ·d*t ?",
+     "type": "nombre",
+     "unite": "mm",
+     "reponse": 32.1165,
+     "explication": "1,32 × 24,3 = 32,1 mm.",
+     "toleranceRel": 0.03
+    }
+   ]
+  },
+  {
+   "id": "ch16-mecanisme",
+   "titre": "Quel étage cède le premier ?",
+   "difficulte": 2,
+   "graine": 3509392542,
+   "enonce": "Un bâtiment de 4 étages, de masses égales (210 t), a pour résistances d'étage 2200 kN, 1500 kN, 1200 kN, 700 kN (du bas vers le haut). On le pousse sous la répartition modale Fᵢ ∝ mᵢΦᵢ, Φ = 0,35 ; 0,65 ; 0,88 ; 1,00.",
+   "donnees": [
+    {
+     "label": "Vy (kN)",
+     "valeur": "2200 ; 1500 ; 1200 ; 700"
+    },
+    {
+     "label": "Répartition",
+     "valeur": "modal"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Quel étage forme le mécanisme ?",
+     "type": "choix",
+     "options": [
+      "étage 3",
+      "étage 2",
+      "étage 1",
+      "étage 4"
+     ],
+     "reponse": 1,
+     "explication": "Efforts tranchants par unité du multiplicateur : S = 604,8 ; 531,3 ; 394,8 ; 210 ; rapports Vy/S = 3,64 ; 2,82 ; 3,04 ; 3,33 : le plus petit (2,82) désigne l'étage 2."
+    },
+    {
+     "texte": "Effort à la base au moment du mécanisme ?",
+     "type": "nombre",
+     "unite": "kN",
+     "reponse": 1707.51,
+     "explication": "Fb = λ*·S₁ = 2,823 × 604,8 = 1 708 kN.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Pourquoi l'Eurocode impose-t-il deux répartitions de forces ?",
+     "type": "choix",
+     "options": [
+      "chacune peut révéler un mécanisme différent : la modale charge le haut, l'uniforme la base",
+      "pour calculer Γ deux fois",
+      "pour faire la moyenne des deux",
+      "parce que la modale n'existe que pour les bâtiments réguliers"
+     ],
+     "reponse": 0,
+     "explication": "On retient le cas le plus défavorable des deux répartitions."
+    }
+   ]
+  },
+  {
+   "id": "ch16-notions",
+   "titre": "Poussée progressive : lecture",
+   "difficulte": 1,
+   "graine": 3684694634,
+   "enonce": "Questions sur la poussée progressive.",
+   "questions": [
+    {
+     "texte": "La courbe de capacité porte…",
+     "type": "choix",
+     "options": [
+      "l'accélération spectrale en fonction de la période",
+      "le moment en fonction de la rotation d'une rotule",
+      "la ductilité en fonction de R",
+      "l'effort tranchant à la base en fonction du déplacement en tête"
+     ],
+     "reponse": 3,
+     "explication": "On pousse la structure sous des forces de forme fixée et l'on suit l'effort à la base."
+    },
+    {
+     "texte": "Un mécanisme d'étage signifie…",
+     "type": "choix",
+     "options": [
+      "que la structure reste élastique",
+      "que toute la déformation plastique se concentre dans un seul niveau",
+      "que tous les étages plastifient ensemble",
+      "que les fondations cèdent"
+     ],
+     "reponse": 1,
+     "explication": "C'est le mode de ruine des rez-de-chaussée transparents ; le dimensionnement en capacité cherche à l'éviter."
+    },
+    {
+     "texte": "Le déplacement cible du bâtiment s'obtient…",
+     "type": "choix",
+     "options": [
+      "en divisant celui du système équivalent par Γ",
+      "en multipliant celui du système équivalent par Γ",
+      "directement sur le spectre élastique, sans transformation",
+      "par le coefficient q"
+     ],
+     "reponse": 1,
+     "explication": "dₜ = Γ·d*ₜ (annexe B, B.6)."
+    },
+    {
+     "texte": "La méthode N2 est d'autant moins fiable que…",
+     "type": "choix",
+     "options": [
+      "le sol est rocheux",
+      "les modes supérieurs comptent (bâtiments hauts, irréguliers)",
+      "le bâtiment est bas et régulier",
+      "l'amortissement vaut 5 %"
+     ],
+     "reponse": 1,
+     "explication": "Elle ne garde qu'une forme de déformation ; les calculs temporels non linéaires prennent le relais."
+    }
+   ]
+  }
+ ]
+}

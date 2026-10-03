@@ -68,6 +68,11 @@ test('chapitre 1 : les exemples chiffrés du texte', () => {
   for (const t of ['63 km', '62 km', '10 h 15 min 11,9 s', 'ML = 3,30 + 2,00 + 0,12 − 2,09']) assert.ok(cours.includes(t), t);
 });
 
+test('cours.html : identifiants uniques (deux calculateurs ne partagent aucun champ ni aucune sortie)', () => {
+  const ids = [...cours.matchAll(/ id="([^"]+)"/g)].map(m => m[1]), vus = new Set(), doublons = ids.filter(id => (vus.has(id) ? true : (vus.add(id), false)));
+  assert.deepEqual(doublons, []);
+});
+
 test('pages : chaque fichier local référencé existe ; chaque champ lu par un calculateur existe', () => {
   for (const page of ['index.html', 'cours.html', 'exerciseur.html', 'labo.html']) {
     const html = lire(page);
@@ -323,4 +328,50 @@ test('chapitre 14 : les exemples chiffrés du texte', async () => {
   assert.equal((0.2 * 1.15 * 2.5 / 3.9 * 0.6 * 2 / 2.5 ** 2).toFixed(3), '0.028');
   assert.equal(S.ec8Calcul(2.5, { type: 1, sol: 'C', ag: 0.2, q: 3.9 }), 0.2 * 0.2);
   for (const t of ['0,575 g au plateau', '0,6/0,3 =\n       <strong>7</strong>', '(16 + 1)/2 = 8,5', '<strong>0,147 g</strong>', 'β·a<sub>g</sub> = 0,04 g']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 15 : les exemples chiffrés du texte', async () => {
+  const B = (await import('../src/sismo/batiment.js')).default, S = (await import('../src/sismo/spectre.js')).default;
+  const bat = { m: Array(5).fill(200), k: Array(5).fill(2e5), h: Array(5).fill(3) }, md = B.modes(bat);
+  assert.deepEqual([md[0].T.toFixed(2), md[0].gamma.toFixed(2), Math.round(100 * md[0].part)], ['0.70', '1.25', 88]);
+  assert.deepEqual([md[1].T.toFixed(2), (100 * md[1].part).toFixed(1), md[2].T.toFixed(2), (100 * md[2].part).toFixed(1)], ['0.24', '8.7', '0.15', '2.4']);
+  const r = B.modesRetenus(md);
+  assert.deepEqual([r.n, Math.round(100 * r.cumul)], [2, 97]);
+  const Sd = T => S.ec8Calcul(T, { type: 1, sol: 'C', ag: 0.2, q: 3.9 }) * S.G;
+  assert.equal((Sd(md[0].T) / S.G).toFixed(3), '0.127');
+  const fl = B.forcesLaterales(bat, { T1: md[0].T, Sd: Sd(md[0].T), TC: 0.6 });
+  assert.equal(fl.lambda, 0.85);
+  assert.equal(Math.round(fl.Fb), 1057);
+  assert.deepEqual(fl.F.map(Math.round), [70, 141, 211, 282, 352]);
+  const sp = B.spectrale(bat, md, Sd, { n: 2, regle: 'srss' });
+  assert.equal(Math.round(sp.V[0]), 1101);
+  for (const t of ['T<sub>1</sub> = <strong>0,70 s</strong>', 'T<sub>2</sub> = 0,24 s (8,7 %)', '≈ <strong>1 057 kN</strong>', '70, 141, 211, 282\n       et 352 kN', 'donne 1 101 kN']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 16 : les exemples chiffrés du texte', async () => {
+  const P = (await import('../src/sismo/poussee.js')).default, B = (await import('../src/sismo/batiment.js')).default, S = (await import('../src/sismo/spectre.js')).default;
+  const bat = { m: Array(5).fill(200), k: Array(5).fill(2e5), h: Array(5).fill(3) };
+  bat.Vy = P.resistances(bat, T => S.ec8Calcul(T, { type: 1, sol: 'C', ag: 0.2, q: 3.9 }) * S.G, { omega: 1.5 });
+  const se = T => S.ec8(T, { type: 1, sol: 'C', ag: 0.2 }) * S.G, md = B.modes(bat);
+  const mo = P.n2(bat, md[0].phi, { se, TC: 0.6 }), un = P.n2(bat, bat.m.map(() => 1), { se, TC: 0.6 });
+  assert.deepEqual([Math.round(mo.mEtoile), mo.gamma.toFixed(2), mo.cap.critique], [703, '1.25', 1]);
+  assert.deepEqual([Math.round(mo.Fy), Math.round(mo.dy * 1000), mo.T.toFixed(2), (mo.se / S.G).toFixed(3)], [1311, 23, '0.70', '0.494']);
+  assert.equal(mo.regle, 'égaux déplacements');
+  assert.deepEqual([(mo.dtEtoile * 1000).toFixed(1), Math.round(mo.dt * 1000), Math.round(mo.glissements[1] * 1000)], ['59.8', 75, 54]);
+  assert.equal((100 * mo.glissements[1] / 3).toFixed(1), '1.8');
+  assert.deepEqual([un.cap.critique, Math.round(un.dt * 1000)], [0, 66]);
+  for (const t of ['m* = 703 t, Γ = 1,25', 'F*<sub>y</sub> = 1 311 kN', 'd*<sub>t</sub> = 59,8 mm', '<strong>d<sub>t</sub> = 75 mm</strong>', '54 mm dans le seul deuxième étage', 'd<sub>t</sub> = 66 mm']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 17 : les exemples chiffrés du texte', async () => {
+  const I = (await import('../src/sismo/isolation.js')).default, S = (await import('../src/sismo/spectre.js')).default;
+  const iso = I.isolateur({ M: 1000, Tiso: 2.5, q: 0.05, dy: 0.01 });
+  assert.deepEqual([Math.round(iso.Q), Math.round(iso.K2), Math.round(iso.K1 / 10) * 10], [491, 6317, 55370]);
+  const se = (T, xi = 0.05) => S.ec8(T, { type: 1, sol: 'C', ag: 0.25, xi }) * S.G, eq = I.deplacementCalcul(iso, { se });
+  assert.ok(eq.converge);
+  assert.deepEqual([Math.round(eq.d * 1000), eq.Teff.toFixed(2), Math.round(100 * eq.xi), S.eta(eq.xi).toFixed(2)], [128, '1.97', 22, '0.61']);
+  assert.equal((eq.F / 1000 / S.G).toFixed(3), '0.133');
+  assert.equal((se(0.4) / S.G).toFixed(2), '0.72');
+  assert.ok(se(0.4) / (eq.F / 1000) > 5);
+  for (const t of ['Q = 5 % du poids (490 kN)', '<strong>d = 128 mm</strong>', 'T<sub>eff</sub> = 1,97 s, ξ<sub>eff</sub> = 22 % (η = 0,61)', 'F/M = 0,133 g, contre 0,72 g']) assert.ok(cours.includes(t), t);
 });
