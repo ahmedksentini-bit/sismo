@@ -5,7 +5,23 @@ sismique réglementaire de l'**Eurocode 8**, première et deuxième génération
 Même architecture et même habillage que les sites de fondations et de géotechnique
 routière de ksr-infra : application web **statique**, aucun framework, aucune compilation.
 
-## État : bancs de lecture, géodésie et aléa
+## Organisation : comme le site de fondations
+
+| Page | Rôle |
+|---|---|
+| `index.html` | accueil : ressources du cours, puis les dix-sept chapitres rangés en quatre parties (A Lire les sismogrammes, B Mouvement du sol et aléa, C Du site au mouvement de projet, D Réponse des ouvrages) ; page de chapitre (`index.html#ch1`) avec notions, exercices corrigés et liens |
+| `cours.html` | le cours au fil du texte, un chapitre par section (`#chN`), avec ses calculateurs (champs à curseur), encadrés « à retenir » et « piège fréquent », sommaire latéral |
+| `exerciseur.html` | exercices à données tirées au hasard (`#chN/modèle/graine`), modes apprentissage, entraînement et examen |
+| `labo.html` | travaux pratiques : les dix-sept bancs ; le banc de rang n est le TP du chapitre n |
+| `polycopie/sismologie-polycopie.pdf` | le polycopié : couverture, sommaire paginé, `cours.html` imprimé (les calculateurs deviennent des exemples chiffrés) |
+
+Les chapitres (`data/chapitres.json`) sont rédigés un à un ; un chapitre non rédigé apparaît « en préparation »
+et son banc reste accessible. Les anciennes ancres (`index.html#localisation`, `#alea`…) sont redirigées vers
+`labo.html`. Infrastructure commune reprise du site de fondations : `styles.css`, `enhancements.css`, `site.css`,
+`src/ui.js`, `src/curseurs.js`, `src/figures.js`, `src/exercices.js`, `src/exerciseur.js`, `src/exos/alea.js`,
+`src/impression.js`, `src/socle.js`, `src/tableaux.js`, `tools/generer-exercices.mjs`, `tools/polycopie.py`.
+
+## Travaux pratiques : les bancs
 
 | Banc | Rôle |
 |---|---|
@@ -29,19 +45,27 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 
 Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
 **Exercice** (séisme tiré au hasard, numéroté, corrigé avec tolérances). Les ancres
-`#localisation`, `#sismometre`, `#profil`, `#spectre`, `#sismicite`, `#geodesie` et `#alea` ouvrent directement le banc voulu.
+`labo.html#localisation`, `#sismometre`, `#profil`, `#spectre`, `#sismicite`, `#geodesie`, `#alea`… ouvrent directement le banc voulu.
 
 ## Lancer
 
 ```
 npm run serve     # http://localhost:3000 — les modules ES ne se chargent pas en file://
 npm test          # invariants numériques (node --test, aucune dépendance)
+npm run exercices # banques data/exercices-chN.json, tirées des modèles src/exos/chNN.js à graine fixe
+npm run polycopie # polycopie/sismologie-polycopie.pdf (Chrome ou Edge sans interface, PyMuPDF)
 ```
 
 ## Architecture
 
 ```
-index.html, lecteur.css
+index.html              accueil et pages de chapitre (src/app.js)
+cours.html              cours interactif ; calculateurs src/cours-chN.js
+exerciseur.html         exerciseur (src/exerciseur.js, src/exercices.js)
+labo.html, lecteur.css  bancs de travaux pratiques
+data/chapitres.json     plan : parties, chapitres, banc associé, exercices
+data/exercices-chN.json banques d'exercices (fichiers produits, npm run exercices)
+src/exos/chNN.js        modèles d'exercices : données tirées, réponses par les solveurs
 src/sismo/signal.js     solveurs purs et testés (aucun accès au DOM)
                           FFT, Butterworth causal, Wood-Anderson, modèle de croûte,
                           temps de trajet Pg/Pn/Sg/Sn, méthode stochastique de Boore,
@@ -96,10 +120,11 @@ src/banc-poussee.js     banc « poussée progressive »
 src/banc-isolation.js   banc « isolation »
 src/banc-mecanisme.js   banc « mécanisme »
 src/banc-source.js      banc « source »
-src/parcours.js         plan du cours : quatre chapitres, ordre des bancs, ancres d'adresse
-src/onglets.js          onglets et fil du parcours (chapitre, banc précédent et suivant) ; chaque banc se construit à sa première ouverture
+src/parcours.js         plan des travaux pratiques : quatre parties, ordre des bancs, ancres, chapitre du cours de chaque banc
+src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, parcours, références (120 tests)
+                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, parcours,
+                        cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références (125 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
@@ -108,6 +133,8 @@ tools/liquepy/          référence de la liquéfaction (Python, liquepy)
 tools/opensees/         références de l'oscillateur inélastique, du bâtiment, de la poussée et de l'isolation (Python, OpenSeesPy)
 tools/obspy/            référence du mécanisme au foyer (Python, ObsPy)
 tools/eqsig/            référence des indicateurs d'accélérogramme (Python, eqsig)
+tools/generer-exercices.mjs  banques d'exercices (npm run exercices)
+tools/polycopie.py      polycopié PDF (npm run polycopie) ; couverture tools/polycopie-couverture.html
 ```
 
 ## Modèle des signaux

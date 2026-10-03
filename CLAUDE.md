@@ -135,3 +135,12 @@ la virgule décimale.
     Bâtiment isolé : dalle de base (30 % de la superstructure) + superstructure à un niveau, amortisseurs d'étage (pas
     de Rayleigh, qui amortirait le mode isolé). Accélérogrammes calés autour de Teff ; la base fixe reçoit le même
     mouvement. Le chapitre 10 de l'EN 1998-1 n'est cité qu'en général, pas recopié de mémoire.
+29. **Cours** (organisation du site de fondations) : `index.html` accueil et pages de chapitre, `cours.html` un
+    chapitre par section `#chN` avec calculateurs (`src/cours-chN.js`, champs `data-curseur`), `exerciseur.html`,
+    `labo.html` les bancs, polycopié produit par `npm run polycopie` (à relancer après toute modification de
+    `cours.html`). `data/chapitres.json` suit l'ordre des bancs : le chapitre n a pour TP le banc de rang n, ses
+    parties A–D sont les groupes de `Parcours.CHAPITRES`, son titre celui de `Parcours.LECONS` (testé). Un chapitre
+    rédigé : `"cours": true`, section dans `cours.html`, `LECONS[banc].fichier = 'cours.html#chN'`. Les exercices
+    (`src/exos/chNN.js`) tirent leurs lectures du générateur et appliquent les règles du cours aux valeurs arrondies ;
+    les banques `data/exercices-chN.json` se régénèrent par `npm run exercices` (test de reproductibilité). Les
+    exemples chiffrés du texte sont testés. Les anciennes ancres de bancs sur `index.html` redirigent vers `labo.html`.

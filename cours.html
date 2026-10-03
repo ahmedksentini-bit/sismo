@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#075985">
+<meta name="description" content="Cours interactif de sismologie et d'aléa sismique pour l'ingénieur, jusqu'au calcul des ouvrages selon l'Eurocode 8">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="enhancements.css">
+<link rel="stylesheet" href="site.css">
+<title>Cours interactif — Sismologie</title>
+</head><body>
+<header class="topbar">
+  <a class="brand" href="index.html" aria-label="Retour à l'accueil">
+    <span class="brand-mark">SI</span>
+    <span><strong>Sismologie</strong><small>Cours interactif</small></span>
+  </a>
+  <div class="header-actions">
+    <a class="ghost course-link" href="exerciseur.html">Exerciseur</a>
+    <a class="ghost course-link" href="labo.html">Travaux pratiques</a>
+  </div>
+</header>
+
+<main id="app" tabindex="-1">
+<section class="chapter-banner"><span class="num">§</span>
+  <div><h1>Sismologie et aléa sismique</h1>
+  <p>Du sismogramme au calcul des ouvrages selon l'Eurocode 8 — le cours au fil du texte, avec ses figures et ses calculateurs.</p></div>
+</section>
+
+<div class="workspace cours-layout">
+<div>
+
+<section id="intro" class="card">
+  <h2>Avant de commencer</h2>
+  <p>Ce cours s'adresse à l'ingénieur qui doit <strong>utiliser</strong> la sismologie : lire un
+     enregistrement, comprendre d'où vient l'accélération de calcul d'un site, choisir des
+     accélérogrammes, juger un effet de site ou une liquéfaction, et dimensionner un ouvrage selon
+     l'<strong>Eurocode 8</strong>. Il part du signal enregistré par une station et remonte, chapitre
+     après chapitre, jusqu'à la réponse des bâtiments.</p>
+  <p>Quatre parties : <strong>lire les sismogrammes</strong> (ce que mesure une station, comment on
+     localise un séisme et on mesure sa taille) ; <strong>mouvement du sol et aléa</strong> (le spectre
+     de réponse, les catalogues, le calcul probabiliste de l'aléa) ; <strong>du site au mouvement de
+     projet</strong> (accélérogrammes, effets de site, liquéfaction) ; <strong>réponse des
+     ouvrages</strong> (ductilité, analyse modale, poussée progressive, isolation).</p>
+  <div class="a-retenir"><strong>Fil conducteur</strong>
+    <p>À chaque chapitre, la même démarche : <em>ce que l'on observe</em>, <em>le modèle qui
+       l'explique</em>, <em>ce que l'ingénieur en retient</em> — et, quand l'Eurocode 8 s'en mêle,
+       <em>ce que dit la norme</em>. Les calculateurs appliquent les formules du texte à des données
+       que l'on fait varier ; chaque chapitre a son banc de travaux pratiques, où l'on refait la
+       démarche sur des enregistrements simulés.</p></div>
+  <p class="method-note">Les références entre crochets renvoient aux textes :
+     <span class="ref">[EN 1998-1 3.2.2.2]</span> pour l'Eurocode 8 (édition de 2004, valeurs
+     recommandées). La deuxième génération de l'Eurocode 8 (EN 1998-1-1:2024) sera présentée à côté,
+     à partir de son texte.</p>
+</section>
+
+<!-- ══════════════════════════ CHAPITRE 1 ══════════════════════════ -->
+<section id="ch1" class="card">
+  <h2>1 · Lire un sismogramme</h2>
+
+  <h3>Ce qu'enregistre une station</h3>
+  <p>Une station sismologique mesure le mouvement du sol dans trois directions : la
+     <strong>verticale</strong> (Z), le <strong>nord–sud</strong> (N) et l'<strong>est–ouest</strong> (E).
+     Son capteur donne la <strong>vitesse</strong> du sol (vélocimètre) ou son
+     <strong>accélération</strong> (accéléromètre), échantillonnée cent fois par seconde et datée en
+     temps universel par un récepteur GNSS. Le tracé obtenu en fonction du temps est le
+     <strong>sismogramme</strong>.</p>
+  <p>Les deux capteurs se complètent. Le vélocimètre est très sensible : il enregistre des séismes
+     lointains ou minuscules, mais il <strong>sature</strong> dès que le sol bouge fort. L'accéléromètre
+     est moins sensible mais ne sature pas : c'est lui qui enregistre, près d'un fort séisme, les
+     mouvements qui intéressent l'ingénieur.</p>
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Les accélérogrammes et les spectres de réponse qui servent au calcul des ouvrages viennent des
+       accéléromètres (chapitres 7 et 11). Un enregistrement de vélocimètre saturé est faux là où il
+       est le plus fort.</p></div>
+
+  <h3>Trois familles d'ondes</h3>
+  <p>Un séisme émet plusieurs types d'ondes, qui n'arrivent pas en même temps à la station :</p>
+  <ul class="liste-cours">
+    <li>les <strong>ondes P</strong> (premières) compriment et dilatent la roche dans leur direction de
+      propagation, comme le son. Ce sont les plus rapides — environ <strong>6 km/s</strong> dans la
+      croûte. Elles arrivent en premier et se voient surtout sur la composante verticale, parce
+      qu'elles remontent presque verticalement à travers les couches lentes de surface ;</li>
+    <li>les <strong>ondes S</strong> (secondes) cisaillent la roche, perpendiculairement à leur
+      propagation. Plus lentes — environ <strong>3,5 km/s</strong> — elles arrivent ensuite, plus
+      fortes, surtout sur les composantes <strong>horizontales</strong>. Ce sont elles qui sollicitent le
+      plus les bâtiments ;</li>
+    <li>les <strong>ondes de surface</strong> (Love et Rayleigh) sont guidées par la surface du sol. Plus
+      lentes encore, elles arrivent en dernier et se distinguent nettement au-delà de quelques dizaines
+      de kilomètres, avec des oscillations de plus longue période.</li>
+  </ul>
+
+  <div class="calc" id="calcSismo">
+    <h3>Un séisme vu par une station</h3>
+    <p class="method-note">Un séisme de magnitude 4 à 10 km de profondeur, enregistré sans bruit en
+       vitesse sur les trois composantes. Faites glisser la distance : l'écart entre P et S grandit, et
+       les ondes de surface se détachent au-delà de 40 km.</p>
+    <div class="data-grid">
+      <div class="field"><label for="smDelta">Distance de la station à l'épicentre</label>
+        <div class="input-wrap"><input id="smDelta" type="text" inputmode="decimal" value="60" data-curseur="20 150 10"><span class="unit">km</span></div></div>
+      <div class="field"><label for="smH">Profondeur du foyer</label>
+        <div class="input-wrap"><input id="smH" type="text" inputmode="decimal" value="10" data-curseur="2 30 1"><span class="unit">km</span></div></div>
+    </div>
+    <div class="figure" id="smFig"></div>
+    <p class="final-result" id="smOut"></p>
+  </div>
+
+  <h3>La distance par l'écart S − P</h3>
+  <p>Les ondes P et S partent ensemble du foyer. Comme P va plus vite, l'écart entre leurs arrivées
+     grandit avec la distance d parcourue :</p>
+  <p class="formula">S − P = d / Vs − d / Vp &nbsp;⟹&nbsp; d = (S − P) · Vp·Vs / (Vp − Vs)</p>
+  <p>Avec Vp = 6,0 km/s et Vs = 3,5 km/s, le facteur vaut 8,4 km/s :</p>
+  <p class="formula">d ≈ 8,4 × (S − P)</p>
+  <p class="method-note">d en kilomètres, S − P en secondes : environ 8 km par seconde d'écart. Le
+     rapport Vp/Vs ≈ 1,7 varie peu d'une croûte à l'autre ; c'est pourquoi la règle voyage bien.</p>
+  <p>La distance obtenue est la <strong>distance hypocentrale</strong> R, du foyer à la station. La
+     distance à l'épicentre, point de la surface à l'aplomb du foyer, s'en déduit avec la profondeur h :
+     Δ = √(R² − h²). Au-delà d'environ 150 km, la première onde P a voyagé en partie dans le manteau,
+     plus rapide (onde Pn, chapitre 6) : la règle surestime alors un peu la distance.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>L'onde P arrive à 12,0 s et l'onde S à 19,5 s. L'écart vaut 7,5 s, d'où R ≈ 8,4 × 7,5 ≈
+       <strong>63 km</strong>. Pour un foyer à 10 km de profondeur, l'épicentre est à √(63² − 10²) ≈
+       62 km.</p></div>
+
+  <h3>L'heure d'origine</h3>
+  <p>Connaissant la distance, on remonte le temps : l'onde P a mis R / Vp secondes pour arriver.</p>
+  <p class="formula">t<sub>0</sub> = t<sub>P</sub> − R / Vp</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>P lue à 10 h 15 min 22,4 s, R = 63 km : R / Vp = 63 / 6,0 = 10,5 s, donc le séisme s'est produit
+       à <strong>10 h 15 min 11,9 s</strong>.</p></div>
+
+  <div class="calc" id="calcSP">
+    <h3>Distance et heure d'origine à partir des lectures</h3>
+    <p class="method-note">Saisissez les temps d'arrivée lus sur l'enregistrement (en secondes après
+       une heure ronde) et la profondeur supposée du foyer.</p>
+    <div class="data-grid">
+      <div class="field"><label for="spP">Arrivée de l'onde P</label>
+        <div class="input-wrap"><input id="spP" type="text" inputmode="decimal" value="12.0" data-curseur="0 60 0.1"><span class="unit">s</span></div></div>
+      <div class="field"><label for="spS">Arrivée de l'onde S</label>
+        <div class="input-wrap"><input id="spS" type="text" inputmode="decimal" value="19.5" data-curseur="0 90 0.1"><span class="unit">s</span></div></div>
+      <div class="field"><label for="spH">Profondeur du foyer</label>
+        <div class="input-wrap"><input id="spH" type="text" inputmode="decimal" value="10" data-curseur="0 40 1"><span class="unit">km</span></div></div>
+    </div>
+    <p class="final-result" id="spOut"></p>
+  </div>
+
+  <h3>La direction de la source</h3>
+  <p>Une seule station donne aussi la <strong>direction</strong> du séisme. L'onde P fait bouger le sol
+     dans sa direction de propagation : en comparant ce premier mouvement sur les deux horizontales, on
+     trouve l'azimut de la source, à 180° près ; le sens du mouvement vertical — vers le haut pour une
+     compression — lève l'ambiguïté. C'est une estimation fragile, sensible au bruit et aux couches de
+     surface : pour placer l'épicentre avec précision, il faut plusieurs stations (chapitre 2).</p>
+
+  <h3>La magnitude locale ML</h3>
+  <p>Richter (1935) a défini la magnitude à partir de l'amplitude maximale lue sur un sismomètre de
+     référence, le <strong>Wood-Anderson</strong> (période propre 0,8 s), corrigée de la distance pour que
+     toutes les stations donnent la même valeur. Aujourd'hui, on simule ce sismomètre à partir de
+     l'enregistrement, et l'on applique la formule normalisée de l'IASPEI (2013) :</p>
+  <p class="formula">ML = log<sub>10</sub> A + 1,11 · log<sub>10</sub> R + 0,00189 · R − 2,09</p>
+  <p class="method-note">A : amplitude maximale sur les composantes horizontales du Wood-Anderson
+     simulé, ramené à un grandissement de 1, en nanomètres ; R : distance hypocentrale en km. Les deux
+     derniers termes corrigent l'affaiblissement des ondes avec la distance.</p>
+  <p>L'échelle est <strong>logarithmique</strong> : à la même distance, une amplitude dix fois plus
+     grande donne une magnitude plus grande d'une unité. En énergie libérée, un point de magnitude
+     représente environ 32 fois plus.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>A = 2 000 nm (2 µm) à R = 63 km : log<sub>10</sub> 2 000 = 3,30 ; 1,11 × log<sub>10</sub> 63 = 2,00 ;
+       0,00189 × 63 = 0,12. ML = 3,30 + 2,00 + 0,12 − 2,09 ≈ <strong>3,3</strong>.</p></div>
+
+  <div class="calc" id="calcML">
+    <h3>Calcul de la magnitude locale</h3>
+    <p class="method-note">L'amplitude se règle par son logarithme : un cran de 1 multiplie A par 10, et
+       la magnitude gagne une unité. À amplitude égale, une station plus lointaine signale un séisme plus fort.</p>
+    <div class="data-grid">
+      <div class="field"><label for="mlLogA">log<sub>10</sub> A, avec A en nanomètres</label>
+        <div class="input-wrap"><input id="mlLogA" type="text" inputmode="decimal" value="3.3" data-curseur="1 6 0.05"><span class="unit">—</span></div></div>
+      <div class="field"><label for="mlR">Distance hypocentrale R</label>
+        <div class="input-wrap"><input id="mlR" type="text" inputmode="decimal" value="63" data-curseur="10 300 1"><span class="unit">km</span></div></div>
+    </div>
+    <p class="final-result" id="mlOut"></p>
+  </div>
+
+  <p>ML a deux limites. Elle est définie pour des distances régionales, jusqu'à quelques centaines de
+     kilomètres. Et elle <strong>sature</strong> au-delà de 6,5 environ : un séisme plus grand rompt une
+     faille plus longue, émet surtout des ondes de longue période, que le Wood-Anderson, réglé sur 0,8 s,
+     ne voit plus grandir. Pour les grands séismes, on emploie la <strong>magnitude de moment</strong>
+     Mw, tirée de la taille physique de la rupture (chapitre 4). C'est elle qu'utilisent les lois
+     d'atténuation et le calcul de l'aléa.</p>
+
+  <h3>Magnitude, intensité, accélération</h3>
+  <p>Trois notions qu'on ne doit pas confondre :</p>
+  <div class="comparaison">
+    <div><h4>Magnitude</h4>
+      <p>la taille du séisme, à sa source : <strong>une seule valeur par séisme</strong>, quelle que soit
+         la station. ML pour les petits et moyens séismes, Mw pour tous.</p></div>
+    <div><h4>Intensité</h4>
+      <p>les effets observés <strong>en un lieu</strong> : ressenti, objets renversés, dégâts (échelle
+         EMS-98, de I à XII). Elle varie d'un lieu à l'autre pour un même séisme.</p></div>
+  </div>
+  <p>L'ingénieur, lui, dimensionne pour une troisième grandeur : le <strong>mouvement du sol au
+     site</strong> — accélération maximale (PGA) et spectre de réponse. Il dépend de la magnitude, de la
+     distance et du sol. Les lois d'atténuation (chapitre 10) en donnent la valeur médiane et la
+     dispersion ; le calculateur ci-dessous trace la médiane des trois lois utilisées dans ce cours,
+     au rocher.</p>
+
+  <div class="calc" id="calcPGA">
+    <h3>L'accélération du sol diminue avec la distance</h3>
+    <p class="method-note">Accélération maximale médiane au rocher (Vs30 = 800 m/s), moyenne en
+       logarithme des lois d'Akkar et al. (2014), Bindi et al. (2014) et Boore et al. (2014). La
+       dispersion d'un séisme à l'autre est d'un facteur 2 environ autour de cette médiane.</p>
+    <div class="data-grid">
+      <div class="field"><label for="pgM">Magnitude Mw</label>
+        <div class="input-wrap"><input id="pgM" type="text" inputmode="decimal" value="5" data-curseur="4 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="pgR">Distance Rjb (≈ épicentrale pour un séisme modéré)</label>
+        <div class="input-wrap"><input id="pgR" type="text" inputmode="decimal" value="10" data-curseur="1 200 1"><span class="unit">km</span></div></div>
+    </div>
+    <div class="figure" id="pgFig"></div>
+    <p class="final-result" id="pgOut"></p>
+  </div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Dire qu'un ouvrage « résiste à un séisme de magnitude 6 ». Un séisme de magnitude 6 à 100 km
+       secoue moins qu'un séisme de magnitude 5 à 5 km. Le projet se fait pour un <em>mouvement du sol
+       au site</em>, avec sa probabilité : c'est tout l'objet du calcul de l'aléa (chapitre 10) et du
+       spectre de l'Eurocode 8 (chapitre 7).</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>P arrive en premier (≈ 6 km/s), surtout sur la verticale ; S ensuite (≈ 3,5 km/s), plus forte,
+        sur les horizontales ; puis les ondes de surface.</li>
+      <li>Distance : R ≈ 8,4 × (S − P), en km et en secondes ; heure d'origine : t<sub>0</sub> =
+        t<sub>P</sub> − R / Vp.</li>
+      <li>ML = log<sub>10</sub> A + correction de distance : × 10 sur l'amplitude, + 1 en magnitude ;
+        ML sature au-delà de 6,5, Mw non.</li>
+      <li>La magnitude caractérise le séisme ; l'ingénieur dimensionne pour le mouvement du sol au site.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch1">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch1">Exerciseur</a>
+    <a class="secondary" href="labo.html#station">Travaux pratiques : banc « Station »</a></div>
+</section>
+
+<!-- SUITE-DES-CHAPITRES -->
+
+</div>
+
+<aside class="cours-aside">
+  <nav class="card" aria-label="Sommaire du cours"><h2>Sommaire</h2>
+    <ul class="chapitre-sommaire" id="sommaire"></ul></nav>
+</aside>
+</div>
+</main>
+
+<script type="module">
+import { chargerJson } from "./src/donnees.js";
+const { chapitres } = await chargerJson("data/chapitres.json");
+document.getElementById("sommaire").innerHTML = chapitres.map((c) => {
+  const pret = document.getElementById(c.id);
+  return `<li><a data-ch="${c.id}" href="${pret ? "#" + c.id : "index.html#" + c.id}">
+    ${c.number} · ${c.title}<small>${pret ? "disponible" : "en préparation"}</small></a></li>`;
+}).join("");
+
+// Sommaire actif : la section dont le titre est le dernier franchi vers le haut.
+const liens = new Map([...document.querySelectorAll("#sommaire a[data-ch]")]
+  .map((a) => [a.dataset.ch, a]));
+const sections = chapitres.map((c) => document.getElementById(c.id)).filter(Boolean);
+
+function marquerSectionLue() {
+  const repere = 120;
+  let courante = sections[0];
+  for (const sec of sections)
+    if (sec.getBoundingClientRect().top <= repere) courante = sec;
+  for (const [id, a] of liens) a.classList.toggle("actif", id === courante?.id);
+  const actif = liens.get(courante?.id);
+  if (actif && liens.size > 6) {
+    const boite = actif.closest("ul");
+    const dessus = actif.offsetTop - boite.scrollTop;
+    if (dessus < 0 || dessus > boite.clientHeight - actif.offsetHeight)
+      boite.scrollTop = actif.offsetTop - boite.clientHeight / 2;
+  }
+}
+let planifie = false;
+addEventListener("scroll", () => {
+  if (planifie) return;
+  planifie = true;
+  requestAnimationFrame(() => { planifie = false; marquerSectionLue(); });
+}, { passive: true });
+addEventListener("resize", marquerSectionLue, { passive: true });
+marquerSectionLue();
+</script>
+<script type="module" src="src/impression.js"></script>
+<script type="module" src="src/socle.js"></script>
+<script type="module" src="src/curseurs.js"></script>
+<script type="module" src="src/cours-ch1.js"></script>
+<script type="module" src="src/tableaux.js"></script>
+</body></html>

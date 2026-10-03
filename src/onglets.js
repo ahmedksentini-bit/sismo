@@ -2,14 +2,18 @@ import Parcours from './parcours.js';
 
 // src/onglets.js — onglets des bancs et fil du parcours. Chaque banc écoute l'événement « banc:ouvert » et se
 // construit à sa première ouverture ; l'ancre de l'adresse (Parcours.ANCRES : #localisation, #accelerogrammes,
-// #effets-de-site, #poussee-progressive…) ouvre le banc voulu. Le bandeau rappelle le chapitre et propose les
-// bancs précédent et suivant dans l'ordre du cours.
+// #effets-de-site, #poussee-progressive…) ouvre le banc voulu. Le bandeau rappelle la partie du cours et propose
+// les bancs précédent et suivant dans l'ordre du cours, et le chapitre du cours (cours.html#chN) quand il est rédigé.
 const ANCRES = Parcours.ANCRES;
 const nomBanc = b => document.querySelector(`[data-onglet="${b}"]`).textContent.trim();
 
 function majParcours(banc) {
-  const p = Parcours.situer(banc), n = Parcours.CHAPITRES.length;
-  document.getElementById('parcours-chapitre').textContent = `Chapitre ${p.chapitre + 1} sur ${n} · ${p.titre} · banc ${p.position + 1} sur ${p.taille}`;
+  const p = Parcours.situer(banc);
+  document.getElementById('parcours-chapitre').textContent = `Partie ${String.fromCharCode(65 + p.chapitre)} · ${p.titre} · banc ${p.position + 1} sur ${p.taille}`;
+  // le chapitre du cours dont le banc est le TP, quand il est rédigé
+  const l = Parcours.LECONS[banc], lien = document.getElementById('parcours-lecon');
+  lien.hidden = !l.fichier;
+  if (l.fichier) { lien.href = l.fichier; lien.textContent = `Lire le cours : ${l.titre}`; }
   for (const [id, cible, fleche] of [['parcours-prec', p.precedent, '←'], ['parcours-suiv', p.suivant, '→']]) {
     const b = document.getElementById(id);
     b.hidden = !cible;

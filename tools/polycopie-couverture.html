@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Sismologie et aléa sismique — couverture</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 297mm; }
+  body { font-family: Inter, -apple-system, "Segoe UI", sans-serif; color: #0f172a;
+    background: linear-gradient(160deg, #082f49 0%, #075985 58%, #0891b2 100%);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { position: relative; height: 297mm; padding: 34mm 22mm 24mm; color: #fff; overflow: hidden; }
+  .page:after { content: ""; position: absolute; right: -60mm; bottom: -70mm; width: 190mm; height: 190mm;
+    border: 30mm solid rgba(255,255,255,.07); border-radius: 50%; }
+  .eyebrow { margin: 0; color: #a5f3fc; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: 11pt; }
+  h1 { margin: 10mm 0 0; font-size: 44pt; line-height: 1.02; }
+  .sous { margin: 8mm 0 0; max-width: 150mm; color: #e0f2fe; font-size: 15pt; line-height: 1.4; }
+  .refs { display: flex; gap: 4mm; margin-top: 12mm; flex-wrap: wrap; }
+  .refs span { padding: 2.5mm 5mm; border-radius: 3mm; font-weight: 800; font-size: 11pt; }
+  .ec8 { background: #ccfbf1; color: #115e59; }
+  .icone { position: absolute; right: 24mm; top: 120mm; width: 62mm; height: 62mm; opacity: .95; }
+  .contenu { position: absolute; left: 22mm; right: 22mm; bottom: 58mm; display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 10mm;
+    color: #e0f2fe; font-size: 10.5pt; line-height: 1.45; }
+  .contenu strong { display: block; color: #fff; font-size: 11pt; margin-bottom: 1mm; }
+  .signature { position: absolute; left: 22mm; bottom: 22mm; padding: 4mm 6mm; border-left: 1mm solid #67e8f9;
+    background: rgba(255,255,255,.08); border-radius: 0 3mm 3mm 0; color: #e0f2fe; font-size: 11pt; }
+  .signature strong { color: #fff; }
+  .edition { position: absolute; right: 22mm; bottom: 24mm; color: #bae6fd; font-size: 10pt; text-align: right; }
+</style>
+</head><body>
+<div class="page">
+  <p class="eyebrow">Génie civil · Eurocode 8</p>
+  <h1>Sismologie<br>et aléa sismique</h1>
+  <p class="sous">Du sismogramme au mouvement de projet, puis à la réponse des ouvrages — chaque notion
+     calculée, tracée et vérifiée.</p>
+  <div class="refs"><span class="ec8">EN 1998-1</span><span class="ec8">EN 1998-5</span><span class="ec8">Calcul probabiliste de l'aléa</span></div>
+  <svg class="icone" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="15" fill="rgba(255,255,255,.10)"/>
+    <path d="M6 34h8l3-6 3 12 3-22 4 30 3-20 3 12 3-8 3 4h15" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M6 50h52" stroke="#bae6fd" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+  </svg>
+  <div class="contenu">
+    <div><strong>A · Lire les sismogrammes</strong>Ondes, distance, magnitude, localisation, mécanisme, source.</div>
+    <div><strong>B · Mouvement du sol et aléa</strong>Sismomètre, spectre de réponse, sismicité, géodésie, calcul de l'aléa.</div>
+    <div><strong>C · Du site au mouvement de projet</strong>Sélection d'accélérogrammes, effets de site, liquéfaction.</div>
+    <div><strong>D · Réponse des ouvrages</strong>Ductilité, bâtiments, poussée progressive, isolation à la base.</div>
+  </div>
+  <div class="signature">École Nationale d'Ingénieurs de Sfax<br><strong>Dr Ahmed Ksentini</strong></div>
+  <div class="edition" id="edition">Édition __DATE__</div>
+</div>
+</body></html>

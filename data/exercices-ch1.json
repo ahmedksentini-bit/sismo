@@ -1,0 +1,233 @@
+{
+ "chapitre": "ch1",
+ "exercices": [
+  {
+   "id": "ch1-distance",
+   "titre": "Distance et heure d'origine par l'écart S − P",
+   "difficulte": 1,
+   "graine": 1572408859,
+   "enonce": "Une station enregistre un séisme local. L'onde P arrive à 10 h 15 min 25,9 s, l'onde S à 10 h 15 min 33,8 s. Le foyer est supposé à 12 km de profondeur (Vp = 6,0 km/s, Vs = 3,5 km/s).",
+   "donnees": [
+    {
+     "label": "Arrivée P",
+     "valeur": "10 h 15 min 25,9 s"
+    },
+    {
+     "label": "Arrivée S",
+     "valeur": "10 h 15 min 33,8 s"
+    },
+    {
+     "label": "Profondeur h",
+     "valeur": "12 km"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Écart S − P ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 7.9,
+     "explication": "33,8 − 25,9 = 7,9 s (les minutes sont les mêmes).",
+     "tolerance": 0.05
+    },
+    {
+     "texte": "Distance hypocentrale R ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 66.36,
+     "explication": "R ≈ 8,4 × (S − P) = 8,4 × 7,9 = 66,4 km — le facteur vient de Vp·Vs/(Vp − Vs) = 6,0 × 3,5 / 2,5 = 8,40 km/s. Distance vraie du générateur : 66,1 km.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Distance épicentrale Δ ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 65.266,
+     "explication": "Δ = √(R² − h²) = √(66,4² − 12²) = 65,3 km (épicentre vrai : 65 km).",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Heure d'origine : combien de secondes après 10 h 15 min 00 s ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 14.84,
+     "explication": "t₀ = tP − R/Vp = 25,9 − 66,4 / 6,0 = 25,9 − 11,1 = 14,8 s, soit 10 h 15 min 14,8 s (origine vraie : 10 h 15 min 14,9 s).",
+     "tolerance": 0.3
+    }
+   ]
+  },
+  {
+   "id": "ch1-magnitude",
+   "titre": "Magnitude locale à partir d'un enregistrement",
+   "difficulte": 2,
+   "graine": 3518392606,
+   "enonce": "Sur l'enregistrement d'un séisme, l'écart S − P vaut 12,3 s. Le Wood-Anderson simulé (grandissement 1) donne une amplitude maximale de 2 670 nm sur la composante nord et de 2 690 nm sur la composante est.",
+   "donnees": [
+    {
+     "label": "S − P",
+     "valeur": "12,3 s"
+    },
+    {
+     "label": "A nord",
+     "valeur": "2 670 nm"
+    },
+    {
+     "label": "A est",
+     "valeur": "2 690 nm"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Distance hypocentrale R ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 103.32,
+     "explication": "R ≈ 8,4 × 12,3 = 103 km.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Correction de distance 1,11·log₁₀ R + 0,00189·R − 2,09 ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.341019,
+     "explication": "1,11 × log₁₀ 103 + 0,00189 × 103 − 2,09 = 2,24 + 0,20 − 2,09 = 0,34.",
+     "tolerance": 0.03
+    },
+    {
+     "texte": "Magnitude locale ML (moyenne des deux composantes) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 3.76915,
+     "explication": "Nord : log₁₀ 2 670 + 0,34 = 3,77 ; est : log₁₀ 2 690 + 0,34 = 3,77 ; moyenne ML = 3,8. Le générateur, à la distance vraie, mesure ML = 3,8.",
+     "tolerance": 0.1
+    },
+    {
+     "texte": "À la même distance, quelle amplitude moyenne donnerait un séisme d'une magnitude plus grande ?",
+     "type": "nombre",
+     "unite": "nm",
+     "reponse": 26799.8,
+     "explication": "Une unité de magnitude multiplie l'amplitude par 10 : 10 × √(2 670 × 2 690) ≈ 26 800 nm (la moyenne des magnitudes correspond à la moyenne géométrique des amplitudes).",
+     "toleranceRel": 0.05
+    }
+   ]
+  },
+  {
+   "id": "ch1-ondes",
+   "titre": "Reconnaître les ondes",
+   "difficulte": 1,
+   "graine": 4208887359,
+   "enonce": "Quatre questions sur les ondes et les capteurs, à traiter sans calcul.",
+   "questions": [
+    {
+     "texte": "Sur quelle composante l'onde P se voit-elle le mieux, pour un séisme proche ?",
+     "type": "choix",
+     "options": [
+      "l'est–ouest",
+      "la verticale",
+      "les trois également",
+      "la nord–sud"
+     ],
+     "reponse": 1,
+     "explication": "Les couches lentes de surface redressent les rais : l'onde P remonte presque verticalement et fait surtout bouger le sol verticalement."
+    },
+    {
+     "texte": "Quelle onde sollicite le plus les bâtiments, dans le champ proche ?",
+     "type": "choix",
+     "options": [
+      "l'onde P, la première arrivée",
+      "aucune : seules les ondes de surface comptent",
+      "l'onde P, forte sur la verticale",
+      "l'onde S, forte sur les horizontales"
+     ],
+     "reponse": 3,
+     "explication": "L'onde S porte l'essentiel de l'énergie à haute fréquence sur les composantes horizontales : c'est elle qui fait le pic d'accélération d'un séisme proche."
+    },
+    {
+     "texte": "Sur un sismogramme, quelle onde arrive la première ?",
+     "type": "choix",
+     "options": [
+      "l'onde S",
+      "l'onde de Love",
+      "l'onde P",
+      "l'onde de Rayleigh"
+     ],
+     "reponse": 2,
+     "explication": "L'onde P, de compression, est la plus rapide (≈ 6 km/s dans la croûte) : elle arrive toujours la première."
+    },
+    {
+     "texte": "L'écart S − P double. La distance au foyer…",
+     "type": "choix",
+     "options": [
+      "double",
+      "est multipliée par 4",
+      "est multipliée par √2",
+      "ne change pas"
+     ],
+     "reponse": 0,
+     "explication": "S − P = d (1/Vs − 1/Vp) : l'écart est proportionnel à la distance."
+    }
+   ]
+  },
+  {
+   "id": "ch1-mouvement",
+   "titre": "Magnitude, intensité et mouvement au site",
+   "difficulte": 2,
+   "graine": 1355236418,
+   "enonce": "Un site au rocher peut être secoué par deux séismes : l'un de magnitude Mw 6,6 à 113 km, l'autre de magnitude Mw 5,1 à 4 km (distances Rjb).",
+   "donnees": [
+    {
+     "label": "Séisme 1",
+     "valeur": "Mw 6,6 à 113 km"
+    },
+    {
+     "label": "Séisme 2",
+     "valeur": "Mw 5,1 à 4 km"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Combien de fois plus d'énergie le séisme 1 libère-t-il (écart de 1,5 en magnitude) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 177.828,
+     "explication": "L'énergie varie comme 10^(1,5·M) : 10^(1,5 × 1,5) ≈ 178. Un point de magnitude ≈ 32 fois plus d'énergie.",
+     "toleranceRel": 0.05
+    },
+    {
+     "texte": "Lequel produit au site la plus forte accélération maximale médiane ?",
+     "type": "choix",
+     "options": [
+      "le séisme de magnitude 6,6 à 113 km",
+      "le séisme de magnitude 5,1 à 4 km"
+     ],
+     "reponse": 1,
+     "explication": "Médiane des trois lois du cours au rocher : 0,014 g pour le séisme 1, 0,13 g pour le séisme 2. La distance compte autant que la magnitude : le séisme modéré et proche l'emporte."
+    },
+    {
+     "texte": "Pour le séisme 1, l'intensité observée…",
+     "type": "choix",
+     "options": [
+      "se déduit de la seule magnitude",
+      "ne dépend que de la profondeur du foyer",
+      "varie d'un lieu à l'autre : elle décrit les effets en un lieu",
+      "est la même partout, comme la magnitude"
+     ],
+     "reponse": 2,
+     "explication": "La magnitude est une valeur par séisme ; l'intensité (EMS-98, de I à XII) décrit les effets observés en un lieu et diminue en général avec la distance."
+    },
+    {
+     "texte": "Pour décrire un séisme de magnitude 7 ou plus, on emploie…",
+     "type": "choix",
+     "options": [
+      "l'intensité maximale",
+      "l'accélération maximale à la station la plus proche",
+      "ML, valable à toutes les tailles",
+      "la magnitude de moment Mw : ML sature vers 6,5"
+     ],
+     "reponse": 3,
+     "explication": "Le Wood-Anderson, réglé sur 0,8 s, ne voit plus grandir les grands séismes qui rayonnent en longue période : ML sature. Mw, tirée du moment sismique, ne sature pas."
+    }
+   ]
+  }
+ ]
+}
