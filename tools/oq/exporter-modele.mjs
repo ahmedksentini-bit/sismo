@@ -23,5 +23,7 @@ sortie.desagregation = { largeurM: 0.5, largeurR: 20, niveaux: ['PGA', 1].map(im
   const k = m.imts.indexOf(imt);
   return { imt, x: Math.round(Psha.niveauPourProba(res.niveaux, res.moyenne[k], 0.1) * 1000) / 1000 };
 }) };
+// Spectre conditionnel : conditionné à Sa(1 s), aux probabilités de 10 % et 2 % en 50 ans.
+sortie.spectreConditionnel = { imtRef: 1, poes: [0.1, 0.02] };
 writeFileSync(new URL('../../tests/references/modele_psha.json', import.meta.url), JSON.stringify(sortie, null, 1) + '\n');
 console.log(`écrit tests/references/modele_psha.json (${sortie.zones.map(z => `${z.id} : ${z.points.length} points`).join(', ')})`);

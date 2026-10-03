@@ -1,10 +1,11 @@
 """tools/oq/psha.py — calcul de référence du moteur PSHA par OpenQuake (calculateurs « classical » et
-« disaggregation »).
+« disaggregation », post-traitement « conditional_spectrum »).
 
 Lit tests/references/modele_psha.json (écrit par exporter-modele.mjs : points des zones, variantes du
 modèle de taux, branches de l'arbre), le traduit en NRML, fait tourner le moteur et écrit
 tests/references/psha.json : courbes d'aléa de chaque réalisation, moyenne et fractiles, spectre à
-probabilité uniforme, désagrégation magnitude-distance.
+probabilité uniforme, désagrégation magnitude-distance, spectre conditionnel (sommes de Lin et al. 2013
+par réalisation et pour la moyenne, corrélation de Baker et Jayaram 2008).
 
 Traduction du modèle :
 - chaque zone devient une multiPointSource (PointMSR : rupture de 10 m × 10 m, donc Rjb égale à la
@@ -28,12 +29,21 @@ import pathlib
 import sys
 import tempfile
 
+import numpy
+
 os.environ.setdefault('OQ_DISTRIBUTE', 'no')
 
 import openquake.engine  # noqa: E402
 from openquake.calculators import base  # noqa: E402
 from openquake.commonlib import datastore, logs  # noqa: E402
 from openquake.hazardlib.mfd import TruncatedGRMFD  # noqa: E402
+from openquake.hazardlib.map_array import compute_hazard_maps  # noqa: E402
+from openquake.baselib.general import decode  # noqa: E402
+from openquake.hazardlib import valid  # noqa: E402
+from openquake.hazardlib.calc.cond_spectra import get_cs_out  # noqa: E402
+from openquake.hazardlib.contexts import get_unique_inverse, read_cmakers, read_ctx_by_grp  # noqa: E402
+from openquake.hazardlib.cross_correlation import BakerJayaram2008  # noqa: E402
+from openquake.hazardlib.imt import from_string  # noqa: E402
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 REF = RACINE / 'tests' / 'references'
@@ -201,7 +211,18 @@ num_rlzs_disagg = 0
 mean = true
 individual_rlzs = true
 ''', encoding='utf-8')
-    return dossier / 'job_classique.ini', dossier / 'job_desag.ini'
+    cs = modele['spectreConditionnel']
+    (dossier / 'job_cs.ini').write_text(commun + f'''calculation_mode = classical
+intensity_measure_types_and_levels = {json.dumps(imtls)}
+postproc_func = conditional_spectrum.main
+cross_correlation = BakerJayaram2008
+imt_ref = {nom_imt(cs['imtRef'])}
+poes = {' '.join(repr(p) for p in cs['poes'])}
+
+[output]
+mean = true
+''', encoding='utf-8')
+    return dossier / 'job_classique.ini', dossier / 'job_desag.ini', dossier / 'job_cs.ini'
 
 
 def lancer(job):
@@ -213,7 +234,7 @@ def lancer(job):
 
 
 def calculer(modele):
-    """Fait tourner les deux jobs ; renvoie leurs numéros (datastores ~/oqdata/calc_N.hdf5)."""
+    """Fait tourner les trois jobs ; renvoie leurs numéros (datastores ~/oqdata/calc_N.hdf5)."""
     with tempfile.TemporaryDirectory() as tmp:
         return tuple(lancer(job) for job in ecrire_jobs(modele, pathlib.Path(tmp)))
 
@@ -273,18 +294,78 @@ def extraire_desag(calc_id, modele):
     }
 
 
+def imt_de(periode):
+    return from_string('PGA' if periode == 0 else f'SA({float(periode)})')
+
+
+def extraire_cs(calc_id, modele):
+    """Spectre conditionnel (post-traitement conditional_spectrum d'OpenQuake : Lin et al. 2013, corrélation
+    de Baker et Jayaram 2008). Pour chaque probabilité, OpenQuake somme sur les ruptures u
+    ws = λu·P(Sa(T*) > x | u)/λ(P) : c0 = Σ ws, c1 = Σ ws·(μ + ρεσ), c2 = Σ ws·(σ²(1 − ρ²) + (μ + ρεσ − c1)²),
+    le centre de c2 étant le c1 de la moyenne ; il écrit exp(c1) et √c2 sans diviser par c0 (≈ 1).
+
+    Défaut d'OpenQuake 3.26 contourné ici : compute_cs relie les groupes de sources aux réalisations par
+    get_trt_rlzs(trt_smrs) dans l'ordre des groupes, alors que les numéros gid des ContextMaker suivent
+    l'ordre de get_unique_inverse (numpy.unique sur des chaînes : 0, 1, 10, 11…). Au-delà de dix modèles de
+    sources, chaque groupe est ajouté aux réalisations d'un autre. On refait donc l'agrégation avec les
+    mêmes briques (contextes, get_cs_out) et get_trt_rlzs(groupes uniques), qui suit les gid."""
+    ds = datastore.read(calc_id)
+    oq = ds['oqparam']
+    imts = list(oq.imtls)
+    flt = ds['full_lt'].init()
+    rlzs = flt.get_realizations()
+    cles = [cle(r, flt, modele) for r in rlzs]
+    poids = numpy.array([float(r.weight[0]) for r in rlzs])
+    uniques, _ = get_unique_inverse(ds['trt_smrs'][:])
+    trt_rlzs = flt.get_trt_rlzs(uniques)  # indice gid → réalisations
+    imti = imts.index(oq.imt_ref)
+    courbe = ds.sel('hcurves-stats', stat='mean', imt=oq.imt_ref)[:, 0, 0, :]
+    niveaux = compute_hazard_maps(courbe, oq.imtls[oq.imt_ref], oq.poes)  # (1, P)
+    cmakers = read_cmakers(ds).to_array()
+    toms = decode(ds['toms'][:])
+    contextes = read_ctx_by_grp(ds)
+    R, M, P = len(rlzs), len(imts), len(oq.poes)
+
+    def passe(centre=None):
+        par_rlz = numpy.zeros((R, M, 3, P))
+        for grp, ctx in contextes.items():
+            out = get_cs_out(cmakers[grp], ctx, imti, niveaux, valid.occurrence_model(toms[grp]), centre)
+            for g, arr in out.items():
+                par_rlz[trt_rlzs[g] % 2 ** 24] += arr[:, 0]
+        return par_rlz, numpy.einsum('r,rmop->mop', poids, par_rlz)
+
+    _, moyenne = passe()
+    par_rlz, moyenne = passe(moyenne[:, None])  # seconde passe : c2 autour du c1 de la moyenne
+    g10 = lambda v: float(f'{v:.10g}')  # noqa: E731
+    bj = BakerJayaram2008()
+    periodes = [0, 0.01, 0.04, 0.05, 0.1, 0.109, 0.15, 0.2, 0.3, 0.5, 1, 2, 3, 5]
+    return {
+        'correlation': {'periodes': periodes, 'rho': [[g10(bj.get_correlation(imt_de(a), imt_de(b))) for b in periodes] for a in periodes]},
+        'imtRef': oq.imt_ref, 'poes': [float(p) for p in oq.poes], 'imts': imts,
+        'niveaux': [float(x) for x in niveaux[0]],
+        'moyenne': [{'c0': g10(moyenne[0, 0, p]), 'c1': [g10(moyenne[m, 1, p]) for m in range(M)],
+                     'c2': [g10(moyenne[m, 2, p]) for m in range(M)]} for p in range(P)],
+        'realisations': [{'cle': c, 'c0': [g10(par_rlz[r, 0, 0, p]) for p in range(P)],
+                          'c1': [[g10(par_rlz[r, m, 1, p]) for m in range(M)] for p in range(P)]}
+                         for r, c in enumerate(cles)],
+        # sortie d'OpenQuake telle quelle (agrégation fautive), pour mémoire : exp(c1) au T* de la moyenne
+        'csStatsOQ': [float(ds['cs-stats'][0, p, 0, imti, 0]) for p in range(P)],
+    }
+
+
 def main():
     modele = json.loads((REF / 'modele_psha.json').read_text(encoding='utf-8'))
-    # --calc N M : relire deux calculs déjà faits (classique, désagrégation) au lieu de relancer le moteur
+    # --calc N M K : relire trois calculs déjà faits (classique, désagrégation, spectre conditionnel)
     if '--calc' in sys.argv:
         i = sys.argv.index('--calc')
-        ids = int(sys.argv[i + 1]), int(sys.argv[i + 2])
+        ids = tuple(int(x) for x in sys.argv[i + 1:i + 4])
     else:
         ids = calculer(modele)
     sortie = extraire(ids[0], modele)
     sortie['desagregation'] = extraire_desag(ids[1], modele)
+    sortie['spectreConditionnel'] = extraire_cs(ids[2], modele)
     (REF / 'psha.json').write_text(json.dumps(sortie, ensure_ascii=False), encoding='utf-8')
-    print(f'écrit tests/references/psha.json (calculs {ids[0]} et {ids[1]}, {len(sortie["realisations"])} réalisations, {len(sortie["imts"])} grandeurs)')
+    print(f'écrit tests/references/psha.json (calculs {", ".join(map(str, ids))}, {len(sortie["realisations"])} réalisations, {len(sortie["imts"])} grandeurs)')
 
 
 if __name__ == '__main__':

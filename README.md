@@ -15,7 +15,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Spectre de réponse** | six bâtiments (T = 0,1 à 4 s) sur une table vibrante ; spectre Sa ou Sd qui se construit pendant la lecture de l'accélérogramme ; spectre élastique de l'EN 1998-1:2004 (types 1 et 2, sols A à E, η, ag calé sur le PGA ou imposé) ; période de l'ouvrage, T₁ = Ct·H^¾ |
 | **Sismicité** | catalogue simulé de 1900 à 2025 (Gutenberg-Richter, répliques d'Omori-Utsu, complétude qui s'améliore avec le temps) ; graphique de Stepp ; valeur b d'Aki sur une période ou de Weichert sur une table de complétude ; Mc par courbure maximale ; déclusterage de Gardner et Knopoff ; taux annuels, périodes de retour, probabilités de Poisson ; mode exercice noté |
 | **Géodésie** | réseau GNSS simulé sur les zones du modèle d'aléa (faille bloquée de Savage et Burford, bande de raccourcissement) ; budget de moment avec la faille F ; profil des vitesses ; taux de déformation par zone par moindres carrés, axes principaux et incertitudes ; taux de moment de Kostrov (Savage et Simpson), tirages et biais en région lente ; couplage χ ; loi de Gutenberg-Richter équilibrée en moment face au catalogue ; envoi des moments au banc « aléa » ; mode exercice noté |
-| **Aléa (PSHA)** | modèle d'école à deux zones sources discrétisées en points et une faille à ruptures flottantes (faille F, glissement réglable), site déplaçable et Vs30 ; arbre logique : modèle de taux (catalogue : (a, b) de chaque zone ; géodésie : couplage χ, moment conservé) × ΔMmax × loi d'atténuation (Akkar et al. 2014, Bindi et al. 2014, Boore et al. 2014, poids égaux), 108 réalisations en énumération complète ; courbes d'aléa de chaque réalisation, moyenne et fractiles 16/84 % ; UHS face aux spectres de l'EN 1998-1:2004 ; désagrégation magnitude-distance ; sensibilité aux branches ; mode exercice noté |
+| **Aléa (PSHA)** | modèle d'école à deux zones sources discrétisées en points et une faille à ruptures flottantes (faille F, glissement réglable), site déplaçable et Vs30 ; arbre logique : modèle de taux (catalogue : (a, b) de chaque zone ; géodésie : couplage χ, moment conservé) × ΔMmax × loi d'atténuation (Akkar et al. 2014, Bindi et al. 2014, Boore et al. 2014, poids égaux), 108 réalisations en énumération complète ; courbes d'aléa de chaque réalisation, moyenne et fractiles 16/84 % ; UHS face aux spectres de l'EN 1998-1:2004 ; spectre moyen conditionnel à Sa(1 s) (Lin et al. 2013, corrélation de Baker et Jayaram 2008) avec sa dispersion ; désagrégation magnitude-distance ; sensibilité aux branches ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
 Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
@@ -52,7 +52,7 @@ src/sismo/faille.js       sources de faille : maillage, ruptures flottantes, WC1
 src/sismo/psha.js         moteur PSHA : Gutenberg-Richter tronquée par classes, zones discrétisées,
                           ruptures ponctuelles, failles, loi normale tronquée, arbre logique (variantes de taux
                           catalogue et géodésie, énumération complète), moyenne et fractiles pondérés,
-                          UHS, désagrégation, sensibilité
+                          UHS, spectre conditionnel, désagrégation, sensibilité
 src/sismo/coefficients/   coefficients exportés de hazardlib (fichiers produits)
 src/lecteur-station.js  banc « une station »
 src/lecteur-reseau.js   banc « réseau »
@@ -63,7 +63,7 @@ src/banc-sismicite.js   banc « sismicité »
 src/banc-geodesie.js    banc « géodésie »
 src/banc-alea.js        banc « aléa »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
-tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, références (60 tests)
+tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, références (63 tests)
 tests/references/       valeurs calculées par OpenQuake (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 ```
@@ -102,8 +102,14 @@ fractiles et cartes d'aléa identiques sur les mêmes courbes, cases de la désa
 Pour la désagrégation, OpenQuake classe les distances en Rrup, distance en ligne droite au foyer (ou aux
 nœuds de la rupture) sur la Terre sphérique ; le moteur sait la calculer (`distance: 'rrup'`), le banc
 affiche Rjb. Sous 40 km, OpenQuake dilate de 5 m la projection d'une rupture de faille : le moteur aussi.
+Le spectre conditionnel est comparé aux sommes de Lin et al. (2013) du post-traitement `conditional_spectrum`
+(Σ ws à 0,013 % près, ln Sa à 0,001 près, pour chaque réalisation et pour la moyenne) et la corrélation de
+Baker et Jayaram (2008) à hazardlib. OpenQuake 3.26 y relie les groupes de sources aux réalisations dans deux
+ordres différents dès qu'il y a plus de dix modèles de sources (ici 36) : sa sortie `cs-stats` mélange les
+branches (0,026 g au lieu de 0,049 g à T* = 1 s). `psha.py` refait donc l'agrégation avec ses propres briques
+(`get_cs_out` par groupe, `get_trt_rlzs` sur les groupes uniques) et garde la sortie brute pour mémoire.
 
-Pour les régénérer (environ cinq minutes, le PSHA compris) :
+Pour les régénérer (environ dix minutes, le PSHA compris) :
 
 ```
 python3 -m venv ~/.venvs/oq

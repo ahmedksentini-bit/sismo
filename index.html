@@ -560,6 +560,12 @@
         <canvas id="al-uhs" aria-label="Spectre à probabilité uniforme et spectres de l'Eurocode 8"></canvas>
         <p class="legende"><span><i style="background:var(--pick-p)"></i>UHS moyen</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>fractiles 16 – 84 %</span><span><i class="tirets" style="border-color:var(--teal)"></i>EC8 type 1</span><span><i class="tirets" style="border-color:var(--amp)"></i>EC8 type 2</span><span id="al-legende-ec8"></span></p>
       </section>
+      <section class="carte" aria-label="Spectre moyen conditionnel">
+        <h2>Spectre moyen conditionnel (CMS)<small>Spectre moyen des séismes qui produisent le niveau de l'UHS à la période choisie (T*), avec sa dispersion ; Lin et al. (2013), corrélation de Baker et Jayaram (2008)</small></h2>
+        <canvas id="al-cms" aria-label="Spectre moyen conditionnel et spectre à probabilité uniforme"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>CMS</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>CMS · e<sup>±σ</sup></span><span><i class="tirets" style="border-color:var(--pick-p)"></i>UHS moyen</span><span><i class="tirets" style="border-color:var(--ink)"></i>T*, grandeur choisie au-dessus de la courbe d'aléa</span></p>
+        <p class="aide">L'UHS enveloppe des séismes différents : aucun ne le produit à toutes les périodes. Pour choisir et caler des accélérogrammes autour de la période de l'ouvrage, le CMS est la cible réaliste.</p>
+      </section>
       <section class="carte" aria-label="Désagrégation">
         <h2>Désagrégation magnitude – distance<small>Part de chaque couple (M, R) dans le taux de dépassement du niveau de l'UHS moyen, pour la grandeur choisie ; R est la distance de Joyner-Boore à la rupture</small></h2>
         <canvas id="al-desag" aria-label="Désagrégation en magnitude et distance"></canvas>

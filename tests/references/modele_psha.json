@@ -2401,5 +2401,12 @@
     "x": 0.049
    }
   ]
+ },
+ "spectreConditionnel": {
+  "imtRef": 1,
+  "poes": [
+   0.1,
+   0.02
+  ]
  }
 }
