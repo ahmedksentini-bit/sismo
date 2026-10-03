@@ -47,10 +47,9 @@
        <em>ce que dit la norme</em>. Les calculateurs appliquent les formules du texte à des données
        que l'on fait varier ; chaque chapitre a son banc de travaux pratiques, où l'on refait la
        démarche sur des enregistrements simulés.</p></div>
-  <p class="method-note">Les références entre crochets renvoient aux textes :
-     <span class="ref">[EN 1998-1 3.2.2.2]</span> pour l'Eurocode 8 (édition de 2004, valeurs
-     recommandées). La deuxième génération de l'Eurocode 8 (EN 1998-1-1:2024) sera présentée à côté,
-     à partir de son texte.</p>
+  <p class="method-note">Les paragraphes cités (§ 3.2.2.2, annexe B…) renvoient à l'EN 1998-1:2004 et à ses
+     valeurs recommandées, sauf mention contraire. La deuxième génération de l'Eurocode 8 (EN 1998-1-1:2024)
+     sera présentée à côté, à partir de son texte.</p>
 </section>
 
 <!-- ══════════════════════════ CHAPITRE 1 ══════════════════════════ -->
@@ -985,18 +984,18 @@
        sur les lois d'atténuation du cours, au rocher). La période choisie montre la réponse d'un
        oscillateur ; son maximum donne un point du spectre.</p>
     <div class="data-grid">
-      <div class="field"><label for="spM">Magnitude Mw</label>
-        <div class="input-wrap"><input id="spM" type="text" inputmode="decimal" value="6" data-curseur="5 7.5 0.1"><span class="unit">—</span></div></div>
-      <div class="field"><label for="spR">Distance Rjb</label>
-        <div class="input-wrap"><input id="spR" type="text" inputmode="decimal" value="10" data-curseur="2 100 1"><span class="unit">km</span></div></div>
-      <div class="field"><label for="spT">Période de l'oscillateur</label>
-        <div class="input-wrap"><input id="spT" type="text" inputmode="decimal" value="0.3" data-curseur="0.05 4 0.05"><span class="unit">s</span></div></div>
-      <div class="field"><label for="spXi">Amortissement ξ</label>
-        <div class="input-wrap"><input id="spXi" type="text" inputmode="decimal" value="0.05" data-curseur="0.01 0.3 0.01"><span class="unit">—</span></div></div>
+      <div class="field"><label for="rsM">Magnitude Mw</label>
+        <div class="input-wrap"><input id="rsM" type="text" inputmode="decimal" value="6" data-curseur="5 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="rsR">Distance Rjb</label>
+        <div class="input-wrap"><input id="rsR" type="text" inputmode="decimal" value="10" data-curseur="2 100 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="rsT">Période de l'oscillateur</label>
+        <div class="input-wrap"><input id="rsT" type="text" inputmode="decimal" value="0.3" data-curseur="0.05 4 0.05"><span class="unit">s</span></div></div>
+      <div class="field"><label for="rsXi">Amortissement ξ</label>
+        <div class="input-wrap"><input id="rsXi" type="text" inputmode="decimal" value="0.05" data-curseur="0.01 0.3 0.01"><span class="unit">—</span></div></div>
     </div>
-    <div class="figure" id="spFigA"></div>
-    <div class="figure" id="spFigS"></div>
-    <p class="final-result" id="spOut"></p>
+    <div class="figure" id="rsFigA"></div>
+    <div class="figure" id="rsFigS"></div>
+    <p class="final-result" id="rsOut"></p>
   </div>
 
   <h3>L'effet de l'amortissement</h3>
@@ -1960,6 +1959,321 @@
     <a class="secondary" href="labo.html#ductilite">Travaux pratiques : banc « Ductilité »</a></div>
 </section>
 
+<section id="ch15" class="card">
+  <h2>15 · Analyse modale d'un bâtiment</h2>
+
+  <h3>La console de cisaillement</h3>
+  <p>Un bâtiment à étages se ramène, pour une première analyse, à une <strong>console de cisaillement</strong> :
+     la masse est concentrée aux planchers (m<sub>i</sub>), et chaque étage est un ressort horizontal de raideur
+     k<sub>i</sub>, somme des raideurs de ses poteaux et voiles (12EI/h³ pour un poteau encastré à ses deux
+     extrémités). Le mouvement du sol excite tout le bâtiment ; son équation est celle de l'oscillateur, écrite
+     avec des matrices :</p>
+  <p class="formula">M·ü + C·u̇ + K·u = −M·1·üg</p>
+
+  <h3>Modes propres</h3>
+  <p>Libre et non amorti, le bâtiment vibre selon des <strong>modes propres</strong> : des déformées φ<sub>n</sub>
+     qui gardent leur forme en oscillant à la pulsation ω<sub>n</sub>, solutions de K·φ = ω²·M·φ. Le premier mode,
+     le plus lent, déforme le bâtiment d'un seul côté ; le deuxième a un nœud à mi-hauteur, et ainsi de suite.
+     Chaque mode répond au séisme comme un oscillateur de période T<sub>n</sub> = 2π/ω<sub>n</sub>, avec un poids
+     donné par le <strong>facteur de participation</strong> Γ<sub>n</sub> = φ<sub>n</sub>ᵀM·1 / φ<sub>n</sub>ᵀMφ<sub>n</sub>
+     et une <strong>masse effective</strong> m<sub>eff,n</sub> = (φ<sub>n</sub>ᵀM·1)² / φ<sub>n</sub>ᵀMφ<sub>n</sub> ; la somme
+     des masses effectives de tous les modes est la masse totale.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Cinq étages de 3 m, 200 t par plancher, 200 MN/m par étage : T<sub>1</sub> = <strong>0,70 s</strong>
+       (Γ<sub>1</sub> = 1,25 pour une déformée valant 1 au sommet, 88 % de la masse), T<sub>2</sub> = 0,24 s (8,7 %), T<sub>3</sub> = 0,15 s (2,4 %).
+       Les deux premiers modes portent déjà 97 % de la masse.</p></div>
+
+  <div class="calc" id="calcModes">
+    <h3>Modes propres d'un bâtiment</h3>
+    <div class="data-grid">
+      <div class="field"><label for="mpN">Nombre d'étages</label>
+        <div class="input-wrap"><input id="mpN" type="text" inputmode="decimal" value="5" data-curseur="1 15 1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="mpProfil">Profil</label>
+        <div class="input-wrap"><select id="mpProfil"><option value="regulier">régulier</option><option value="souple">rez-de-chaussée souple (k₁ = 0,4 k)</option><option value="degressif">rigidité dégressive vers le haut</option><option value="toiture">toiture lourde (masse × 2,5)</option></select></div></div>
+      <div class="field"><label for="mpMasse">Masse par plancher</label>
+        <div class="input-wrap"><input id="mpMasse" type="text" inputmode="decimal" value="200" data-curseur="50 600 10"><span class="unit">t</span></div></div>
+      <div class="field"><label for="mpK">Raideur d'étage</label>
+        <div class="input-wrap"><input id="mpK" type="text" inputmode="decimal" value="200" data-curseur="20 1000 10"><span class="unit">MN/m</span></div></div>
+    </div>
+    <div class="figure" id="mpFig"></div>
+    <div id="mpTab"></div>
+    <p class="final-result" id="mpOut"></p>
+  </div>
+
+  <h3>L'analyse modale spectrale</h3>
+  <p>Chaque mode est un oscillateur : sous le spectre de calcul S<sub>d</sub>(T), sa réponse maximale vaut
+     u<sub>n</sub> = φ<sub>n</sub>·Γ<sub>n</sub>·S<sub>d</sub>(T<sub>n</sub>)/ω<sub>n</sub>² et sa force à la base
+     m<sub>eff,n</sub>·S<sub>d</sub>(T<sub>n</sub>). Les maxima des modes ne se produisent pas au même instant : on les
+     combine. Si les périodes sont bien séparées (T<sub>j</sub> ≤ 0,9·T<sub>i</sub>), la racine de la somme des carrés
+     (SRSS) suffit ; sinon, la combinaison quadratique complète (CQC, Der Kiureghian 1981) tient compte de leur
+     corrélation (EN 1998-1:2004, § 4.3.3.3.2). On retient les modes dont la masse effective cumulée atteint 90 %, et
+     tous ceux de plus de 5 % (§ 4.3.3.3.1).</p>
+
+  <h3>La méthode des forces latérales</h3>
+  <p>Pour un bâtiment régulier en élévation dont T<sub>1</sub> ≤ min(4·T<sub>C</sub> ; 2 s), l'Eurocode admet une
+     méthode simplifiée (§ 4.3.3.2), qui ne garde que le premier mode : un effort tranchant à la base</p>
+  <p class="formula">F<sub>b</sub> = S<sub>d</sub>(T<sub>1</sub>) · m · λ</p>
+  <p class="method-note">m : masse totale ; λ = 0,85 si T<sub>1</sub> ≤ 2·T<sub>C</sub> et plus de deux étages (la masse
+     effective du premier mode est moindre que la masse totale), 1 sinon. F<sub>b</sub> se répartit sur les planchers
+     proportionnellement à z<sub>i</sub>·m<sub>i</sub> (ou à la déformée du premier mode). T<sub>1</sub> peut venir de
+     C<sub>t</sub>·H<sup>3/4</sup> ou de 2·√d, d étant le déplacement en tête sous les poids appliqués
+     horizontalement.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Le bâtiment de l'exemple, sol C, a<sub>g</sub> = 0,2 g, q = 3,9 : S<sub>d</sub>(0,698 s) = 0,147 × 0,6/0,698 =
+       0,127 g ; F<sub>b</sub> = S<sub>d</sub> × 1 000 t × 0,85 ≈ <strong>1 057 kN</strong>, réparti en 70, 141, 211, 282
+       et 352 kN du premier au dernier plancher. L'analyse modale (deux modes, SRSS) donne 1 101 kN à la base.</p></div>
+
+  <h3>Déplacements et effets du second ordre</h3>
+  <p>Le calcul élastique sous le spectre de calcul sous-estime les déplacements réels, puisque la structure se
+     plastifie : on les multiplie par q (§ 4.3.4), d<sub>r</sub> = q·d<sub>e</sub> pour le déplacement relatif
+     d'étage. Deux vérifications en découlent :</p>
+  <ul class="liste-cours">
+    <li>la <strong>limitation des dommages</strong> (§ 4.4.3.2) : d<sub>r</sub>·ν ≤ 0,005·h pour des cloisons fragiles
+      (0,0075·h si elles sont ductiles, 0,010·h si elles ne gênent pas la structure), avec ν = 0,5 recommandé ;</li>
+    <li>le <strong>coefficient de sensibilité</strong> θ = P<sub>tot</sub>·d<sub>r</sub> / (V<sub>tot</sub>·h) (§ 4.4.2.2) :
+      au-dessous de 0,10, on néglige le second ordre ; jusqu'à 0,20, on majore les effets sismiques par 1/(1 − θ) ;
+      au-delà de 0,30, la structure est trop souple.</li>
+  </ul>
+
+  <div class="calc" id="calcAnalyse">
+    <h3>Forces latérales et analyse modale</h3>
+    <p class="method-note">Bâtiment à étages de 3 m, 200 t par plancher, 200 MN/m par étage (profil au choix) ;
+       spectre de calcul de type 1.</p>
+    <div class="data-grid">
+      <div class="field"><label for="anN">Nombre d'étages</label>
+        <div class="input-wrap"><input id="anN" type="text" inputmode="decimal" value="5" data-curseur="2 15 1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="anProfil">Profil</label>
+        <div class="input-wrap"><select id="anProfil"><option value="regulier">régulier</option><option value="souple">rez-de-chaussée souple</option><option value="degressif">rigidité dégressive</option><option value="toiture">toiture lourde</option></select></div></div>
+      <div class="field"><label for="anAg">a<sub>g</sub></label>
+        <div class="input-wrap"><input id="anAg" type="text" inputmode="decimal" value="0.2" data-curseur="0.05 0.4 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="anSol">Classe de sol</label>
+        <div class="input-wrap"><select id="anSol"><option>A</option><option>B</option><option selected>C</option><option>D</option><option>E</option></select></div></div>
+      <div class="field"><label for="anQ">Coefficient de comportement q</label>
+        <div class="input-wrap"><input id="anQ" type="text" inputmode="decimal" value="3.9" data-curseur="1 6 0.1"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="anFig"></div>
+    <div id="anTab"></div>
+    <p class="final-result" id="anOut"></p>
+  </div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Appliquer la méthode des forces latérales à un bâtiment irrégulier en élévation — un rez-de-chaussée
+       transparent, une toiture lourde : le premier mode n'y suffit plus, et l'étage souple concentre les
+       déformations. Autre piège : vérifier les déplacements avec d<sub>e</sub> au lieu de q·d<sub>e</sub>.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>K·φ = ω²M·φ ; Γ<sub>n</sub> et m<sub>eff,n</sub> ; Σ m<sub>eff</sub> = m.</li>
+      <li>Modes retenus : 90 % de la masse et tous ceux de plus de 5 % ; SRSS si T<sub>j</sub> ≤ 0,9T<sub>i</sub>, sinon CQC.</li>
+      <li>Forces latérales : F<sub>b</sub> = S<sub>d</sub>(T<sub>1</sub>)·m·λ, réparties selon z·m, si T<sub>1</sub> ≤ min(4T<sub>C</sub> ; 2 s)
+        et régularité.</li>
+      <li>d<sub>r</sub> = q·d<sub>e</sub> ; d<sub>r</sub>ν ≤ 0,005 à 0,010·h ; θ ≤ 0,10 (0,20 avec majoration, 0,30 au plus).</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch15">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch15">Exerciseur</a>
+    <a class="secondary" href="labo.html#batiment">Travaux pratiques : banc « Bâtiment »</a></div>
+</section>
+
+<section id="ch16" class="card">
+  <h2>16 · Poussée progressive et méthode N2</h2>
+
+  <h3>Au-delà du calcul élastique</h3>
+  <p>L'analyse modale du chapitre 15 suppose un comportement élastique, corrigé globalement par q. Elle ne dit
+     pas <em>où</em> la structure se plastifie, ni si la ductilité supposée est disponible. L'analyse
+     <strong>en poussée progressive</strong> (« pushover », EN 1998-1:2004, § 4.3.3.4.2) répond à ces questions par
+     un calcul statique non linéaire : on pousse la structure sous des forces latérales croissantes, de forme
+     fixée, jusqu'à la ruine, et l'on suit la plastification de ses éléments.</p>
+
+  <h3>La courbe de capacité</h3>
+  <p>Le résultat est la <strong>courbe de capacité</strong> : l'effort tranchant à la base en fonction du
+     déplacement en tête. L'Eurocode demande deux répartitions des forces (§ 4.3.3.4.2.2 (1)) : une répartition
+     <strong>modale</strong>, F<sub>i</sub> ∝ m<sub>i</sub>·Φ<sub>i</sub> (Φ déformée du premier mode, normée au sommet), et
+     une répartition <strong>uniforme</strong>, F<sub>i</sub> ∝ m<sub>i</sub>. La première charge le haut du bâtiment, la
+     seconde la base.</p>
+  <p>Pour une console de cisaillement dont chaque étage est élastique parfaitement plastique (raideur k<sub>i</sub>,
+     résistance V<sub>y,i</sub>), la courbe est bilinéaire : sous le multiplicateur λ des forces, l'effort tranchant de
+     l'étage i vaut λ·S<sub>i</sub>, et le premier étage qui atteint sa résistance — celui où V<sub>y,i</sub>/S<sub>i</sub> est
+     minimal — forme un <strong>mécanisme d'étage</strong> : au-delà, lui seul se déforme.</p>
+
+  <h3>Le système équivalent (annexe B)</h3>
+  <p>La méthode N2 (Fajfar) ramène la structure à un oscillateur à un degré de liberté :</p>
+  <p class="formula">m* = Σ m<sub>i</sub>Φ<sub>i</sub> &nbsp;;&nbsp; Γ = m* / Σ m<sub>i</sub>Φ<sub>i</sub>² &nbsp;;&nbsp; F* = F<sub>b</sub>/Γ, d* = d<sub>n</sub>/Γ</p>
+  <p>On idéalise la courbe du système équivalent par une droite élastique et un palier (à aires égales sous la
+     courbe jusqu'au mécanisme) : résistance F*<sub>y</sub>, déplacement d*<sub>y</sub>, puis la période</p>
+  <p class="formula">T* = 2π · √(m*·d*<sub>y</sub> / F*<sub>y</sub>)</p>
+
+  <h3>Le déplacement cible</h3>
+  <p>Le système équivalent est un oscillateur élastoplastique : son déplacement sous le spectre élastique
+     S<sub>e</sub> suit les règles du chapitre 14. Avec d*<sub>et</sub> = S<sub>e</sub>(T*)·(T*/2π)² :</p>
+  <ul class="liste-cours">
+    <li>si T* ≥ T<sub>C</sub>, égaux déplacements : d*<sub>t</sub> = d*<sub>et</sub> ;</li>
+    <li>si T* &lt; T<sub>C</sub> et F*<sub>y</sub>/m* ≥ S<sub>e</sub>(T*), la réponse reste élastique : d*<sub>t</sub> = d*<sub>et</sub> ;</li>
+    <li>sinon, avec q<sub>u</sub> = S<sub>e</sub>(T*)·m*/F*<sub>y</sub> : d*<sub>t</sub> = (d*<sub>et</sub>/q<sub>u</sub>)·(1 + (q<sub>u</sub> − 1)·T<sub>C</sub>/T*) ≥ d*<sub>et</sub>.</li>
+  </ul>
+  <p>Le déplacement cible du bâtiment est d<sub>t</sub> = Γ·d*<sub>t</sub>. On lit alors, sur le calcul en poussée,
+     l'état de la structure à ce déplacement : glissements d'étage, rotations des rotules, efforts dans les éléments
+     fragiles — à comparer à leurs capacités.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Le bâtiment de cinq étages du chapitre 15, ses étages dimensionnés à 1,5 fois les efforts de l'analyse
+       modale (sol C, a<sub>g</sub> = 0,2 g, q = 3,9). Répartition modale : m* = 703 t, Γ = 1,25 ; le deuxième étage
+       atteint le premier sa résistance ; F*<sub>y</sub> = 1 311 kN, d*<sub>y</sub> = 23 mm, T* = 0,70 s ≥ T<sub>C</sub>.
+       S<sub>e</sub>(T*) = 0,494 g donne d*<sub>t</sub> = 59,8 mm, d'où <strong>d<sub>t</sub> = 75 mm</strong> en tête, dont
+       54 mm dans le seul deuxième étage (1,8 % de sa hauteur). Répartition uniforme : c'est le rez-de-chaussée qui
+       cède, et d<sub>t</sub> = 66 mm.</p></div>
+
+  <div class="calc" id="calcPoussee">
+    <h3>Poussée progressive et déplacement cible</h3>
+    <p class="method-note">Bâtiment à étages de 3 m, 200 t par plancher, 200 MN/m par étage (profil au choix) ;
+       résistances d'étage égales à ω fois les efforts de l'analyse modale sous le spectre de calcul ; étages
+       élastiques parfaitement plastiques ; spectre élastique de type 1 pour la demande.</p>
+    <div class="data-grid">
+      <div class="field"><label for="puN">Nombre d'étages</label>
+        <div class="input-wrap"><input id="puN" type="text" inputmode="decimal" value="5" data-curseur="2 12 1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="puProfil">Profil</label>
+        <div class="input-wrap"><select id="puProfil"><option value="regulier">régulier</option><option value="souple">rez-de-chaussée souple et faible</option><option value="toiture">toiture lourde</option></select></div></div>
+      <div class="field"><label for="puAg">a<sub>g</sub></label>
+        <div class="input-wrap"><input id="puAg" type="text" inputmode="decimal" value="0.2" data-curseur="0.05 0.4 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="puSol">Classe de sol</label>
+        <div class="input-wrap"><select id="puSol"><option>A</option><option>B</option><option selected>C</option><option>D</option></select></div></div>
+      <div class="field"><label for="puQ">q du dimensionnement</label>
+        <div class="input-wrap"><input id="puQ" type="text" inputmode="decimal" value="3.9" data-curseur="1.5 6 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="puOmega">Surrésistance ω</label>
+        <div class="input-wrap"><input id="puOmega" type="text" inputmode="decimal" value="1.5" data-curseur="1 2.5 0.1"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="puFig"></div>
+    <div id="puTab"></div>
+    <p class="final-result" id="puOut"></p>
+  </div>
+
+  <h3>Format accélération–déplacement</h3>
+  <p>On visualise la méthode en traçant, dans le plan (déplacement spectral, accélération spectrale), le spectre
+     de demande S<sub>e</sub> en fonction de S<sub>e</sub>·(T/2π)² — chaque période est une droite issue de l'origine — et
+     la courbe de capacité du système équivalent, (d*, F*/m*). Le déplacement cible se lit à la rencontre de la
+     droite de période T* et du spectre, quand T* ≥ T<sub>C</sub>.</p>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>La poussée progressive vérifie que le mécanisme réel est celui que l'on a voulu par le dimensionnement en
+       capacité (chapitre 14). Un mécanisme d'étage, comme ici, concentre toute la déformation dans un niveau : c'est
+       le mode de ruine des rez-de-chaussée transparents. Les calculs temporels non linéaires (banc « poussée »)
+       complètent la méthode, notamment quand les modes supérieurs comptent.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Lire le déplacement cible sur le système équivalent sans le multiplier par Γ, ou ne faire qu'une seule
+       répartition de forces : la modale peut masquer la faiblesse du rez-de-chaussée que révèle l'uniforme.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Courbe de capacité sous deux répartitions : modale (m·Φ) et uniforme (m).</li>
+      <li>m* = ΣmΦ, Γ = m*/ΣmΦ², F* = F<sub>b</sub>/Γ, d* = d/Γ ; T* = 2π√(m*d*<sub>y</sub>/F*<sub>y</sub>).</li>
+      <li>d*<sub>t</sub> = S<sub>e</sub>(T*)(T*/2π)² si T* ≥ T<sub>C</sub>, sinon la règle des courtes périodes ; d<sub>t</sub> = Γd*<sub>t</sub>.</li>
+      <li>Lire l'état de la structure au déplacement cible : mécanisme, glissements d'étage.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch16">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch16">Exerciseur</a>
+    <a class="secondary" href="labo.html#poussee-progressive">Travaux pratiques : banc « Poussée »</a></div>
+</section>
+
+<section id="ch17" class="card">
+  <h2>17 · L'isolation à la base</h2>
+
+  <h3>Découpler l'ouvrage du sol</h3>
+  <p>Plutôt que de résister au séisme ou de le subir en se plastifiant, on peut l'éviter en partie : poser
+     l'ouvrage sur des <strong>isolateurs</strong>, très souples horizontalement mais raides verticalement. La
+     période du bâtiment isolé passe à 2 ou 3 s, là où le spectre est faible ; les accélérations transmises à la
+     superstructure chutent, et presque toute la déformation se concentre dans les isolateurs. Deux familles
+     dominent : les <strong>appuis en élastomère fretté</strong>, souvent à noyau de plomb qui dissipe en se
+     plastifiant, et les <strong>pendules à friction</strong>, dont le rayon de courbure fixe la période.</p>
+
+  <h3>L'isolateur bilinéaire</h3>
+  <p>Les deux familles se représentent par une loi bilinéaire : raideur initiale K<sub>1</sub>, raideur
+     post-élastique K<sub>2</sub>, et une <strong>force caractéristique</strong> Q, ordonnée à l'origine de la branche
+     post-élastique (la résistance du plomb, ou le frottement μ·W du pendule). La période post-élastique de la masse
+     portée M vaut T<sub>iso</sub> = 2π√(M/K<sub>2</sub>) ; la plastification se produit au déplacement d<sub>y</sub>,
+     d'où K<sub>1</sub> = K<sub>2</sub> + Q/d<sub>y</sub>. Une boucle d'amplitude d dissipe l'énergie :</p>
+  <p class="formula">E<sub>D</sub> = 4·Q·(d − d<sub>y</sub>)</p>
+
+  <h3>La linéarisation équivalente</h3>
+  <p>Pour le dimensionnement, on remplace l'isolateur par un ressort linéaire et un amortisseur équivalents, à
+     l'amplitude d :</p>
+  <p class="formula">K<sub>eff</sub> = F(d)/d &nbsp;;&nbsp; T<sub>eff</sub> = 2π√(M/K<sub>eff</sub>) &nbsp;;&nbsp; ξ<sub>eff</sub> = ξ<sub>v</sub> + E<sub>D</sub> / (2π·K<sub>eff</sub>·d²)</p>
+  <p>Le déplacement de calcul est celui du spectre élastique à T<sub>eff</sub>, corrigé de l'amortissement par
+     η = √(10/(5 + ξ<sub>eff</sub>)) ≥ 0,55 (chapitre 7) : d = η·S<sub>e</sub>(T<sub>eff</sub>)·(T<sub>eff</sub>/2π)². Comme
+     T<sub>eff</sub> et ξ<sub>eff</sub> dépendent de d, on itère jusqu'à ce que d se stabilise (point fixe). Le
+     chapitre 10 de l'EN 1998-1 encadre la conception des ouvrages isolés ; ce cours s'en tient à la méthode.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Bâtiment de 1 000 t sur isolateurs : T<sub>iso</sub> = 2,5 s, Q = 5 % du poids (490 kN), d<sub>y</sub> = 10 mm, donc
+       K<sub>2</sub> = 6 317 kN/m et K<sub>1</sub> = 55 370 kN/m. Sol C, a<sub>g</sub> = 0,25 g : le point fixe converge vers
+       <strong>d = 128 mm</strong>, T<sub>eff</sub> = 1,97 s, ξ<sub>eff</sub> = 22 % (η = 0,61). L'accélération transmise vaut
+       F/M = 0,133 g, contre 0,72 g au plateau pour la même structure sur base fixe, de période 0,4 s : plus de cinq
+       fois moins.</p></div>
+
+  <div class="calc" id="calcIsolateur">
+    <h3>Dimensionner un isolateur par linéarisation équivalente</h3>
+    <div class="data-grid">
+      <div class="field"><label for="isM">Masse portée M</label>
+        <div class="input-wrap"><input id="isM" type="text" inputmode="decimal" value="1000" data-curseur="200 5000 50"><span class="unit">t</span></div></div>
+      <div class="field"><label for="isT">Période post-élastique T<sub>iso</sub></label>
+        <div class="input-wrap"><input id="isT" type="text" inputmode="decimal" value="2.5" data-curseur="1.5 4 0.1"><span class="unit">s</span></div></div>
+      <div class="field"><label for="isQ">Force caractéristique Q / poids</label>
+        <div class="input-wrap"><input id="isQ" type="text" inputmode="decimal" value="0.05" data-curseur="0.01 0.15 0.005"><span class="unit">—</span></div></div>
+      <div class="field"><label for="isDy">Déplacement de plastification d<sub>y</sub></label>
+        <div class="input-wrap"><input id="isDy" type="text" inputmode="decimal" value="10" data-curseur="2 40 1"><span class="unit">mm</span></div></div>
+      <div class="field"><label for="isAg">a<sub>g</sub></label>
+        <div class="input-wrap"><input id="isAg" type="text" inputmode="decimal" value="0.25" data-curseur="0.05 0.5 0.01"><span class="unit">g</span></div></div>
+      <div class="field"><label for="isSol">Classe de sol</label>
+        <div class="input-wrap"><select id="isSol"><option>A</option><option>B</option><option selected>C</option><option>D</option></select></div></div>
+    </div>
+    <div class="figure" id="isFig"></div>
+    <p class="final-result" id="isOut"></p>
+  </div>
+
+  <h3>Vérifier par le calcul temporel</h3>
+  <p>La linéarisation équivalente est une approximation. On la vérifie par des calculs temporels non linéaires du
+     bâtiment isolé : une dalle de base sur l'isolateur bilinéaire, la superstructure au-dessus, sous des
+     accélérogrammes calés autour de T<sub>eff</sub>. On compare le déplacement de l'isolateur au déplacement de calcul,
+     et l'accélération de la superstructure à celle du même bâtiment sur base fixe, soumis au même mouvement.</p>
+
+  <div class="calc" id="calcIsoTemps">
+    <h3>Bâtiment isolé et base fixe sous un même accélérogramme</h3>
+    <p class="method-note">Isolateur du calculateur précédent ; dalle de base de 30 % de la superstructure ;
+       superstructure de période 0,4 s sur base fixe, ξ = 5 % ; accélérogramme synthétique (Mw 7 à 10 km) calé sur le
+       spectre élastique entre 0,75·T<sub>eff</sub> et 1,25·T<sub>eff</sub>. Newmark et Newton, vérifié contre
+       OpenSeesPy.</p>
+    <div class="data-grid">
+      <div class="field"><label for="itGraine">Accélérogramme n°</label>
+        <div class="input-wrap"><input id="itGraine" type="text" inputmode="decimal" value="1" data-curseur="1 7 1"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="itFig"></div>
+    <p class="final-result" id="itOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>L'isolation protège le contenu autant que la structure : hôpitaux, centres de secours, bâtiments patrimoniaux,
+       équipements sensibles. Elle demande un joint libre autour du bâtiment, à la mesure du déplacement de calcul
+       majoré, des raccordements souples des réseaux, et une attention particulière sur sol mou, où le spectre reste
+       fort aux longues périodes. Le gain se lit au plus simple : on échange de l'accélération contre du
+       déplacement.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Isoler une structure déjà souple (T &gt; 1 s) : l'allongement de période gagne peu. Autre piège : compter un
+       amortissement équivalent sans borne — l'Eurocode ne descend pas sous η = 0,55, et le déplacement doit être
+       vérifié par des calculs temporels quand l'isolateur est très non linéaire.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Isolateurs souples horizontalement : T allongée à 2–3 s, accélérations réduites, déplacements concentrés.</li>
+      <li>Loi bilinéaire : K<sub>2</sub> = M(2π/T<sub>iso</sub>)², Q, d<sub>y</sub> ; E<sub>D</sub> = 4Q(d − d<sub>y</sub>).</li>
+      <li>K<sub>eff</sub>, T<sub>eff</sub>, ξ<sub>eff</sub> ; d = η·S<sub>e</sub>(T<sub>eff</sub>)(T<sub>eff</sub>/2π)² par point fixe.</li>
+      <li>Vérification par calculs temporels non linéaires ; joint et raccordements à la mesure du déplacement.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch17">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch17">Exerciseur</a>
+    <a class="secondary" href="labo.html#isolation">Travaux pratiques : banc « Isolation »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -2025,5 +2339,8 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch12.js"></script>
 <script type="module" src="src/cours-ch13.js"></script>
 <script type="module" src="src/cours-ch14.js"></script>
+<script type="module" src="src/cours-ch15.js"></script>
+<script type="module" src="src/cours-ch16.js"></script>
+<script type="module" src="src/cours-ch17.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>

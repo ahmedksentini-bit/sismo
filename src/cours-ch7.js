@@ -19,10 +19,10 @@ const G = Spectre.G, SOLS = ["A", "B", "C", "D", "E"];
 // ── Spectre de réponse d'un accélérogramme ───────────────────────────────
 const TS = Spectre.periodes(90, 0.02, 4);
 let cle = "", rec = null, cleS = "", spec = null;
-const majSpectre = garde("spOut", () => {
-  const M = num("spM"), R = num("spR"), T = num("spT"), xi = num("spXi");
+const majSpectre = garde("rsOut", () => {
+  const M = num("rsM"), R = num("rsR"), T = num("rsT"), xi = num("rsXi");
   if (!(M >= 4.5 && M <= 8 && R >= 1 && R <= 200 && T >= 0.02 && T <= 4 && xi > 0 && xi < 1)) {
-    el("spOut").textContent = "Mw de 4,5 à 8, distance de 1 à 200 km, période de 0,02 à 4 s, amortissement entre 0 et 1."; el("spFigA").innerHTML = el("spFigS").innerHTML = ""; return;
+    el("rsOut").textContent = "Mw de 4,5 à 8, distance de 1 à 200 km, période de 0,02 à 4 s, amortissement entre 0 et 1."; el("rsFigA").innerHTML = el("rsFigS").innerHTML = ""; return;
   }
   const c = `${M}|${R}`;
   if (c !== cle) { rec = Accelero.simuler({ M, R, graine: 7 }); cle = c; cleS = ""; }
@@ -37,7 +37,7 @@ const majSpectre = garde("spOut", () => {
   pga /= G;
   const duree = rec.acc.length * rec.dt, pas = Math.max(1, Math.floor(rec.acc.length / 900)), pasX = Math.max(1, Math.floor(x.length / 900));
   const ech = Math.max(pga, (w * w * sd) / G) * 1.15;
-  el("spFigA").innerHTML = graphe({
+  el("rsFigA").innerHTML = graphe({
     largeur: 560, hauteur: 230, xmin: 0, xmax: Math.ceil(duree), ymin: -ech, ymax: ech,
     xlabel: "temps (s)", ylabel: "accélération (g)",
     series: [
@@ -47,7 +47,7 @@ const majSpectre = garde("spOut", () => {
     marques: [{ x: (isd * rec.dt) / k, y: (w * w * x[isd]) / G, couleur: COULEURS.effort, libelle: `${f(sa, 2)} g` }],
   });
   const ec = (Tt) => Spectre.ec8(Tt, { type: M > 5.5 ? 1 : 2, sol: "A", ag: pga, xi });
-  el("spFigS").innerHTML = graphe({
+  el("rsFigS").innerHTML = graphe({
     largeur: 560, hauteur: 300, xmin: 0, xmax: 4, ymin: 0, ymax: Math.ceil(Math.max(...spec.Sa) / G * 12) / 10,
     xlabel: "période T (s)", ylabel: "pseudo-accélération Sa (g)",
     series: [
@@ -56,10 +56,10 @@ const majSpectre = garde("spOut", () => {
     ],
     marques: [{ x: T, y: sa, couleur: COULEURS.effort, guides: true, libelle: `T = ${f(T, 2)} s` }],
   });
-  el("spOut").innerHTML = `Oscillateur T = ${f(T, 3)} s, ξ = ${fd(100 * xi, 0)} % : <strong>Sd = ${f(sd * 1000, 3)} mm</strong>, <strong>Sa = ω²·Sd = ${f(sa, 3)} g</strong> (${f(sa / pga, 2)} × PGA)
+  el("rsOut").innerHTML = `Oscillateur T = ${f(T, 3)} s, ξ = ${fd(100 * xi, 0)} % : <strong>Sd = ${f(sd * 1000, 3)} mm</strong>, <strong>Sa = ω²·Sd = ${f(sa, 3)} g</strong> (${f(sa / pga, 2)} × PGA)
     <small>PGA ${f(pga, 2)} g ; maximum du spectre ${f(Math.max(...spec.Sa) / G, 2)} g à ${f(TS[spec.Sa.indexOf(Math.max(...spec.Sa))], 2)} s. Sous-pas : ${k} par pas de ${fd(rec.dt * 1000, 0)} ms.</small>`;
 });
-brancher(["spM", "spR", "spT", "spXi"], majSpectre);
+brancher(["rsM", "rsR", "rsT", "rsXi"], majSpectre);
 
 // ── Spectre élastique de l'EN 1998-1:2004 ────────────────────────────────
 const majEC8 = garde("ecOut", () => {

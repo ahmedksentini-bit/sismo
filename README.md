@@ -15,8 +15,8 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | `labo.html` | travaux pratiques : les dix-sept bancs ; le banc de rang n est le TP du chapitre n |
 | `polycopie/sismologie-polycopie.pdf` | le polycopié : couverture, sommaire paginé, `cours.html` imprimé (les calculateurs deviennent des exemples chiffrés) |
 
-Les chapitres (`data/chapitres.json`) sont rédigés un à un ; un chapitre non rédigé apparaît « en préparation »
-et son banc reste accessible. Les anciennes ancres (`index.html#localisation`, `#alea`…) sont redirigées vers
+Les dix-sept chapitres (`data/chapitres.json`) sont rédigés, chacun avec ses calculateurs, ses quatre modèles
+d'exercices et ses exemples chiffrés testés (`tests/cours.test.mjs`). Les anciennes ancres (`index.html#localisation`, `#alea`…) sont redirigées vers
 `labo.html`. Infrastructure commune reprise du site de fondations : `styles.css`, `enhancements.css`, `site.css`,
 `src/ui.js`, `src/curseurs.js`, `src/figures.js`, `src/exercices.js`, `src/exerciseur.js`, `src/exos/alea.js`,
 `src/impression.js`, `src/socle.js`, `src/tableaux.js`, `tools/generer-exercices.mjs`, `tools/polycopie.py`.
@@ -66,6 +66,7 @@ labo.html, lecteur.css  bancs de travaux pratiques
 data/chapitres.json     plan : parties, chapitres, banc associé, exercices
 data/exercices-chN.json banques d'exercices (fichiers produits, npm run exercices)
 src/exos/chNN.js        modèles d'exercices : données tirées, réponses par les solveurs
+src/cours-chN.js        calculateurs du chapitre N du cours ; src/ballon.js sphère focale SVG (cours et exercices)
 src/sismo/signal.js     solveurs purs et testés (aucun accès au DOM)
                           FFT, Butterworth causal, Wood-Anderson, modèle de croûte,
                           temps de trajet Pg/Pn/Sg/Sn, méthode stochastique de Boore,
@@ -124,7 +125,7 @@ src/parcours.js         plan des travaux pratiques : quatre parties, ordre des b
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, parcours,
-                        cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références (125 tests)
+                        cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références (142 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
