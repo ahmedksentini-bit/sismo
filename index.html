@@ -25,6 +25,7 @@
     <button type="button" data-onglet="geodesie" aria-pressed="false">Géodésie</button>
     <button type="button" data-onglet="alea" aria-pressed="false">Aléa</button>
     <button type="button" data-onglet="selection" aria-pressed="false">Accélérogrammes</button>
+    <button type="button" data-onglet="site" aria-pressed="false">Site</button>
   </nav>
 </header>
 
@@ -51,6 +52,8 @@
         les séismes possibles pour donner la courbe d'aléa du site, le spectre à probabilité uniforme et le scénario qui domine. Moteur vérifié contre OpenQuake.</p>
       <p class="chapeau" id="chapeau-selection" hidden>Un calcul temporel d'ouvrage demande un jeu d'accélérogrammes : on les choisit dans une banque
         et on les met à l'échelle sur une cible — spectre moyen conditionnel, UHS ou spectre de l'Eurocode 8 — puis on contrôle les règles de l'EN 1998-1:2004.</p>
+      <p class="chapeau" id="chapeau-site" hidden>Le sol filtre et amplifie le mouvement du rocher. Une colonne de couches, des ondes de cisaillement
+        verticales, une rigidité qui chute avec la déformation : fonction de transfert, spectres en surface et classes de sol de l'Eurocode 8.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -723,6 +726,84 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-site" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Profils en profondeur">
+        <h2>Colonne de sol<small>Par sous-couche de 2,5 m au plus : Vs initial (tirets) et compatible avec la déformation, déformation effective γeff = 0,65·γmax, rigidité G/G0 et amortissement ξ (courbes de Darendeli 2001)</small></h2>
+        <canvas id="si-profils" aria-label="Profils de Vs, de déformation et de rigidité en profondeur"></canvas>
+      </section>
+      <section class="carte" aria-label="Fonction de transfert">
+        <h2>Fonction de transfert<small>Rapport des accélérations en surface et à l'affleurement du rocher, ondes SH verticales (Kramer 1996) : en linéaire (tirets) et pour le séisme choisi (linéaire équivalent)</small></h2>
+        <canvas id="si-transfert" aria-label="Fonction de transfert de la colonne"></canvas>
+        <p class="legende"><span><i class="tirets" style="border-color:var(--grid-strong)"></i>linéaire (G0, ξ0)</span><span><i style="background:var(--blue)"></i>linéaire équivalent</span><span><i class="tirets" style="border-color:var(--pick-p)"></i>f0 du quart d'onde</span></p>
+      </section>
+      <section class="carte" aria-label="Spectres de réponse">
+        <h2>Spectres de réponse<small>Au rocher et en surface (ξ = 5 %), face aux spectres de l'EN 1998-1:2004 de même ag pour le rocher (A) et pour la classe du site</small></h2>
+        <canvas id="si-spectres" aria-label="Spectres de réponse au rocher, en surface et de l'Eurocode 8"></canvas>
+        <p class="legende"><span><i style="background:var(--grid-strong)"></i>rocher</span><span><i style="background:var(--blue)"></i>surface</span><span><i class="tirets" style="border-color:var(--teal)"></i>EC8, sol A</span><span><i class="tirets" style="border-color:var(--pick-p)"></i>EC8, classe du site</span></p>
+      </section>
+      <section class="carte" aria-label="Accélérogrammes">
+        <h2>Accélérogrammes<small>Au rocher (affleurement) et en surface</small></h2>
+        <canvas id="si-acc" aria-label="Accélérogrammes au rocher et en surface"></canvas>
+        <p class="aide">Calcul vérifié contre pystrata (Kottke) : fonction de transfert à 10⁻¹⁰ près, propriétés compatibles et PGA en surface à 10⁻⁴ près.
+          Sans nappe ; σ'm = σ'v·(1 + 2K0)/3 avec K0 = 0,5 ; poids volumique déduit de Vs.</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="si-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="si-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures">
+        <div class="afficheurs deux" id="si-afficheurs"></div>
+      </section>
+      <section class="carte" id="si-panneau-explorer" aria-label="Réglages">
+        <p class="sous-titre">Profil</p>
+        <div class="segments compact" role="group" aria-label="Profils types" id="si-profils-choix" style="margin-bottom:12px"></div>
+        <div class="champ"><span class="etiquette">Couche</span><div class="segments compact" role="group" aria-label="Couche" id="si-couches"></div></div>
+        <div class="champ"><label for="si-h">Épaisseur <output id="si-h-v"></output></label><input type="range" id="si-h" min="1" max="30" step="1"></div>
+        <div class="champ"><label for="si-vs">Vs <output id="si-vs-v"></output></label><input type="range" id="si-vs" min="80" max="780" step="10"></div>
+        <div class="champ"><label for="si-ip">Indice de plasticité IP <output id="si-ip-v"></output></label><input type="range" id="si-ip" min="0" max="50" step="5"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="si-ajouter">Ajouter une couche</button><button type="button" class="bouton secondaire" id="si-retirer">Retirer</button></div>
+        <div class="champ" style="margin-top:12px"><label for="si-roc">Vs du rocher <output id="si-roc-v"></output></label><input type="range" id="si-roc" min="600" max="2000" step="50"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Séisme au rocher</p>
+        <div class="segments" role="group" aria-label="Scénario" style="margin-bottom:10px">
+          <button type="button" data-si-scenario="0">M 5,5 à 10 km</button><button type="button" data-si-scenario="1">M 6,5 à 20 km</button><button type="button" data-si-scenario="2">M 7,2 à 40 km</button>
+        </div>
+        <div class="champ"><label for="si-pga">PGA au rocher <output id="si-pga-v"></output></label><input type="range" id="si-pga" min="0.02" max="0.5" step="0.01"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="si-tirage">Autre accélérogramme</button></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Calcul</p>
+        <div class="segments" role="group" aria-label="Calcul">
+          <button type="button" data-si-calcul="lin">Linéaire</button><button type="button" data-si-calcul="eql">Linéaire équivalent</button>
+        </div>
+      </section>
+      <section class="carte" id="si-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="si-exo-num"></span>
+        <p class="enonce">Pour ce profil, calculez Vs30, donnez la classe de sol de l'EN 1998-1:2004 et la fréquence fondamentale de la colonne
+          par la formule du quart d'onde.</p>
+        <div id="si-exo-profil"></div>
+        <div class="champ"><label for="si-r-vs30">Vs30 (m/s)</label><input type="text" id="si-r-vs30" inputmode="decimal" autocomplete="off" placeholder="ex. 280"></div>
+        <div class="champ"><span class="etiquette">Classe de sol</span>
+          <div class="segments" role="group" aria-label="Classe de sol"><button type="button" data-si-rep="classe|A" aria-pressed="false">A</button><button type="button" data-si-rep="classe|B" aria-pressed="false">B</button><button type="button" data-si-rep="classe|C" aria-pressed="false">C</button><button type="button" data-si-rep="classe|D" aria-pressed="false">D</button><button type="button" data-si-rep="classe|E" aria-pressed="false">E</button></div></div>
+        <div class="champ"><label for="si-r-f0">f0 (Hz)</label><input type="text" id="si-r-f0" inputmode="decimal" autocomplete="off" placeholder="ex. 2,4"></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="si-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="si-nouvel-exo">Nouvel exercice</button></div>
+        <div id="si-corrige"></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Résonance</b> : une couche molle sur un rocher raide piège les ondes ; le premier pic tombe près de f0 = Vs/4H, et son amplitude croît avec le contraste d'impédance ρr·Vr / ρs·Vs.</li>
+          <li><b>Non-linéarité</b> : plus le séisme est fort, plus le sol se déforme ; sa rigidité chute et son amortissement monte. Le pic glisse vers les basses fréquences et s'aplatit : l'amplification du PGA diminue, celle des longues périodes peut croître.</li>
+          <li><b>EN 1998-1:2004</b> : la classe de sol (Vs30, tableau 3.1) fixe S, TB, TC et TD. Les classes S1 et S2 (argiles très molles, sols liquéfiables) et les sites particuliers demandent une étude spécifique, comme celle-ci.</li>
+          <li><b>Linéaire équivalent</b> : propriétés uniques par couche, compatibles avec 0,65·γmax ; au-delà d'environ 0,1 à 1 % de déformation, un calcul non linéaire temporel devient nécessaire.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -749,6 +830,7 @@
 <script type="module" src="src/banc-geodesie.js"></script>
 <script type="module" src="src/banc-alea.js"></script>
 <script type="module" src="src/banc-selection.js"></script>
+<script type="module" src="src/banc-site.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>

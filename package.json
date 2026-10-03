@@ -8,6 +8,6 @@
     "test": "node --test tests/*.test.mjs",
     "serve": "npx serve .",
     "calage": "node tools/calage-accelerogrammes.mjs",
-    "references": "node tools/oq/exporter-catalogue.mjs && ${PYTHON:-python3} tools/oq/coefficients.py && ${PYTHON:-python3} tools/oq/references.py && node tools/oq/exporter-modele.mjs && ${PYTHON:-python3} tools/oq/psha.py"
+    "references": "node tools/oq/exporter-catalogue.mjs && ${PYTHON:-python3} tools/oq/coefficients.py && ${PYTHON:-python3} tools/oq/references.py && node tools/oq/exporter-modele.mjs && ${PYTHON:-python3} tools/oq/psha.py && node tools/pystrata/exporter-site.mjs && ${PYTHON:-python3} tools/pystrata/site.py"
   }
 }
