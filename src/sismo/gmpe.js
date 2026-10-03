@@ -1,4 +1,5 @@
 import Akkar2014 from './coefficients/akkar2014.js';
+import Bindi2014 from './coefficients/bindi2014.js';
 
 // src/sismo/gmpe.js — lois d'atténuation (GMPE). Chaque loi renvoie la médiane en ln (g pour PGA et SA,
 // cm/s pour PGV) et ses écarts types en ln : σ total, τ (inter-événement), φ (intra-événement).
@@ -49,7 +50,33 @@ const Gmpe = (() => {
     },
   };
 
-  const LOIS = { akkar2014 };
+  // ── Bindi et al. (2014), distance de Joyner-Boore ───────────────────────
+  // log10 Y (cm/s² pour PGA et SA, cm/s pour PGV) = e1 + FM + FD + γ·log10(Vs30/800) + style de faille,
+  // FM = b1·(M − Mh) + b2·(M − Mh)² sous Mh = 6,75, b3·(M − Mh) au-dessus ;
+  // FD = [c1 + c2·(M − 5,5)]·log10 √(Rjb² + h²) − c3·(√(Rjb² + h²) − 1). Écarts types donnés en log10.
+  const G = 9.80665;
+  function styleBindi(C, rake) {
+    if (Math.abs(rake) <= 30 || 180 - Math.abs(rake) <= 30) return C.sofS;
+    if (rake > 30 && rake < 150) return C.sofR;
+    if (rake > -150 && rake < -30) return C.sofN;
+    return 0;
+  }
+  const bindi2014 = {
+    id: 'bindi2014', nom: 'Bindi et al. (2014)', distance: 'Rjb',
+    domaine: { M: [4, 7.6], R: [0, 300], vs30: [150, 1500] },
+    periodes: Bindi2014.SA.map(c => c.T),
+    calculer({ M, Rjb, vs30, rake = 0 }, imt) {
+      const t = Bindi2014, C = coefficients(t, imt), dm = M - t.Mh;
+      const FM = M < t.Mh ? C.e1 + C.b1 * dm + C.b2 * dm * dm : C.e1 + C.b3 * dm;
+      const r = Math.sqrt(Rjb * Rjb + C.h * C.h);
+      const FD = (C.c1 + C.c2 * (M - t.Mref)) * Math.log10(r / t.Rref) - C.c3 * (r - t.Rref);
+      const log10Y = FM + FD + C.gamma * Math.log10(vs30 / t.Vref) + styleBindi(C, rake);
+      const ln = imt === 'PGV' ? log10Y * Math.LN10 : Math.log(Math.pow(10, log10Y - 2) / G);
+      return { ln, sigma: C.sigma * Math.LN10, tau: C.tau * Math.LN10, phi: C.phi * Math.LN10 };
+    },
+  };
+
+  const LOIS = { akkar2014, bindi2014 };
   return { LOIS, coefficientsSA };
 })();
 export default Gmpe;
