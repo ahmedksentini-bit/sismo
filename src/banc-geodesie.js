@@ -19,7 +19,11 @@ import Psha from './sismo/psha.js';
   // 3,3·10¹⁷
   const sci = (x, d = 1) => { if (!(x > 0)) return '—'; const e = Math.floor(Math.log10(x)); return `${virg(x / Math.pow(10, e), d)}·${puissance(e)}`; };
 
-  const ZONES = Psha.modeleDefaut().zones.map(z => ({ ...z, aire: G.aire(z.polygone) }));
+  const MODELE = Psha.modeleDefaut();
+  const ZONES = MODELE.zones.map(z => ({ ...z, aire: G.aire(z.polygone) }));
+  // Failles du modèle d'aléa (glissement géologique) et leur moment, rattachés à leur zone
+  const FAILLES = MODELE.failles.map(f => ({ ...f, moment: Psha.momentFaille(MODELE, f) }));
+  const momentFaillesZone = iz => FAILLES.reduce((s, f) => s + (f.zone === iz ? f.moment : 0), 0);
   const DOM = G.DOMAINE;
   const ECHELLE = 15; // km de flèche par mm/an
   const champDepart = () => G.champDefaut();
@@ -40,7 +44,7 @@ import Psha from './sismo/psha.js';
     etat.analyses = ZONES.map(z => {
       const st = etat.stations.filter(s => G.dansPolygone(s.x, s.y, z.polygone)), aj = G.ajuster(st);
       const vrai = G.deformationMoyenne(etat.champ, z.polygone), o = { ...opts, A: z.aire }, cat = loiCatalogue(z);
-      const r = { n: st.length, aj, vrai, momentVrai: G.momentKostrov(vrai, o), momentCat: G.momentGR(cat), cat };
+      const r = { n: st.length, aj, vrai, momentVrai: G.momentKostrov(vrai, o), momentCat: G.momentGR(cat), momentFailles: momentFaillesZone(ZONES.indexOf(z)), cat };
       if (aj) {
         r.p = G.principales(aj); r.sp = G.incertitudePrincipales(aj);
         r.moment = G.momentKostrov(aj, o); r.tirs = G.momentTires(aj, o);
@@ -110,6 +114,12 @@ import Psha from './sismo/psha.js';
     const f = etat.champ.faille;
     ctx.save(); ctx.strokeStyle = COUL.amp; ctx.lineWidth = 2; ctx.setLineDash([7, 4]);
     ctx.beginPath(); ctx.moveTo(g.X(f.x), g.Y(DOM.y1)); ctx.lineTo(g.X(f.x), g.Y(DOM.y0)); ctx.stroke(); ctx.restore();
+    for (const fa of FAILLES) {
+      const [[x0, y0], [x1, y1]] = fa.trace;
+      ctx.strokeStyle = COUL.teal; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(g.X(x0), g.Y(y0)); ctx.lineTo(g.X(x1), g.Y(y1)); ctx.stroke(); ctx.lineCap = 'butt';
+      texte(ctx, `${fa.nom} (aléa)`, g.X(x0) - 6, g.Y(y0) + 4, COUL.teal, `800 11px ${POLICE}`, 'right', 'top');
+    }
     // Champ vrai (exploration)
     const k = ECHELLE * g.s;
     if (etat.vrai && !enExercice()) {
@@ -215,11 +225,16 @@ import Psha from './sismo/psha.js';
         ctx.fillStyle = COUL.blue; ctx.beginPath(); ctx.moveTo(X(etat.chi * an.moment), y - 14); ctx.lineTo(X(etat.chi * an.moment) + 5, y - 3); ctx.lineTo(X(etat.chi * an.moment) - 5, y - 3); ctx.closePath(); ctx.fill();
       }
       if (!enExercice()) { ctx.strokeStyle = COUL.teal; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(an.momentVrai), y - 8, 7, 0, 2 * Math.PI); ctx.stroke(); }
-      ctx.fillStyle = COUL.ink; ctx.fillRect(X(an.momentCat) - 5, y + 6, 10, 10);
-      const txt = enExercice() || !an.aj ? `catalogue ${sci(an.momentCat)}` : `${W < 520 ? 'cat./géo.' : 'catalogue / géodésie'} = ${virg(an.momentCat / an.moment, 2)}`;
+      ctx.fillStyle = COUL.ink; ctx.fillRect(X(an.momentCat) - 5, y + 2, 10, 10);
+      if (an.momentFailles > 0) {
+        const xf = X(an.momentCat + an.momentFailles);
+        ctx.strokeStyle = COUL.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xf, y); ctx.lineTo(xf + 6, y + 7); ctx.lineTo(xf, y + 14); ctx.lineTo(xf - 6, y + 7); ctx.closePath(); ctx.stroke();
+      }
+      let txt = enExercice() || !an.aj ? `catalogue ${sci(an.momentCat)}` : `${W < 520 ? 'cat./géo.' : 'catalogue / géodésie'} = ${virg(an.momentCat / an.moment, 2)}`;
+      if (an.momentFailles > 0 && an.aj && !enExercice()) txt += W < 520 ? ` ; + F : ${virg((an.momentCat + an.momentFailles) / an.moment, 2)}` : ` ; avec la faille F : ${virg((an.momentCat + an.momentFailles) / an.moment, 2)}`;
       ctx.font = `700 11px ${POLICE}`;
       const aGauche = X(an.momentCat) + 10 + ctx.measureText(txt).width > W - m.d;
-      texte(ctx, txt, aGauche ? X(an.momentCat) - 10 : X(an.momentCat) + 10, y + 11, COUL.ink, `700 11px ${POLICE}`, aGauche ? 'right' : 'left');
+      texte(ctx, txt, aGauche ? X(an.momentCat) - 10 : X(an.momentCat) - 6, y + 24, COUL.ink, `700 11px ${POLICE}`, aGauche ? 'right' : 'left');
     });
   }
 
@@ -265,7 +280,7 @@ import Psha from './sismo/psha.js';
       afficheur('Raccourcissement ε̇1h', ok ? `${virg(an.p.e1h, 1)}` : '—', ok ? `± ${virg(an.sp.e1h, 1)} ns/an, axe N${milliers(an.p.azimutRaccourcissement)}°E` : an.aj ? 'ns/an' : 'moins de 3 stations'),
       afficheur('Allongement ε̇2h', ok ? `${signe(an.p.e2h, 1)}` : '—', ok ? `± ${virg(an.sp.e2h, 1)} ns/an` : 'ns/an'),
       afficheur('Ṁ0 géodésique', ok ? sci(an.moment) : '—', ok ? `tirages 16–84 % : ${sci(an.tirs.q16)} – ${sci(an.tirs.q84)}` : 'N·m/an'),
-      afficheur('Ṁ0 du catalogue', sci(an.momentCat), ok ? `couplage apparent ${virg(an.momentCat / an.moment, 2)}` : 'N·m/an'),
+      afficheur('Ṁ0 du catalogue', sci(an.momentCat), ok ? `couplage apparent ${virg(an.momentCat / an.moment, 2)}${an.momentFailles > 0 ? ` ; avec la faille F (${sci(an.momentFailles)}) : ${virg((an.momentCat + an.momentFailles) / an.moment, 2)}` : ''}` : 'N·m/an'),
       afficheur(`M ≥ 6 (χ = ${virg(etat.chi, 2)})`, ok ? `${milliers(1 / t6g)} ans` : '—', `catalogue : ${milliers(1 / t6c)} ans`),
     ].join('');
   }

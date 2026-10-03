@@ -5,7 +5,9 @@
   BindiEtAl2014Rjb sur une grille (M, Rjb, Vs30, style, période) ;
 - hmtk.json : déclusterage de Gardner et Knopoff et estimateur de Weichert sur tests/references/catalogue.csv ;
 - geodesie.json : invariants des taux de déformation (GeodeticStrain d'HMTK) ; taux de moment d'une
-  Gutenberg-Richter tronquée et valeur a qui équilibre un taux de moment (TruncatedGRMFD de hazardlib).
+  Gutenberg-Richter tronquée et valeur a qui équilibre un taux de moment (TruncatedGRMFD de hazardlib) ;
+- failles.json : ruptures flottantes de trois failles simples (SimpleFaultSource, WC1994) : nombre et
+  taux par magnitude, Rjb et Rrup d'une rupture sur sept vues de six sites.
 Prérequis : openquake.engine installé (voir README) ; le catalogue est produit par exporter-catalogue.mjs.
 """
 import csv
@@ -21,7 +23,11 @@ from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKno
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
 from openquake.hmtk.seismicity.occurrence.weichert import Weichert
 from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
-from openquake.hazardlib.mfd import TruncatedGRMFD
+from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib import geo
+from openquake.hazardlib.source import SimpleFaultSource
+from openquake.hazardlib.scalerel import WC1994
+from openquake.hazardlib.tom import PoissonTOM
 import openquake.engine
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
@@ -95,13 +101,46 @@ def geodesie():
     return {'deformations': deformations, 'lois': lois}
 
 
+KM_DEG = 6371.0 * np.pi / 180
+FAILLES = {
+    'verticale': {'trace': [[-10, -40], [-10, 40]], 'pendage': 90.0, 'zHaut': 0.0, 'zBas': 12.0, 'rake': 0.0},
+    'inverse': {'trace': [[150, -60], [150, 50]], 'pendage': 30.0, 'zHaut': 2.0, 'zBas': 17.0, 'rake': 90.0},
+    'oblique': {'trace': [[20, -30], [60, 30]], 'pendage': 60.0, 'zHaut': 0.0, 'zBas': 14.0, 'rake': -90.0},
+}
+SITES_FAILLES = [[0, 0], [-10, 0], [170, 0], [130, -80], [40, 0], [55, 50]]
+
+
+def failles():
+    """Ruptures flottantes d'OpenQuake (maillage de 1 km, rapport d'aspect 1) aux magnitudes 5,5 à 7."""
+    mesh = geo.Mesh(np.array([x / KM_DEG for x, _ in SITES_FAILLES]), np.array([y / KM_DEG for _, y in SITES_FAILLES]), None)
+    out = {}
+    for nom, f in FAILLES.items():
+        trace = geo.Line([geo.Point(x / KM_DEG, y / KM_DEG) for x, y in f['trace']])
+        mfd = EvenlyDiscretizedMFD(5.5, 0.5, [1.0, 1.0, 1.0, 1.0])
+        src = SimpleFaultSource('f', 'f', 'Active Shallow Crust', mfd, 1.0, WC1994(), 1.0, PoissonTOM(50.0),
+                                f['zHaut'], f['zBas'], trace, f['pendage'], f['rake'])
+        par_m = {}
+        for rup in src.iter_ruptures():
+            par_m.setdefault(f'{float(rup.mag):.1f}', []).append(rup)
+        ruptures = {}
+        for m, rups in par_m.items():
+            vus = list(range(0, len(rups), 7))
+            ruptures[m] = {'n': len(rups), 'taux': float(rups[0].occurrence_rate), 'indices': vus,
+                           'rjb': [[round(float(v), 6) for v in rups[i].surface.get_joyner_boore_distance(mesh)] for i in vus],
+                           'rrup': [[round(float(v), 6) for v in rups[i].surface.get_min_distance(mesh)] for i in vus]}
+        maillage = geo.surface.SimpleFaultSurface.from_fault_data(trace, f['zHaut'], f['zBas'], f['pendage'], 1.0).mesh.shape
+        out[nom] = {**f, 'maillage': [int(v) for v in maillage], 'ruptures': ruptures}
+    return {'sites': SITES_FAILLES, 'failles': out}
+
+
 def main():
     entete = {'outil': f'OpenQuake {openquake.engine.__version__}'}
     (REF / 'gmpe_akkar2014.json').write_text(json.dumps({**entete, **gmpe()}, ensure_ascii=False), encoding='utf-8')
     (REF / 'gmpe_bindi2014.json').write_text(json.dumps({**entete, **gmpe(BindiEtAl2014Rjb, ('PGA', 'PGV', 0.02, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0))}, ensure_ascii=False), encoding='utf-8')
     (REF / 'hmtk.json').write_text(json.dumps({**entete, **hmtk()}, ensure_ascii=False), encoding='utf-8')
     (REF / 'geodesie.json').write_text(json.dumps({**entete, **geodesie()}, ensure_ascii=False), encoding='utf-8')
-    print('écrit tests/references/gmpe_akkar2014.json, gmpe_bindi2014.json, hmtk.json et geodesie.json')
+    (REF / 'failles.json').write_text(json.dumps({**entete, **failles()}, ensure_ascii=False), encoding='utf-8')
+    print('écrit tests/references/gmpe_akkar2014.json, gmpe_bindi2014.json, hmtk.json, geodesie.json et failles.json')
 
 
 if __name__ == '__main__':

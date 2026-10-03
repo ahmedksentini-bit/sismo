@@ -94,9 +94,9 @@ test('incertitude du moment : quand le bruit domine, la médiane est biaisée ve
   proche(tf.q50 / G.momentKostrov(fort, { A: 10000 }), 1, 0.01, 'signal fort : sans biais');
 });
 
-test('modèle d\'école : le catalogue libère environ 60 % du moment géodésique de chaque zone', () => {
+test('modèle d\'école : le catalogue libère 30 % du moment géodésique de la zone A (la faille F porte le reste), 58 % de la zone B', () => {
   const zones = [[[-60, -40], [50, -55], [70, 35], [-15, 60], [-70, 20]], [[95, -90], [190, -70], [215, 50], [150, 120], [100, 80]]];
   const [mA, mB] = G.momentsVrais(zones);
-  proche(mA / G.momentGR({ a: Math.log10(0.25) + 4, b: 1, mmin: 4, mmax: 6.5 }), 1 / 0.59, 0.05);
-  proche(mB / G.momentGR({ a: Math.log10(1.2) + 3.6, b: 0.9, mmin: 4, mmax: 7.3 }), 1 / 0.58, 0.05);
+  proche(G.momentGR({ a: Math.log10(0.25) + 4, b: 1, mmin: 4, mmax: 6.5 }) / mA, 0.30, 0.02);
+  proche(G.momentGR({ a: Math.log10(1.2) + 3.6, b: 0.9, mmin: 4, mmax: 7.3 }) / mB, 0.58, 0.02);
 });
