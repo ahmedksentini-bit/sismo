@@ -20,8 +20,8 @@ const Parcours = (() => {
   // Chapitre du cours associé à chaque banc (le banc en est le TP) ; fichier null : chapitre en préparation.
   const LECONS = {
     station: { titre: 'Lire un sismogramme', fichier: 'cours.html#ch1', duree: 20 },
-    reseau: { titre: 'Localiser un séisme avec un réseau', fichier: null, duree: 20 },
-    mecanisme: { titre: 'Le mécanisme au foyer', fichier: null, duree: 25 },
+    reseau: { titre: 'Localiser un séisme avec un réseau', fichier: 'cours.html#ch2', duree: 20 },
+    mecanisme: { titre: 'Le mécanisme au foyer', fichier: 'cours.html#ch3', duree: 25 },
     source: { titre: 'La taille de la source : moment et Mw', fichier: null, duree: 25 },
     sismometre: { titre: 'Comment fonctionne un sismomètre', fichier: null, duree: 20 },
     profil: { titre: 'La structure de la croûte', fichier: null, duree: 20 },

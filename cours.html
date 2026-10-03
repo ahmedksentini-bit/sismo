@@ -239,6 +239,302 @@
     <a class="secondary" href="labo.html#station">Travaux pratiques : banc « Station »</a></div>
 </section>
 
+<section id="ch2" class="card">
+  <h2>2 · Localiser un séisme avec un réseau</h2>
+
+  <h3>Une station ne suffit pas</h3>
+  <p>Au chapitre 1, une station donnait la <strong>distance</strong> du foyer, par l'écart S − P, et
+     une <strong>direction</strong> fragile, par le premier mouvement de l'onde P. Pour placer le séisme
+     sur la carte, on combine les lectures de plusieurs stations : c'est le travail quotidien des
+     observatoires, qui publient pour chaque séisme un <strong>épicentre</strong> (latitude, longitude),
+     une <strong>profondeur</strong> et une <strong>heure d'origine</strong>.</p>
+
+  <h3>Les cercles de distance</h3>
+  <p>Chaque station i donne sa distance hypocentrale R<sub>i</sub> ≈ 8,4 × (S − P)<sub>i</sub>. Si
+     l'on connaît la profondeur h, l'épicentre est à la distance Δ<sub>i</sub> = √(R<sub>i</sub>² − h²)
+     de la station : sur la carte, il se trouve sur le cercle de centre la station et de rayon
+     Δ<sub>i</sub>. Deux cercles se coupent en deux points ; le troisième lève l'ambiguïté. Trois
+     stations suffisent donc à placer l'épicentre — c'est la <strong>trilatération</strong>, comme
+     un récepteur GNSS se place à partir des satellites.</p>
+  <p>Sans connaître h, on trace les cercles de rayon R<sub>i</sub> : ils sont trop grands et se
+     recouvrent ; leurs cordes communes se coupent à l'aplomb du foyer. Plus la zone commune est
+     large, plus le foyer est profond.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Quatre stations lisent : SIM1, P à 7,4 s et S à 9,9 s ; SIM2, 12,8 et 19,0 s ; SIM3, 11,6 et
+       17,0 s ; SIM4, 14,5 et 22,0 s (secondes après une heure ronde). Les écarts S − P valent 2,5 ;
+       6,2 ; 5,4 et 7,5 s, d'où R ≈ 21, 52, 45 et 63 km. Le calculateur ci-dessous trace les cercles
+       et place l'épicentre de ce séisme, à 17,9 km de SIM1.</p></div>
+
+  <div class="calc" id="calcLoc">
+    <h3>Localiser un séisme avec quatre stations</h3>
+    <p class="method-note">Les quatre stations du banc « réseau ». Placez le séisme, choisissez l'erreur
+       de pointé : les temps d'arrivée sont calculés dans le modèle de croûte du cours, perturbés de
+       cette erreur (toujours la même série de tirages), puis le séisme est relocalisé par moindres
+       carrés. La zone teintée regroupe les épicentres dont le résidu dépasse le meilleur de moins de
+       0,25 s.</p>
+    <div class="data-grid">
+      <div class="field"><label for="locX">Épicentre : abscisse (vers l'est)</label>
+        <div class="input-wrap"><input id="locX" type="text" inputmode="decimal" value="16" data-curseur="-90 110 2"><span class="unit">km</span></div></div>
+      <div class="field"><label for="locY">Épicentre : ordonnée (vers le nord)</label>
+        <div class="input-wrap"><input id="locY" type="text" inputmode="decimal" value="-8" data-curseur="-110 70 2"><span class="unit">km</span></div></div>
+      <div class="field"><label for="locH">Profondeur du foyer</label>
+        <div class="input-wrap"><input id="locH" type="text" inputmode="decimal" value="10" data-curseur="2 30 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="locErr">Erreur de pointé (écart type)</label>
+        <div class="input-wrap"><input id="locErr" type="text" inputmode="decimal" value="0.1" data-curseur="0 0.5 0.05"><span class="unit">s</span></div></div>
+    </div>
+    <div class="figure" id="locFig"></div>
+    <div id="locTab"></div>
+    <p class="final-result" id="locOut"></p>
+  </div>
+
+  <h3>Le diagramme de Wadati</h3>
+  <p>À une station, l'onde P arrive à t<sub>P</sub> = t<sub>0</sub> + d / Vp et l'onde S à
+     t<sub>S</sub> = t<sub>0</sub> + d / Vs. En éliminant la distance d :</p>
+  <p class="formula">t<sub>S</sub> − t<sub>P</sub> = (Vp / Vs − 1) · (t<sub>P</sub> − t<sub>0</sub>)</p>
+  <p>Portées en fonction de t<sub>P</sub>, les écarts S − P de toutes les stations s'alignent donc sur
+     une droite, <strong>quelles que soient leurs distances</strong>. Sa pente vaut Vp/Vs − 1 et elle
+     coupe l'axe S − P = 0 à l'heure d'origine t<sub>0</sub>. Wadati (1933) obtenait ainsi l'heure
+     d'origine et le rapport des vitesses sans rien savoir de la position du séisme ni de la croûte.
+     Aujourd'hui, le diagramme sert surtout à <strong>contrôler les pointés</strong> : une station
+     qui s'écarte de la droite a mal lu P ou S.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Avec les quatre lectures précédentes, la droite qui passe par SIM1 (7,4 s ; 2,5 s) et SIM4
+       (14,5 s ; 7,5 s) a pour pente 5,0 / 7,1 = 0,70 : Vp/Vs ≈ <strong>1,70</strong>. Elle coupe
+       S − P = 0 à t<sub>0</sub> = 7,4 − 2,5 / 0,70 ≈ <strong>3,9 s</strong>. Les moindres carrés sur
+       les quatre points donnent les mêmes valeurs.</p></div>
+
+  <div class="calc" id="calcWadati">
+    <h3>Diagramme de Wadati</h3>
+    <div class="data-grid">
+      <div class="field champ-large"><label for="wdPts">Arrivées t<sub>P</sub> et t<sub>S</sub> (s), une station par ligne</label>
+        <textarea id="wdPts" rows="5" spellcheck="false">7.4 9.9
+12.8 19.0
+11.6 17.0
+14.5 22.0</textarea></div>
+    </div>
+    <div class="figure" id="wdFig"></div>
+    <p class="final-result" id="wdOut"></p>
+  </div>
+
+  <h3>La localisation par moindres carrés</h3>
+  <p>Les observatoires ne tracent plus de cercles. Chaque temps d'arrivée lu donne une équation
+     t<sub>obs</sub> = t<sub>0</sub> + T(x, y, h ; station), où T est le temps de trajet calculé dans un
+     modèle de vitesses de la croûte (onde Pg directe ou Pn réfractée par le manteau, chapitre 6). On
+     cherche les quatre inconnues x, y, h et t<sub>0</sub> qui rendent les <strong>résidus</strong>
+     t<sub>obs</sub> − t<sub>0</sub> − T les plus petits, au sens des moindres carrés. Geiger (1912)
+     linéarisait le problème et itérait ; on peut aussi, comme le banc « réseau », essayer toute une
+     grille de positions — pour chacune, la meilleure heure d'origine est simplement la moyenne des
+     t<sub>obs</sub> − T.</p>
+  <p class="method-note">Quatre inconnues demandent au moins quatre lectures, dont trois ondes P. On
+     pointe S avec un poids moindre : elle émerge dans la coda de P et se lit moins bien. Un résidu
+     moyen (rms) de l'ordre du dixième de seconde signe une bonne localisation ; un résidu isolé de
+     plus d'une seconde trahit un pointé faux.</p>
+  <p>La localisation ne vaut que ce que vaut le <strong>modèle de vitesses</strong> : un Vp trop fort de
+     5 % éloigne tous les foyers des stations. Ces erreurs systématiques ne se voient pas dans le
+     résidu.</p>
+
+  <h3>La lacune azimutale</h3>
+  <p>Vue de l'épicentre, chaque station est dans une direction (son azimut). La <strong>lacune
+     azimutale</strong> (« gap ») est le plus grand secteur sans station. Tant qu'elle reste sous
+     180°, les stations entourent le séisme et l'épicentre est bien contraint. Au-delà, le séisme est
+     hors du réseau : toutes les stations le voient du même côté, et la zone d'incertitude s'allonge
+     dans la direction qui l'éloigne du réseau. Les catalogues publient la lacune avec chaque séisme :
+     c'est le premier critère de qualité d'une localisation.</p>
+
+  <h3>La profondeur</h3>
+  <p>La profondeur est l'inconnue la plus mal déterminée. Un foyer plus profond retarde toutes les
+     arrivées d'à peu près la même quantité, qu'une heure d'origine plus précoce compense : h et
+     t<sub>0</sub> se « troquent ». Seule une station <strong>proche</strong>, à une distance
+     comparable à la profondeur, sépare les deux. Avec la station la plus proche, à la distance
+     épicentrale Δ, on a h = √(R² − Δ²) : une petite erreur sur R pèse d'autant plus que Δ dépasse
+     h.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>SIM1 est à Δ = 17,9 km de l'épicentre et lit S − P = 2,5 s, soit R ≈ 21,0 km :
+       h = √(21,0² − 17,9²) ≈ <strong>11 km</strong> (le foyer vrai est à 10 km). Une erreur de 0,1 s sur
+       S − P change R de 0,84 km et h d'environ 1,5 km ; la même erreur à 60 km de distance changerait
+       h de 4 km.</p></div>
+
+  <div class="calc" id="calcProf">
+    <h3>La profondeur par la station la plus proche</h3>
+    <div class="data-grid">
+      <div class="field"><label for="prDelta">Distance épicentrale Δ de la station</label>
+        <div class="input-wrap"><input id="prDelta" type="text" inputmode="decimal" value="17.9" data-curseur="0 100 0.1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="prSP">Écart S − P lu</label>
+        <div class="input-wrap"><input id="prSP" type="text" inputmode="decimal" value="2.5" data-curseur="0.5 15 0.1"><span class="unit">s</span></div></div>
+      <div class="field"><label for="prErr">Incertitude sur S − P</label>
+        <div class="input-wrap"><input id="prErr" type="text" inputmode="decimal" value="0.1" data-curseur="0.05 0.5 0.05"><span class="unit">s</span></div></div>
+    </div>
+    <div class="figure" id="prFig"></div>
+    <p class="final-result" id="prOut"></p>
+  </div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Prendre pour une mesure la profondeur « 10 km » d'un catalogue. Quand aucune station n'est assez
+       proche, l'observatoire <em>fixe</em> la profondeur à une valeur conventionnelle et ne localise que
+       l'épicentre. De même, un épicentre de lacune azimutale supérieure à 180° peut être faux de
+       plusieurs dizaines de kilomètres : avant d'attribuer des séismes à une faille (chapitres 8 à 10),
+       on regarde la qualité de chaque localisation.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Chaque station donne un cercle de distance ; trois stations placent l'épicentre.</li>
+      <li>Wadati : S − P en fonction de t<sub>P</sub> est une droite de pente Vp/Vs − 1 qui coupe l'axe à
+        t<sub>0</sub> ; elle contrôle les pointés.</li>
+      <li>La localisation moderne minimise les résidus des temps d'arrivée dans un modèle de vitesses :
+        quatre inconnues (x, y, h, t<sub>0</sub>), au moins quatre lectures.</li>
+      <li>Lacune azimutale &lt; 180° : épicentre bien contraint. Profondeur : il faut une station à une
+        distance comparable à h, sinon h et t<sub>0</sub> se compensent.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch2">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch2">Exerciseur</a>
+    <a class="secondary" href="labo.html#localisation">Travaux pratiques : banc « Réseau »</a></div>
+</section>
+
+<section id="ch3" class="card">
+  <h2>3 · Le mécanisme au foyer</h2>
+
+  <h3>Une faille, trois angles</h3>
+  <p>Un séisme est un glissement brutal sur une faille. Trois angles décrivent ce glissement, selon la
+     convention d'Aki et Richards :</p>
+  <ul class="liste-cours">
+    <li>l'<strong>azimut</strong> φ (« strike ») de la trace de la faille, compté depuis le nord dans le
+      sens horaire, et choisi pour que la faille plonge <em>à droite</em> quand on regarde dans sa
+      direction ;</li>
+    <li>le <strong>pendage</strong> δ (« dip »), angle du plan avec l'horizontale, de 0 à 90° ;</li>
+    <li>le <strong>glissement</strong> λ (« rake »), direction du mouvement du compartiment supérieur
+      dans le plan, comptée depuis la direction de la faille : λ = −90° pour une <strong>faille
+      normale</strong> (le toit descend, la croûte s'étire), λ = +90° pour une <strong>faille
+      inverse</strong> (le toit monte, la croûte se raccourcit), λ = 0° ou 180° pour un
+      <strong>décrochement</strong> sénestre ou dextre (mouvement horizontal).</li>
+  </ul>
+  <p class="method-note">On classe en faille normale les glissements de −150° à −30°, en faille inverse
+     ceux de 30° à 150°, en décrochement les autres : ce sont les classes qu'emploient les lois
+     d'atténuation.</p>
+
+  <h3>Compressions et dilatations</h3>
+  <p>Le glissement pousse la roche vers l'avant de chaque compartiment et la tire derrière. L'onde P
+     part donc en <strong>compression</strong> dans deux quadrants opposés et en
+     <strong>dilatation</strong> dans les deux autres. Une station placée dans un quadrant en compression
+     voit le sol monter au premier mouvement de l'onde P (composante verticale vers le haut) ; dans un
+     quadrant en dilatation, le sol descend. Les quadrants sont séparés par deux plans
+     perpendiculaires, les <strong>plans nodaux</strong>, où l'onde P ne rayonne pas : l'un est le plan
+     de faille, l'autre le <strong>plan auxiliaire</strong>, perpendiculaire au glissement.</p>
+  <p>C'est le modèle du <strong>double couple</strong> : un glissement sur le plan de faille rayonne
+     exactement comme un glissement sur le plan auxiliaire. Les premiers mouvements ne disent donc
+     pas lequel des deux plans a joué. Pour trancher, on regarde l'alignement des répliques, la trace
+     de la rupture en surface, la géologie ou la déformation mesurée par satellite.</p>
+
+  <h3>La sphère focale</h3>
+  <p>On imagine une petite sphère autour du foyer. Le rai qui rejoint une station perce la sphère en un
+     point défini par son azimut et par son <strong>angle d'émergence</strong> i, compté depuis la
+     verticale descendante. On reporte chaque polarité lue sur ce point — disque noir pour une
+     compression, blanc pour une dilatation — puis on projette l'hémisphère inférieur sur un plan, en
+     projection de Schmidt (à aires égales : un point d'émergence i est à la distance √2·sin(i/2) du
+     centre, le bord valant 1). Une station lointaine, atteinte par l'onde Pn réfractée par le manteau,
+     reçoit un rai parti vers le bas, émergent à 49° de la verticale ; une station plus proche reçoit un
+     rai montant (onde Pg), qu'on reporte par le point diamétralement opposé — d'autant plus près du bord
+     que la station est loin.</p>
+  <p>Les quadrants en compression se teintent ; les plans nodaux deviennent deux arcs qui se coupent à
+     angle droit sur la sphère. La figure est caractéristique du type de faille :</p>
+  <div class="comparaison">
+    <div><h4>Faille normale</h4><p>centre blanc : le rai vertical part en dilatation ; deux lunules
+       teintées sur les bords. L'axe T, horizontal, est perpendiculaire à la faille.</p></div>
+    <div><h4>Faille inverse</h4><p>centre teinté, bords blancs : l'inverse de la normale. L'axe P,
+       horizontal, donne la direction du raccourcissement.</p></div>
+  </div>
+  <p>Pour un <strong>décrochement</strong>, les deux plans sont presque verticaux : la sphère montre
+     quatre quartiers alternés, en croix.</p>
+
+  <h3>Les axes P et T</h3>
+  <p>À 45° des deux plans nodaux, au milieu du quadrant en dilatation, se trouve l'<strong>axe P</strong>
+     (pression) ; au milieu du quadrant en compression, l'<strong>axe T</strong> (tension). Ils indiquent
+     en première approche la direction du raccourcissement et de l'allongement de la croûte autour de la
+     faille : une famille de mécanismes inverses aux axes P orientés nord–sud signe une compression
+     nord–sud. Attention au piège des mots : l'axe P est au milieu des <em>dilatations</em>.</p>
+  <div class="a-retenir"><strong>Exemples</strong>
+    <p>Faille normale d'azimut 30°, de pendage 50° et de glissement −90° : le plan auxiliaire a pour
+       azimut 210°, pendage 40° et glissement −90° (pour un glissement de ±90°, le plan auxiliaire a
+       l'azimut opposé et le pendage complémentaire). L'axe T est horizontal, d'azimut 120° : la croûte
+       s'étire perpendiculairement à la faille ; l'axe P plonge de 85°.</p>
+    <p>Faille inverse 120° / 35° / 90° : plan auxiliaire 300° / 55° / 90° ; l'axe P plonge de 10° vers
+       l'azimut 30° — raccourcissement nord-nord-est.</p></div>
+
+  <div class="calc" id="calcBallon">
+    <h3>Sphère focale d'un mécanisme</h3>
+    <div class="data-grid">
+      <div class="field"><label for="meAz">Azimut φ</label>
+        <div class="input-wrap"><input id="meAz" type="text" inputmode="decimal" value="30" data-curseur="0 355 5"><span class="unit">°</span></div></div>
+      <div class="field"><label for="meDip">Pendage δ</label>
+        <div class="input-wrap"><input id="meDip" type="text" inputmode="decimal" value="50" data-curseur="5 90 5"><span class="unit">°</span></div></div>
+      <div class="field"><label for="meRake">Glissement λ</label>
+        <div class="input-wrap"><input id="meRake" type="text" inputmode="decimal" value="-90" data-curseur="-180 180 5"><span class="unit">°</span></div></div>
+    </div>
+    <div class="figure" id="meFig"></div>
+    <p class="final-result" id="meOut"></p>
+  </div>
+
+  <h3>Du réseau au mécanisme</h3>
+  <p>Pour déterminer le mécanisme, on lit la polarité de la première arrivée P sur la composante
+     verticale de chaque station, on la place sur la sphère grâce à l'azimut de la station et à l'angle
+     d'émergence (tiré de la localisation et du modèle de croûte), puis on cherche les plans qui séparent
+     au mieux les compressions des dilatations. L'ordinateur essaie tous les mécanismes d'une grille et
+     garde ceux qui ont le moins de <strong>désaccords</strong>. Avec peu de stations, toute une famille
+     de mécanismes convient : la solution n'est contrainte que si les polarités couvrent bien la
+     sphère, de part et d'autre de chaque plan. Une polarité mal lue (premier mouvement noyé dans le
+     bruit) déplace la solution ou laisse un désaccord.</p>
+
+  <div class="calc" id="calcInversion">
+    <h3>Polarités d'un réseau et famille de solutions</h3>
+    <p class="method-note">Séisme à 10 km de profondeur, stations tirées une fois pour toutes de 10 à
+       150 km. Les traits fins orangés sont les plans de tous les mécanismes de la grille (pas de 10°)
+       qui atteignent le minimum de désaccords ; les tirets verts, le mécanisme vrai. Les polarités
+       entourées de rouge ont été inversées volontairement.</p>
+    <div class="data-grid">
+      <div class="field"><label for="inType">Mécanisme vrai</label>
+        <div class="input-wrap"><select id="inType">
+          <option value="30 50 -90">faille normale 30° / 50° / −90°</option>
+          <option value="120 35 90">faille inverse 120° / 35° / 90°</option>
+          <option value="20 80 175">décrochement 20° / 80° / 175°</option>
+          <option value="60 45 40">oblique 60° / 45° / 40°</option>
+        </select></div></div>
+      <div class="field"><label for="inN">Nombre de stations</label>
+        <div class="input-wrap"><input id="inN" type="text" inputmode="decimal" value="20" data-curseur="4 30 1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="inFaux">Polarités mal lues</label>
+        <div class="input-wrap"><input id="inFaux" type="text" inputmode="decimal" value="0" data-curseur="0 3 1"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="inFig"></div>
+    <p class="final-result" id="inOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Le type de faille entre dans les lois d'atténuation (chapitre 10) : à magnitude et distance égales,
+       un séisme inverse secoue un peu plus qu'un décrochement, un séisme normal un peu moins. Pour
+       Mw 6 à 10 km au rocher, la médiane des trois lois du cours donne une accélération maximale de
+       0,165 g (inverse), 0,148 g (décrochement) et 0,131 g (normale). Dans un modèle d'aléa, chaque zone
+       source reçoit ainsi un mécanisme dominant, tiré des mécanismes au foyer de ses séismes.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Désigner le plan de faille à partir de la seule sphère focale : les deux plans nodaux sont
+       équivalents. Autre confusion : l'axe P n'est pas « là où arrivent les compressions » — il est au
+       milieu des dilatations.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Azimut, pendage, glissement : λ ≈ −90° normale, +90° inverse, 0° ou 180° décrochement.</li>
+      <li>L'onde P part en compression dans deux quadrants, en dilatation dans les deux autres ; les plans
+        nodaux sont le plan de faille et le plan auxiliaire, indiscernables par les polarités.</li>
+      <li>Sphère focale : hémisphère inférieur, projection de Schmidt ; centre blanc → normale, centre
+        teinté → inverse, croix → décrochement.</li>
+      <li>Axe T au milieu des compressions, axe P au milieu des dilatations : ils donnent l'allongement et
+        le raccourcissement de la croûte.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch3">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch3">Exerciseur</a>
+    <a class="secondary" href="labo.html#mecanisme">Travaux pratiques : banc « Mécanisme »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -291,5 +587,7 @@ marquerSectionLue();
 <script type="module" src="src/socle.js"></script>
 <script type="module" src="src/curseurs.js"></script>
 <script type="module" src="src/cours-ch1.js"></script>
+<script type="module" src="src/cours-ch2.js"></script>
+<script type="module" src="src/cours-ch3.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>

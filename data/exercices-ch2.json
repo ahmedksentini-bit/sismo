@@ -1,0 +1,247 @@
+{
+ "chapitre": "ch2",
+ "exercices": [
+  {
+   "id": "ch2-wadati",
+   "titre": "Heure d'origine et Vp/Vs par le diagramme de Wadati",
+   "difficulte": 1,
+   "graine": 3269090575,
+   "enonce": "Quatre stations lisent les arrivées d'un même séisme (secondes après une heure ronde) : ST1, P à 15,3 s et S à 20,5 s ; ST2, P à 16,9 s et S à 23,3 s ; ST3, P à 20,3 s et S à 29,0 s ; ST4, P à 15,2 s et S à 20,3 s.",
+   "donnees": [
+    {
+     "label": "ST1",
+     "valeur": "tP 15,3 s · tS 20,5 s"
+    },
+    {
+     "label": "ST2",
+     "valeur": "tP 16,9 s · tS 23,3 s"
+    },
+    {
+     "label": "ST3",
+     "valeur": "tP 20,3 s · tS 29,0 s"
+    },
+    {
+     "label": "ST4",
+     "valeur": "tP 15,2 s · tS 20,3 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Pente de la droite de Wadati (S − P en fonction de tP) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.702925,
+     "explication": "Par les deux stations extrêmes, ST4 et ST3 : (8,7 − 5,1) / (20,3 − 15,2) = 0,706 ; les moindres carrés sur les quatre points donnent 0,703.",
+     "tolerance": 0.03
+    },
+    {
+     "texte": "Rapport Vp/Vs ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 1.70293,
+     "explication": "Vp/Vs = 1 + pente = 1,70 (modèle du cours : 6,0 / 3,5 = 1,71).",
+     "tolerance": 0.03
+    },
+    {
+     "texte": "Heure d'origine t₀ (secondes après l'heure ronde) ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 7.89132,
+     "explication": "La droite coupe S − P = 0 en t₀ = tP − (S − P)/pente, soit 15,2 − 5,1 / 0,706 = 7,97 s par deux points, 7,89 s par les moindres carrés (origine vraie : 8,0 s).",
+     "tolerance": 0.4
+    },
+    {
+     "texte": "Une cinquième station tomberait 1,5 s au-dessus de la droite. On conclut…",
+     "type": "choix",
+     "options": [
+      "que Vp/Vs vaut 2 à cette station",
+      "que l'une de ses lectures (sans doute S) est fausse",
+      "que l'heure d'origine est fausse",
+      "que le séisme est plus profond"
+     ],
+     "reponse": 1,
+     "explication": "Toutes les stations d'un même séisme s'alignent, quelle que soit leur distance : un point écarté signale un pointé faux, le plus souvent celui de S, qui émerge dans la coda de P."
+    }
+   ]
+  },
+  {
+   "id": "ch2-cercles",
+   "titre": "Placer l'épicentre par les cercles de distance",
+   "difficulte": 2,
+   "graine": 4229975020,
+   "enonce": "Trois stations, de coordonnées ST1 (-13 ; 46), ST2 (43 ; -15), ST3 (8 ; -39) (km, x vers l'est, y vers le nord), lisent des écarts S − P de 7,4 s, 3,2 s, 4,1 s. Le foyer est supposé à 7 km de profondeur.",
+   "donnees": [
+    {
+     "label": "ST1",
+     "valeur": "(-13 ; 46) km · S − P 7,4 s"
+    },
+    {
+     "label": "ST2",
+     "valeur": "(43 ; -15) km · S − P 3,2 s"
+    },
+    {
+     "label": "ST3",
+     "valeur": "(8 ; -39) km · S − P 4,1 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Distance hypocentrale de ST1 ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 62.16,
+     "explication": "R = 8,4 × 7,4 = 62,2 km.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Rayon du cercle épicentral de ST1 ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 61.7646,
+     "explication": "Δ = √(R² − h²) = √(62,2² − 7²) = 61,8 km.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Rayon du cercle épicentral de ST2 ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 25.9525,
+     "explication": "R = 8,4 × 3,2 = 26,9 km, Δ = √(R² − 7²) = 26 km.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Quel point est l'épicentre (coordonnées en km) ?",
+     "type": "choix",
+     "options": [
+      "(-12 ; 8)",
+      "(33 ; 23)",
+      "(18 ; 7)",
+      "(18 ; -7)"
+     ],
+     "reponse": 3,
+     "explication": "Le point (18 ; -7) est à 61,4 km de ST1, 26,2 km de ST2, 33,5 km de ST3 : les trois cercles (61,8, 26, 33,7 km) passent tout près (écart moyen 0,3 km, dû aux lectures arrondies). Les autres points s'en écartent de 26, 21, 11 km en moyenne."
+    }
+   ]
+  },
+  {
+   "id": "ch2-lacune",
+   "titre": "Lacune azimutale et qualité d'une localisation",
+   "difficulte": 1,
+   "graine": 1588786709,
+   "enonce": "Vues de l'épicentre localisé, les 6 stations du réseau sont dans les azimuts 314°, 290°, 259°, 236°, 268°, 281° (comptés depuis le nord, dans le sens horaire).",
+   "donnees": [
+    {
+     "label": "ST1",
+     "valeur": "azimut 314°"
+    },
+    {
+     "label": "ST2",
+     "valeur": "azimut 290°"
+    },
+    {
+     "label": "ST3",
+     "valeur": "azimut 259°"
+    },
+    {
+     "label": "ST4",
+     "valeur": "azimut 236°"
+    },
+    {
+     "label": "ST5",
+     "valeur": "azimut 268°"
+    },
+    {
+     "label": "ST6",
+     "valeur": "azimut 281°"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Lacune azimutale (plus grand secteur sans station) ?",
+     "type": "nombre",
+     "unite": "°",
+     "reponse": 282.271,
+     "explication": "Azimuts rangés : 236, 259, 268, 281, 290, 314° ; écarts successifs, y compris le passage par le nord (282°) : le plus grand vaut 282°.",
+     "tolerance": 2
+    },
+    {
+     "texte": "L'épicentre est-il bien contraint ?",
+     "type": "choix",
+     "options": [
+      "non : la lacune dépasse 180°, le séisme est hors du réseau",
+      "oui : la lacune reste sous 180°, les stations entourent le séisme"
+     ],
+     "reponse": 0,
+     "explication": "Critère usuel des catalogues : lacune < 180°. Ici 282°."
+    },
+    {
+     "texte": "Pour un séisme hors du réseau, la zone d'incertitude de l'épicentre…",
+     "type": "choix",
+     "options": [
+      "s'allonge dans la direction qui l'éloigne du réseau",
+      "se réduit, les stations étant toutes du même côté",
+      "reste circulaire, de même taille",
+      "ne dépend que de la profondeur"
+     ],
+     "reponse": 0,
+     "explication": "Toutes les stations voient le séisme du même côté : rapprocher ou éloigner l'épicentre le long de cette direction change peu les écarts entre stations, compensé par l'heure d'origine."
+    }
+   ]
+  },
+  {
+   "id": "ch2-profondeur",
+   "titre": "La profondeur par la station la plus proche",
+   "difficulte": 2,
+   "graine": 4232806357,
+   "enonce": "Un séisme est localisé à 23,3 km de la station la plus proche, qui lit S − P = 3,1 s. Une autre station, à 77 km, lit S − P = 9,3 s.",
+   "donnees": [
+    {
+     "label": "Station proche",
+     "valeur": "Δ = 23,3 km · S − P = 3,1 s"
+    },
+    {
+     "label": "Station lointaine",
+     "valeur": "Δ = 77 km · S − P = 9,3 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Profondeur du foyer d'après la station proche ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 11.6272,
+     "explication": "R = 8,4 × 3,1 = 26 km ; h = √(R² − Δ²) = √(26² − 23,3²) = 11,6 km (foyer vrai : 12 km).",
+     "toleranceRel": 0.06
+    },
+    {
+     "texte": "De combien change cette profondeur si S − P est lu 0,1 s plus long ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 1.77596,
+     "explication": "R passe à 8,4 × 3,2 = 26,9 km, h à 13,4 km : + 1,78 km.",
+     "toleranceRel": 0.15
+    },
+    {
+     "texte": "Et pour la station lointaine, la même erreur de 0,1 s change h de ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 4.30292,
+     "explication": "Avec la station lointaine : h = √((8,4 × S − P)² − Δ²) passe de 13,2 à 17,5 km, soit + 4,3 km : la profondeur y est mal contrainte.",
+     "toleranceRel": 0.15
+    },
+    {
+     "texte": "Pourquoi la profondeur est-elle l'inconnue la plus mal déterminée ?",
+     "type": "choix",
+     "options": [
+      "parce que Vp/Vs varie avec la profondeur",
+      "parce que les ondes S ne traversent pas la croûte",
+      "un foyer plus profond retarde toutes les arrivées, ce qu'une heure d'origine plus précoce compense",
+      "parce que les stations mesurent mal la composante verticale"
+     ],
+     "reponse": 2,
+     "explication": "h et t₀ se « troquent » ; seule une station à une distance comparable à la profondeur les sépare."
+    }
+   ]
+  }
+ ]
+}
