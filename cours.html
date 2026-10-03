@@ -1097,6 +1097,259 @@
     <a class="secondary" href="labo.html#spectre">Travaux pratiques : banc « Spectre »</a></div>
 </section>
 
+<section id="ch8" class="card">
+  <h2>8 · Catalogue et loi de Gutenberg-Richter</h2>
+
+  <h3>Le catalogue de sismicité</h3>
+  <p>Un catalogue range les séismes d'une région : date et heure d'origine, épicentre, profondeur,
+     magnitude. Il réunit des époques très inégales. Depuis quelques décennies, les réseaux denses
+     enregistrent jusqu'aux petits séismes ; au début du XX<sup>e</sup> siècle, seuls les forts séismes
+     étaient détectés ; avant, on ne dispose que de témoignages, convertis en magnitude à partir de
+     l'intensité. Toutes les magnitudes doivent être ramenées à Mw (chapitre 4) avant tout calcul.</p>
+
+  <h3>La loi de Gutenberg-Richter</h3>
+  <p>Sur une région et une période assez longues, le nombre annuel de séismes de magnitude supérieure ou
+     égale à M décroît exponentiellement :</p>
+  <p class="formula">log<sub>10</sub> λ(≥ M) = a − b · M</p>
+  <p class="method-note">λ : taux annuel ; a mesure l'activité de la région ; b, la proportion des grands
+     séismes parmi les petits, vaut près de 1 dans la plupart des régions : une unité de magnitude de plus,
+     dix fois moins de séismes. La loi est <strong>tronquée</strong> à une magnitude maximale Mmax, la
+     plus grande que les failles de la région puissent produire.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Une région compte en moyenne 2 séismes de magnitude ≥ 4 par an, avec b = 1 : λ(≥ 5) = 0,2 par an,
+       soit un séisme de magnitude 5 tous les <strong>5 ans</strong> en moyenne ; λ(≥ 6) = 0,02 (tous les
+       50 ans) ; λ(≥ 7) = 0,002 (tous les 500 ans). La valeur de a vaut log<sub>10</sub> 2 + 4 = 4,30.</p></div>
+
+  <div class="calc" id="calcGR">
+    <h3>Taux annuels et périodes de retour</h3>
+    <div class="data-grid">
+      <div class="field"><label for="grL4">Taux annuel de M ≥ 4</label>
+        <div class="input-wrap"><input id="grL4" type="text" inputmode="decimal" value="2" data-curseur="0.05 20 0.05"><span class="unit">/ an</span></div></div>
+      <div class="field"><label for="grB">Valeur b</label>
+        <div class="input-wrap"><input id="grB" type="text" inputmode="decimal" value="1" data-curseur="0.6 1.4 0.05"><span class="unit">—</span></div></div>
+      <div class="field"><label for="grMmax">Magnitude maximale Mmax</label>
+        <div class="input-wrap"><input id="grMmax" type="text" inputmode="decimal" value="7.5" data-curseur="5.5 8.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="grT">Durée considérée</label>
+        <div class="input-wrap"><input id="grT" type="text" inputmode="decimal" value="50" data-curseur="1 200 1"><span class="unit">ans</span></div></div>
+    </div>
+    <div class="figure" id="grFig"></div>
+    <div id="grTab"></div>
+    <p class="final-result" id="grOut"></p>
+  </div>
+
+  <h3>La complétude</h3>
+  <p>Un catalogue est <strong>complet</strong> au-dessus d'une magnitude Mc s'il contient tous les
+     séismes de cette taille. Au-dessous, des séismes manquent : la distribution des magnitudes s'infléchit
+     et ne suit plus la loi. Mc diminue avec le temps, au rythme de la densification des réseaux. Deux
+     outils l'estiment :</p>
+  <ul class="liste-cours">
+    <li>la <strong>courbure maximale</strong> : la classe de magnitude la plus peuplée, augmentée de 0,2
+      par prudence (Woessner et Wiemer, 2005) ;</li>
+    <li>le <strong>graphique de Stepp</strong> (1972) : pour une classe de magnitude, le taux calculé sur
+      les T dernières années, en fonction de T. Tant que le catalogue est complet, l'écart type du taux
+      décroît comme 1/√T ; quand le taux se met à baisser, on remonte au-delà de la période complète.</li>
+  </ul>
+
+  <h3>La valeur b</h3>
+  <p>On estime b au-dessus de Mc par le maximum de vraisemblance d'Aki (1965), avec la correction d'Utsu
+     pour des magnitudes rangées par classes de largeur ΔM :</p>
+  <p class="formula">b = log<sub>10</sub> e / (M̄ − (Mc − ΔM/2))</p>
+  <p class="method-note">M̄ : moyenne des magnitudes ≥ Mc ; log<sub>10</sub> e = 0,4343 ; ΔM = 0,1 en général.
+     L'incertitude vaut environ b/√N (Shi et Bolt, 1982, en donnent l'expression exacte) : il faut plusieurs
+     centaines de séismes pour connaître b à 0,05 près. Quand Mc change avec le temps, l'estimateur de
+     Weichert (1980) combine des périodes de complétude différentes pour chaque classe.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Au-dessus de Mc = 3,0, la moyenne des magnitudes vaut 3,43 : b = 0,4343 / (3,43 − 2,95) =
+       <strong>0,90</strong>.</p></div>
+
+  <h3>Répliques et déclusterage</h3>
+  <p>Un fort séisme est suivi de <strong>répliques</strong>, d'autant plus nombreuses qu'il est grand, dont
+     le taux décroît comme 1/(t + c)<sup>p</sup> (loi d'Omori-Utsu, p ≈ 1,1) ; la plus forte vaut en
+     moyenne la magnitude du choc principal moins 1,2 (loi de Båth). Ces séismes ne sont pas indépendants :
+     le calcul de l'aléa, qui suppose des séismes poissoniens, ne doit compter que les chocs principaux.
+     On <strong>déclustérise</strong> le catalogue : la méthode de Gardner et Knopoff (1974) retire, autour
+     de chaque séisme, ceux qui tombent dans une fenêtre d'espace L(M) et de temps T(M) croissant avec la
+     magnitude — environ 40 km et 140 jours pour M 5, 70 km et 2,5 ans pour M 7.</p>
+
+  <div class="calc" id="calcCatalogue">
+    <h3>Un catalogue simulé : complétude et valeur b</h3>
+    <p class="method-note">Catalogue d'école de 1900 à 2025 (région de 300 × 300 km), simulé avec la valeur b
+       choisie, des répliques d'Omori-Utsu et une complétude qui s'améliore avec le temps (Mc ≈ 5,5 en 1900,
+       4,5 en 1930, 3,5 en 1964, 2,5 en 1990). La distribution est celle des séismes depuis l'année
+       choisie.</p>
+    <div class="data-grid">
+      <div class="field"><label for="caB">Valeur b vraie</label>
+        <div class="input-wrap"><input id="caB" type="text" inputmode="decimal" value="1" data-curseur="0.7 1.3 0.05"><span class="unit">—</span></div></div>
+      <div class="field"><label for="caDebut">Depuis l'année</label>
+        <div class="input-wrap"><input id="caDebut" type="text" inputmode="decimal" value="1990" data-curseur="1900 2015 5"><span class="unit">—</span></div></div>
+      <div class="field"><label for="caDecl">Séismes retenus</label>
+        <div class="input-wrap"><select id="caDecl"><option value="tous">tous (répliques comprises)</option><option value="principaux">chocs principaux (Gardner et Knopoff)</option></select></div></div>
+    </div>
+    <div class="figure" id="caFig"></div>
+    <p class="final-result" id="caOut"></p>
+  </div>
+
+  <h3>Des taux aux probabilités</h3>
+  <p>Si les chocs principaux se produisent au hasard, sans mémoire (processus de Poisson), la probabilité
+     qu'au moins un séisme de taux annuel λ se produise en t années vaut :</p>
+  <p class="formula">P = 1 − e<sup>−λt</sup> &nbsp;;&nbsp; période de retour T<sub>R</sub> = 1/λ = −t / ln(1 − P)</p>
+  <p class="method-note">10 % en 50 ans correspondent à T<sub>R</sub> = 475 ans, le niveau de référence de
+     l'EN 1998-1:2004 pour l'exigence de non-effondrement ; 2 % en 50 ans, à 2 475 ans. Un événement de
+     période de retour 50 ans a 63 % de chances de se produire en 50 ans, pas 100 %.</p>
+
+  <div class="calc" id="calcPoisson">
+    <h3>Probabilité de Poisson</h3>
+    <div class="data-grid">
+      <div class="field"><label for="poTR">Période de retour T<sub>R</sub></label>
+        <div class="input-wrap"><input id="poTR" type="text" inputmode="decimal" value="475" data-curseur="10 10000 5"><span class="unit">ans</span></div></div>
+      <div class="field"><label for="poT">Durée d'exposition t</label>
+        <div class="input-wrap"><input id="poT" type="text" inputmode="decimal" value="50" data-curseur="1 200 1"><span class="unit">ans</span></div></div>
+    </div>
+    <p class="final-result" id="poOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>a, b et Mmax de chaque zone source alimentent directement le calcul de l'aléa (chapitre 10). Une
+       erreur de 0,1 sur b déplace le taux des forts séismes d'un facteur 10<sup>0,1×2</sup> ≈ 1,6 deux
+       unités au-dessus de Mc : c'est souvent la première source d'incertitude d'une étude d'aléa, que
+       l'arbre logique traduit par plusieurs branches.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Estimer b sur tout le catalogue sans tenir compte de la complétude : les petits séismes manquants des
+       époques anciennes aplatissent la distribution et font sortir b trop faible. Autre piège : calculer des
+       probabilités de Poisson avec les répliques comprises, qui gonflent le taux des petits séismes.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>log<sub>10</sub> λ(≥ M) = a − bM, b ≈ 1, tronquée à Mmax.</li>
+      <li>Complétude Mc variable dans le temps : courbure maximale, graphique de Stepp, Weichert.</li>
+      <li>b d'Aki-Utsu = 0,4343 / (M̄ − Mc + ΔM/2) au-dessus de Mc, incertitude ≈ b/√N.</li>
+      <li>Déclusterage (Gardner et Knopoff) avant Poisson : P = 1 − e<sup>−λt</sup> ; 10 % en 50 ans ↔
+        475 ans.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch8">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch8">Exerciseur</a>
+    <a class="secondary" href="labo.html#sismicite">Travaux pratiques : banc « Sismicité »</a></div>
+</section>
+
+<section id="ch9" class="card">
+  <h2>9 · Déformation de la croûte et taux de séismes</h2>
+
+  <h3>Mesurer la déformation</h3>
+  <p>Un catalogue couvre au mieux quelques siècles ; les grands séismes d'une faille lente reviennent tous
+     les mille ans ou plus. La <strong>géodésie</strong> donne une autre mesure de l'activité : des stations
+     GNSS permanentes mesurent leur vitesse au millimètre par an près. Les différences de vitesse entre
+     stations voisines révèlent la déformation de la croûte, accumulée entre les séismes puis relâchée par
+     eux. Ce que la croûte accumule en déformation élastique, les séismes doivent le rendre.</p>
+
+  <h3>Une faille bloquée</h3>
+  <p>En profondeur, sous une profondeur D de quelques kilomètres à une quinzaine, une faille glisse
+     continûment à la vitesse s ; au-dessus, elle est <strong>bloquée</strong> et ne bouge qu'aux séismes.
+     Entre deux séismes, la surface se déforme : pour un décrochement, la vitesse parallèle à la faille,
+     à la distance x, vaut (Savage et Burford, 1973) :</p>
+  <p class="formula">v(x) = (s / π) · arctan(x / D)</p>
+  <p class="method-note">La moitié du glissement s'accumule dans une bande de ± D autour de la faille ; le
+     taux de déformation y culmine à s/(πD). 1 mm/an par km vaut 10<sup>−6</sup> par an, soit 1 000
+     nanodéformations par an (ns/an).</p>
+  <p>Le taux de moment que doit libérer une faille de longueur L et de largeur W qui glisse à la vitesse s
+     s'écrit comme le moment d'un séisme (chapitre 4) : Ṁ<sub>0</sub> = μ·L·W·s.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Une faille de 60 km, bloquée sur 12 km, glisse à 5 mm/an : Ṁ<sub>0</sub> = 3·10<sup>10</sup> ×
+       60 000 × 12 000 × 0,005 = 1,08·10<sup>17</sup> N·m/an. Libéré par des séismes de magnitude 6,5
+       (M<sub>0</sub> = 6,3·10<sup>18</sup> N·m), ce moment en demande un tous les <strong>58 ans</strong> ;
+       par des séismes de magnitude 7, un tous les <strong>330 ans</strong>. Le taux de déformation culmine
+       sur la faille à 5/(π × 12) = 0,133 mm/an/km, soit 133 ns/an.</p></div>
+
+  <div class="calc" id="calcFaille">
+    <h3>Une faille bloquée : vitesses et moment</h3>
+    <div class="data-grid">
+      <div class="field"><label for="faS">Vitesse de glissement s</label>
+        <div class="input-wrap"><input id="faS" type="text" inputmode="decimal" value="5" data-curseur="0.2 30 0.1"><span class="unit">mm/an</span></div></div>
+      <div class="field"><label for="faD">Profondeur de blocage D</label>
+        <div class="input-wrap"><input id="faD" type="text" inputmode="decimal" value="12" data-curseur="2 25 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="faL">Longueur de la faille L</label>
+        <div class="input-wrap"><input id="faL" type="text" inputmode="decimal" value="60" data-curseur="5 400 5"><span class="unit">km</span></div></div>
+      <div class="field"><label for="faM">Magnitude des séismes qui la rompent</label>
+        <div class="input-wrap"><input id="faM" type="text" inputmode="decimal" value="6.5" data-curseur="5 8 0.1"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="faFig"></div>
+    <p class="final-result" id="faOut"></p>
+  </div>
+
+  <h3>Le taux de déformation d'une région</h3>
+  <p>Sur une région couverte par un réseau, on ajuste aux vitesses des stations un champ de vitesse
+     linéaire, par moindres carrés : son gradient est le <strong>tenseur des taux de déformation</strong>
+     (ε̇<sub>xx</sub>, ε̇<sub>yy</sub>, ε̇<sub>xy</sub>). Ses axes principaux donnent le raccourcissement
+     maximal ε̇<sub>1</sub> (négatif) et l'allongement ε̇<sub>2</sub>, comme les axes P et T des mécanismes au
+     foyer (chapitre 3). Dans une région lente, quelques ns/an, le bruit des stations pèse lourd : le taux
+     n'est connu qu'à un facteur 2 près, et toujours biaisé vers le haut, car le moment dépend de sa valeur
+     absolue.</p>
+  <p>Kostrov (1974) relie la déformation moyenne d'un volume au moment des séismes qu'il contient. Sous la
+     forme de Savage et Simpson (1997), pour une couche sismogène d'épaisseur H et de surface A :</p>
+  <p class="formula">Ṁ<sub>0</sub> = 2μ·H·A · max(|ε̇<sub>1</sub>|, |ε̇<sub>2</sub>|, |ε̇<sub>1</sub> + ε̇<sub>2</sub>|)</p>
+
+  <h3>Le couplage et l'équilibre en moment</h3>
+  <p>Toute la déformation ne se libère pas en séismes : une part se fait par glissement lent, plis,
+     déformation diffuse. Le <strong>couplage sismique</strong> χ, entre 0 et 1, est la part sismique. Le
+     moment sismique χ·Ṁ<sub>0</sub> doit être libéré par la loi de Gutenberg-Richter de la région, tronquée
+     à Mmax : connaissant b et Mmax, on en déduit la valeur a. C'est l'<strong>équilibre en
+     moment</strong>.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Une zone de 100 × 100 km se raccourcit de 10 ns/an d'est en ouest ; H = 15 km, μ = 30 GPa :
+       Ṁ<sub>0</sub> = 2 × 3·10<sup>10</sup> × 15 000 × 10<sup>10</sup> × 10<sup>−8</sup> =
+       9,0·10<sup>16</sup> N·m/an. Avec χ = 0,5, b = 1 et une loi de 4 à 7, l'équilibre donne a = 3,82 :
+       un séisme de magnitude ≥ 5 tous les 15 ans, de magnitude ≥ 6 tous les <strong>170 ans</strong>. Avec
+       Mmax = 6,5, le même moment se répartit sur des séismes plus petits : un séisme ≥ 6 tous les
+       120 ans, et le taux des M ≥ 4 double presque.</p></div>
+
+  <div class="calc" id="calcKostrov">
+    <h3>Du taux de déformation à la loi de Gutenberg-Richter</h3>
+    <div class="data-grid">
+      <div class="field"><label for="koXX">ε̇<sub>xx</sub> (est–ouest)</label>
+        <div class="input-wrap"><input id="koXX" type="text" inputmode="decimal" value="-10" data-curseur="-60 60 1"><span class="unit">ns/an</span></div></div>
+      <div class="field"><label for="koYY">ε̇<sub>yy</sub> (nord–sud)</label>
+        <div class="input-wrap"><input id="koYY" type="text" inputmode="decimal" value="0" data-curseur="-60 60 1"><span class="unit">ns/an</span></div></div>
+      <div class="field"><label for="koXY">ε̇<sub>xy</sub></label>
+        <div class="input-wrap"><input id="koXY" type="text" inputmode="decimal" value="0" data-curseur="-60 60 1"><span class="unit">ns/an</span></div></div>
+      <div class="field"><label for="koA">Surface de la zone A</label>
+        <div class="input-wrap"><input id="koA" type="text" inputmode="decimal" value="10000" data-curseur="500 50000 500"><span class="unit">km²</span></div></div>
+      <div class="field"><label for="koChi">Couplage sismique χ</label>
+        <div class="input-wrap"><input id="koChi" type="text" inputmode="decimal" value="0.5" data-curseur="0.05 1 0.05"><span class="unit">—</span></div></div>
+      <div class="field"><label for="koMmax">Magnitude maximale</label>
+        <div class="input-wrap"><input id="koMmax" type="text" inputmode="decimal" value="7" data-curseur="5.5 8 0.1"><span class="unit">—</span></div></div>
+    </div>
+    <p class="method-note">H = 15 km, μ = 30 GPa, b = 1, loi de Gutenberg-Richter tronquée entre 4 et Mmax,
+       équilibrée comme les sources d'OpenQuake.</p>
+    <div class="figure" id="koFig"></div>
+    <p class="final-result" id="koOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Le catalogue contraint bien le taux des petits et moyens séismes ; la géodésie, celui des grands, que
+       le catalogue n'a pas eu le temps de voir. Les modèles d'aléa récents combinent les deux, souvent comme
+       deux branches de l'arbre logique (chapitre 10) : dans le banc « aléa », la variante « géodésie » garde
+       le moment quand Mmax change, la variante « catalogue » garde a.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Prendre χ = 1 sans le dire : toute la déformation n'est pas sismique, et le taux des séismes en est
+       surestimé d'autant. Autre piège : oublier que, à moment fixé, une Mmax plus faible augmente le taux des
+       séismes moyens — le moment doit bien sortir quelque part.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Faille bloquée : v = (s/π)·arctan(x/D) ; Ṁ<sub>0</sub> = μLWs.</li>
+      <li>1 mm/an/km = 1 000 ns/an ; Kostrov : Ṁ<sub>0</sub> = 2μHA·max(|ε̇<sub>1</sub>|, |ε̇<sub>2</sub>|,
+        |ε̇<sub>1</sub> + ε̇<sub>2</sub>|).</li>
+      <li>Couplage χ : part sismique du moment ; l'équilibre en moment fixe a pour b et Mmax donnés.</li>
+      <li>La géodésie contraint les grands séismes que le catalogue n'a pas vus.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch9">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch9">Exerciseur</a>
+    <a class="secondary" href="labo.html#geodesie">Travaux pratiques : banc « Géodésie »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -1155,5 +1408,7 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch5.js"></script>
 <script type="module" src="src/cours-ch6.js"></script>
 <script type="module" src="src/cours-ch7.js"></script>
+<script type="module" src="src/cours-ch8.js"></script>
+<script type="module" src="src/cours-ch9.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>

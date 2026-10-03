@@ -1,0 +1,211 @@
+{
+ "chapitre": "ch9",
+ "exercices": [
+  {
+   "id": "ch9-faille",
+   "titre": "Moment d'une faille et période de retour",
+   "difficulte": 1,
+   "graine": 3117724479,
+   "enonce": "Une faille décrochante de 40 km de long, bloquée jusqu'à 17 km de profondeur, glisse en moyenne de 3,7 mm/an (μ = 30 GPa). On suppose que tout son moment est libéré par des séismes de magnitude 7,1.",
+   "donnees": [
+    {
+     "label": "L, D",
+     "valeur": "40 km, 17 km"
+    },
+    {
+     "label": "s",
+     "valeur": "3,7 mm/an"
+    },
+    {
+     "label": "Mw",
+     "valeur": "7,1"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Taux de moment Ṁ₀ (en 10¹⁶ N·m/an) ?",
+     "type": "nombre",
+     "unite": "10¹⁶ N·m/an",
+     "reponse": 7.548,
+     "explication": "Ṁ₀ = μ·L·D·s = 3·10¹⁰ × 40 000 × 17 000 × 0,0037 = 7,55·10^16 N·m/an.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Moment d'un séisme de magnitude 7,1 (en 10¹⁸ N·m) ?",
+     "type": "nombre",
+     "unite": "10¹⁸ N·m",
+     "reponse": 50.1187,
+     "explication": "M₀ = 10^(1,5 × 7,1 + 9,05) = 5,01·10^19 N·m.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Intervalle moyen entre deux séismes ?",
+     "type": "nombre",
+     "unite": "ans",
+     "reponse": 664,
+     "explication": "5,01·10^19 / 7,55·10^16 = 664 ans.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Taux de déformation maximal en surface, sur la faille ?",
+     "type": "nombre",
+     "unite": "ns/an",
+     "reponse": 69.2792,
+     "explication": "s/(πD) = 3,7 / (π × 17) = 0,0693 mm/an/km = 69,3 ns/an.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch9-kostrov",
+   "titre": "Moment de Kostrov d'une zone",
+   "difficulte": 2,
+   "graine": 2184364952,
+   "enonce": "Une zone de 3 000 km² se déforme au taux moyen ε̇xx = -12, ε̇yy = -4, ε̇xy = 1 ns/an (x vers l'est, y vers le nord). Couche sismogène de 15 km, μ = 30 GPa.",
+   "donnees": [
+    {
+     "label": "Tenseur (ns/an)",
+     "valeur": "-12 ; -4 ; 1"
+    },
+    {
+     "label": "A",
+     "valeur": "3 000 km²"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Taux principal de raccourcissement ε̇₁ ?",
+     "type": "nombre",
+     "unite": "ns/an",
+     "reponse": -12.1231,
+     "explication": "ε̇₁,₂ = (ε̇xx + ε̇yy)/2 ∓ √(((ε̇xx − ε̇yy)/2)² + ε̇xy²) = -8,0 ∓ 4,12 : ε̇₁ = -12,12 ns/an.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Taux principal d'allongement ε̇₂ ?",
+     "type": "nombre",
+     "unite": "ns/an",
+     "reponse": -3.87689,
+     "explication": "ε̇₂ = -3,88 ns/an.",
+     "tolerance": 0.3
+    },
+    {
+     "texte": "Taux de moment de Kostrov (en 10¹⁶ N·m/an) ?",
+     "type": "nombre",
+     "unite": "10¹⁶ N·m/an",
+     "reponse": 4.32,
+     "explication": "max(|ε̇₁|, |ε̇₂|, |ε̇₁ + ε̇₂|) = 16,00 ns/an ; Ṁ₀ = 2 × 3·10¹⁰ × 15 000 × 3 000 000 000 × 16,00·10⁻⁹ = 4,32·10^16 N·m/an.",
+     "toleranceRel": 0.03
+    }
+   ]
+  },
+  {
+   "id": "ch9-equilibre",
+   "titre": "Loi de Gutenberg-Richter équilibrée en moment",
+   "difficulte": 2,
+   "graine": 2111796994,
+   "enonce": "Le taux de moment géodésique d'une zone vaut 6,5·10^16 N·m/an ; on retient un couplage sismique χ = 0,7, b = 0,9 et une loi de Gutenberg-Richter tronquée entre 4 et 6,5. L'équilibre en moment donne a = 3,546 (λ(≥ M) = 10^(a − bM) − 10^(a − b·Mmax)).",
+   "donnees": [
+    {
+     "label": "Ṁ₀ géodésique",
+     "valeur": "6,5·10^16 N·m/an"
+    },
+    {
+     "label": "χ, b, Mmax",
+     "valeur": "0,7 ; 0,9 ; 6,5"
+    },
+    {
+     "label": "a",
+     "valeur": "3,546"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Taux de moment à libérer en séismes (en 10¹⁶ N·m/an) ?",
+     "type": "nombre",
+     "unite": "10¹⁶ N·m/an",
+     "reponse": 4.55,
+     "explication": "χ·Ṁ₀ = 0,7 × 6,5·10^16 = 4,55·10^16 N·m/an.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Période de retour des séismes de magnitude ≥ 6 ?",
+     "type": "nombre",
+     "unite": "ans",
+     "reponse": 110.774,
+     "explication": "λ(≥ 6) = 10^(3,546 − 5,4) − 10^(3,546 − 5,85) = 0,00903 / an, soit une fois tous les 111 ans.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "À moment égal, si l'on abaisse Mmax d'une demi-unité, le taux des séismes de magnitude 5…",
+     "type": "choix",
+     "options": [
+      "augmente : le même moment doit être libéré par des séismes plus petits",
+      "diminue",
+      "ne change pas",
+      "devient nul"
+     ],
+     "reponse": 0,
+     "explication": "L'équilibre en moment fixe a pour b et Mmax donnés ; une Mmax plus faible relève a et donc le taux de toutes les magnitudes inférieures."
+    }
+   ]
+  },
+  {
+   "id": "ch9-notions",
+   "titre": "Géodésie et sismicité",
+   "difficulte": 1,
+   "graine": 3473645038,
+   "enonce": "Questions sur la géodésie et le bilan de moment.",
+   "questions": [
+    {
+     "texte": "1 mm/an de différence de vitesse entre deux stations distantes de 10 km correspond à…",
+     "type": "choix",
+     "options": [
+      "1 000 ns/an",
+      "100 ns/an",
+      "10 ns/an",
+      "1 ns/an"
+     ],
+     "reponse": 1,
+     "explication": "1 mm/an/km = 10⁻⁶/an = 1 000 ns/an ; sur 10 km, 0,1 mm/an/km = 100 ns/an."
+    },
+    {
+     "texte": "Pour une faille bloquée jusqu'à D, la moitié du glissement s'accumule…",
+     "type": "choix",
+     "options": [
+      "uniquement sur la faille",
+      "uniformément sur toute la région",
+      "dans une bande de ± D autour de la faille",
+      "à plus de 10 D de la faille"
+     ],
+     "reponse": 2,
+     "explication": "arctan(±1) = ±π/4 : à ± D, la vitesse vaut ± s/4, la moitié de l'écart total s."
+    },
+    {
+     "texte": "Le catalogue et la géodésie se complètent car…",
+     "type": "choix",
+     "options": [
+      "le catalogue mesure la déformation",
+      "le catalogue contraint les petits et moyens séismes, la géodésie le taux des grands",
+      "ils donnent toujours le même résultat",
+      "la géodésie mesure directement les magnitudes"
+     ],
+     "reponse": 1,
+     "explication": "Les grands séismes d'une faille lente reviennent trop rarement pour qu'un catalogue de quelques siècles les compte ; la déformation, elle, s'accumule en continu."
+    },
+    {
+     "texte": "Le couplage sismique χ est…",
+     "type": "choix",
+     "options": [
+      "le rapport entre ML et Mw",
+      "la valeur b de la région",
+      "la part du moment géodésique libérée par des séismes",
+      "la profondeur de blocage d'une faille"
+     ],
+     "reponse": 2,
+     "explication": "Le reste se libère par glissement lent, plis ou déformation diffuse."
+    }
+   ]
+  }
+ ]
+}

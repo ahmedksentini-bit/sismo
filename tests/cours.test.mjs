@@ -202,3 +202,40 @@ test('chapitre 7 : les exemples chiffrés du texte', async () => {
   assert.ok(S.periodeApprochee(15, 'beton') < 0.6);
   for (const t of ['<strong>0,575 g</strong>', '= 0,345 g', '= 0,077 g', 'tombe à 0,19 g', '≈ 0,57 s', '0,82 pour 10 % ; 1,20 pour 2 %', 'vers\n     28 %']) assert.ok(cours.includes(t), t);
 });
+
+test('chapitre 8 : les exemples chiffrés du texte', async () => {
+  const S = (await import('../src/sismo/sismicite.js')).default;
+  const lam = m => 2 * 10 ** (-(m - 4));
+  assert.deepEqual([5, 6, 7].map(m => +lam(m).toPrecision(2)), [0.2, 0.02, 0.002]);
+  assert.equal((Math.log10(2) + 4).toFixed(2), '4.30');
+  assert.equal((Math.LOG10E / (3.43 - 2.95)).toFixed(2), '0.90');
+  const w5 = S.fenetreGK(5), w7 = S.fenetreGK(7);
+  assert.equal(Math.round(w5.L / 10) * 10, 40);
+  assert.equal(Math.round(w5.T / 10) * 10, 140);
+  assert.equal(Math.round(w7.L / 10) * 10, 70);
+  assert.equal((w7.T / 365.25).toFixed(1), '2.5');
+  assert.equal(Math.round(S.periodeRetour(0.1, 50)), 475);
+  assert.equal(Math.round(S.periodeRetour(0.02, 50)), 2475);
+  assert.equal(Math.round(100 * S.probabilite(1 / 50, 50)), 63);
+  assert.equal((10 ** 0.2).toFixed(1), '1.6');
+  for (const t of ['tous les <strong>5 ans</strong>', '(tous les\n       50 ans)', '2,95) =\n       <strong>0,90</strong>', 'environ 40 km et 140 jours pour M 5, 70 km et 2,5 ans pour M 7', 'T<sub>R</sub> = 475 ans', 'a 63 % de chances']) assert.ok(cours.includes(t), t);
+});
+
+test('chapitre 9 : les exemples chiffrés du texte', async () => {
+  const G = (await import('../src/sismo/geodesie.js')).default;
+  const M0 = G.momentFaille({ L: 60, W: 12, s: 5 });
+  assert.equal(M0.toExponential(2), '1.08e+17');
+  assert.equal(G.moment(6.5).toExponential(1), '6.3e+18');
+  assert.equal(Math.round(G.moment(6.5) / M0), 58);
+  assert.equal(Math.round(G.moment(7) / M0 / 10) * 10, 330);
+  assert.equal(Math.round(1000 * 5 / (Math.PI * 12)), 133);
+  const t = { exx: -10, eyy: 0, exy: 0 };
+  assert.equal(G.momentKostrov(t, { A: 1e4, H: 15 }).toExponential(1), '9.0e+16');
+  const z = G.bilanZone({ tenseur: t, A: 1e4, chi: 0.5, b: 1, mmin: 4, mmax: 7 }), z2 = G.bilanZone({ tenseur: t, A: 1e4, chi: 0.5, b: 1, mmin: 4, mmax: 6.5 });
+  assert.equal(z.a.toFixed(2), '3.82');
+  assert.equal(Math.round(1 / z.taux(5)), 15);
+  assert.equal(Math.round(1 / z.taux(6) / 10) * 10, 170);
+  assert.equal(Math.round(1 / z2.taux(6) / 10) * 10, 120);
+  assert.ok(z2.taux(4) / z.taux(4) > 1.7 && z2.taux(4) / z.taux(4) < 2);
+  for (const t of ['tous les <strong>58 ans</strong>', 'tous les <strong>330 ans</strong>', 'soit 133 ns/an', '9,0·10<sup>16</sup> N·m/an', 'a = 3,82', 'tous les <strong>170 ans</strong>', 'tous les\n       120 ans']) assert.ok(cours.includes(t), t);
+});
