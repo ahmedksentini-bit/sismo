@@ -32,6 +32,7 @@
     <button type="button" data-onglet="ductilite" aria-pressed="false">Ductilité</button>
     <button type="button" data-onglet="batiment" aria-pressed="false">Bâtiment</button>
     <button type="button" data-onglet="poussee" aria-pressed="false">Poussée</button>
+    <button type="button" data-onglet="isolation" aria-pressed="false">Isolation</button>
   </nav>
 </header>
 
@@ -72,6 +73,8 @@
         forces latérales et par l'analyse modale spectrale de l'Eurocode 8, déplacements entre étages, et combinaisons modales confrontées à des calculs temporels.</p>
       <p class="chapeau" id="chapeau-poussee" hidden>On pousse le bâtiment jusqu'à former un mécanisme : la courbe de capacité, ramenée à un oscillateur équivalent,
         donne le déplacement cible de la méthode N2. Est-il juste ? Sept calculs temporels non linéaires du même bâtiment répondent, étage par étage.</p>
+      <p class="chapeau" id="chapeau-isolation" hidden>Posé sur des isolateurs, le bâtiment change de période et d'amortissement : l'accélération transmise chute,
+        le déplacement se reporte dans les appuis. Linéarisation équivalente, boucle de l'isolateur et calculs temporels non linéaires face à la base fixe.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -1119,6 +1122,88 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-isolation" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Décalage de période">
+        <h2>Décalage de période et amortissement<small>Spectre élastique de l'EN 1998-1:2004 à 5 % et à l'amortissement équivalent de l'isolation (η, § 3.2.2.2 (3)) ; points : superstructure sur base fixe et bâtiment isolé à la période effective</small></h2>
+        <canvas id="is-spectre" aria-label="Spectres à 5 % et à l'amortissement équivalent, périodes base fixe et isolée"></canvas>
+        <p class="legende"><span><i style="background:var(--teal)"></i>Se, ξ = 5 %</span><span><i class="tirets" style="border-color:var(--blue)"></i>Se, ξeff</span><span><i style="background:var(--pick-p)"></i>base fixe</span><span><i style="background:var(--blue)"></i>isolé</span></p>
+      </section>
+      <section class="carte" aria-label="Linéarisation équivalente">
+        <h2>Linéarisation équivalente<small>Pour un déplacement supposé d : raideur sécante, période et amortissement équivalents, puis la demande spectrale ; la solution est le point où la demande égale le déplacement supposé (escalier : itérations)</small></h2>
+        <canvas id="is-pointfixe" aria-label="Demande spectrale en fonction du déplacement supposé et itérations"></canvas>
+        <p class="legende"><span><i style="background:var(--teal)"></i>demande</span><span><i class="tirets" style="border-color:var(--grid-strong)"></i>demande = d</span><span><i style="background:var(--blue)"></i>itérations</span><span><i style="background:var(--pick-p)"></i>déplacement de calcul</span></p>
+      </section>
+      <section class="carte" aria-label="Boucle de l'isolateur">
+        <h2>Boucle de l'isolateur<small>Effort–déplacement de l'isolateur sous l'accélérogramme choisi ; tirets : enveloppe bilinéaire ; trait rouge : raideur sécante Keff au déplacement de calcul</small></h2>
+        <canvas id="is-boucle" aria-label="Boucle effort-déplacement de l'isolateur"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>calcul temporel</span><span><i class="tirets" style="border-color:var(--grid-strong)"></i>enveloppe</span><span><i style="background:var(--pick-p)"></i>Keff</span><span id="is-etat"></span></p>
+      </section>
+      <section class="carte" aria-label="Calcul temporel">
+        <h2>Déplacement et accélérations au cours du temps<small>En haut, déplacement de l'isolateur (tirets : déplacement de calcul) ; en bas, accélération absolue de la superstructure, isolée ou sur base fixe</small></h2>
+        <canvas id="is-temps" aria-label="Déplacement de l'isolateur et accélérations de la superstructure"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>isolé</span><span><i style="background:var(--pick-p)"></i>base fixe</span></p>
+        <p class="aide">Bâtiment à deux niveaux : dalle de base (30 % de la superstructure) sur l'isolateur bilinéaire, superstructure élastique amortie à 5 %,
+          amortisseur visqueux ξv dans l'isolateur ; Newmark et Newton couplés, vérifiés contre OpenSeesPy (Steel01 et Viscous en parallèle) à 10⁻⁸ près.</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="is-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="is-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="is-afficheurs"></div></section>
+      <section class="carte" id="is-panneau-explorer" aria-label="Réglages">
+        <p class="sous-titre">Superstructure</p>
+        <div class="champ"><label for="is-ts">Période sur base fixe Ts <output id="is-ts-v"></output></label><input type="range" id="is-ts" min="0.1" max="1" step="0.05"></div>
+        <div class="champ"><label for="is-ms">Masse <output id="is-ms-v"></output></label><input type="range" id="is-ms" min="200" max="3000" step="100"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Isolateurs</p>
+        <div class="champ"><label for="is-tiso">Période post-élastique Tiso <output id="is-tiso-v"></output></label><input type="range" id="is-tiso" min="1.5" max="4" step="0.1"></div>
+        <div class="champ"><label for="is-q">Résistance caractéristique Q/W <output id="is-q-v"></output></label><input type="range" id="is-q" min="0" max="0.1" step="0.005"></div>
+        <div class="champ"><label for="is-dy">Déplacement de plastification <output id="is-dy-v"></output></label><input type="range" id="is-dy" min="0.005" max="0.03" step="0.001"></div>
+        <div class="champ"><label for="is-xiv">Amortissement visqueux ξv <output id="is-xiv-v"></output></label><input type="range" id="is-xiv" min="0" max="0.15" step="0.01"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Séisme (EN 1998-1:2004)</p>
+        <div class="champ"><label for="is-ag">ag <output id="is-ag-v"></output></label><input type="range" id="is-ag" min="0.05" max="0.5" step="0.01"></div>
+        <div class="champ"><span class="etiquette">Classe de sol</span><div class="segments" role="group" aria-label="Classe de sol"><button type="button" data-is-sol="A">A</button><button type="button" data-is-sol="B">B</button><button type="button" data-is-sol="C">C</button><button type="button" data-is-sol="D">D</button><button type="button" data-is-sol="E">E</button></div></div>
+        <div class="champ"><span class="etiquette">Type de spectre</span><div class="segments" role="group" aria-label="Type de spectre"><button type="button" data-is-type="1">Type 1 · M 7 à 10 km</button><button type="button" data-is-type="2">Type 2 · M 6 à 5 km</button></div></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="is-tirage">Autres accélérogrammes</button></div>
+      </section>
+      <section class="carte" id="is-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="is-exo-num"></span>
+        <p class="enonce">Faites une itération de la linéarisation équivalente pour le déplacement supposé : raideur effective, amortissement effectif,
+          période effective, puis la demande spectrale en déplacement (spectre élastique de l'EN 1998-1:2004 corrigé par η).</p>
+        <div id="is-exo-donnees"></div>
+        <div class="champ"><label for="is-r-keff">Keff (kN/m)</label><input type="text" id="is-r-keff" inputmode="decimal" autocomplete="off" placeholder="ex. 12 500"></div>
+        <div class="champ"><label for="is-r-xi">ξeff (%)</label><input type="text" id="is-r-xi" inputmode="decimal" autocomplete="off" placeholder="ex. 18"></div>
+        <div class="champ"><label for="is-r-teff">Teff (s)</label><input type="text" id="is-r-teff" inputmode="decimal" autocomplete="off" placeholder="ex. 2,1"></div>
+        <div class="champ"><label for="is-r-d">Demande (cm)</label><input type="text" id="is-r-d" inputmode="decimal" autocomplete="off" placeholder="ex. 14"></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="is-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="is-nouvel-exo">Nouvel exercice</button></div>
+        <div id="is-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Itérations">
+        <p class="sous-titre">Itérations</p>
+        <div class="table-defile"><table class="resultats" id="is-iter-table"></table></div>
+      </section>
+      <section class="carte" aria-label="Calculs temporels">
+        <p class="sous-titre">Calculs temporels non linéaires</p>
+        <div class="table-defile"><table class="resultats" id="is-temps-table"></table></div>
+        <p class="aide" id="is-temps-info"></p>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Décalage de période</b> : l'isolation porte la période au-delà du palier du spectre ; l'accélération transmise à la superstructure chute, le déplacement se concentre dans les isolateurs.</li>
+          <li><b>Amortissement</b> : l'hystérésis de l'isolateur dissipe ED = 4·Q·(d − dy) par cycle ; ramené à un amortissement visqueux équivalent, il réduit la demande par η, plafonné à 0,55 par l'EN 1998-1:2004.</li>
+          <li><b>Point fixe</b> : raideur et amortissement équivalents dépendent du déplacement cherché ; on itère jusqu'à ce que la demande égale le déplacement supposé.</li>
+          <li><b>Compromis</b> : une résistance Q plus forte amortit davantage et réduit le déplacement, mais raidit l'isolateur et renvoie de l'accélération à la superstructure. Le chapitre 10 de l'EN 1998-1 encadre ces calculs.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <div class="poste" id="banc-mecanisme" hidden>
     <div class="colonne">
       <section class="carte" aria-label="Sphère focale">
@@ -1261,6 +1346,7 @@
 <script type="module" src="src/banc-source.js"></script>
 <script type="module" src="src/banc-batiment.js"></script>
 <script type="module" src="src/banc-poussee.js"></script>
+<script type="module" src="src/banc-isolation.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>

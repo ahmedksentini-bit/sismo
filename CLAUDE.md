@@ -110,7 +110,7 @@ la virgule décimale.
     saturation, Q(f), κ, amplification du site) ; Mw = (log10 M0 − 9,05)/1,5 et Δσ de la relation de Brune du
     générateur ; la correction de Reff dépend de Mw : itérée. La vérité est le Mw et le Δσ du générateur ; le
     banc se limite à Mw ≤ 6 (au-delà, fc passe sous 0,2 Hz et la fenêtre S ne suffit plus). La barre des bancs
-    passe à la ligne (dix-sept onglets) : ne pas la remettre sur une seule ligne forcée.
+    passe à la ligne (dix-huit onglets) : ne pas la remettre sur une seule ligne forcée.
 25. **Intensité** (`src/sismo/intensite.js`) : conventions d'eqsig (référence `tests/references/intensite.json`,
     `tools/eqsig/`) : trapèzes, Arias avec g = 9,81 m/s², bornes de durée aux indices strictement compris entre les
     fractions de Ia (Trifunac et Brady 1975). Les indicateurs de la banque sont calculés à l'échelle 1 : Arias se
@@ -126,4 +126,11 @@ la virgule décimale.
     exacte. Profils « modal » Fi = mi·Φi (Φ du mode 1 normée au sommet) et « uniforme » Fi = mi (Γ = 1) ; dt = Γ·d*t
     avec `Inelastique.n2`. Résistances = ω × efforts de l'analyse modale de calcul. Calcul temporel : Rayleigh sur la
     rigidité initiale (ξ aux modes 1 et 2), Newmark et Newton couplés, sous-pas du mode le plus court ; OpenSees
-    exige `-doRayleigh` sur les zeroLength, sans quoi l'amortissement de raideur disparaît.
+    exige `-doRayleigh` sur les zeroLength, sans quoi l'amortissement de raideur disparaît. Option `amortissement`
+    { a0, c } : C = a0·M + amortisseurs d'étage c_i (Rayleigh ⇔ c_i = a1·k_i) ; α peut être donné par étage.
+28. **Isolation** (`src/sismo/isolation.js`) : isolateur bilinéaire défini par Tiso (K2 de la masse portée totale),
+    Q = q·M·g (force à déplacement nul) et dy ; ED = 4·Q·(d − dy) (testé sur le ressort cinématique) ; ξeff = ξv +
+    ED/(2π·Keff·d²), demande η·Se(Teff)·(Teff/2π)² par `Spectre.ec8(T, { xi })` (η ≥ 0,55) ; point fixe avec relaxation.
+    Bâtiment isolé : dalle de base (30 % de la superstructure) + superstructure à un niveau, amortisseurs d'étage (pas
+    de Rayleigh, qui amortirait le mode isolé). Accélérogrammes calés autour de Teff ; la base fixe reçoit le même
+    mouvement. Le chapitre 10 de l'EN 1998-1 n'est cité qu'en général, pas recopié de mémoire.
