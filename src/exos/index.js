@@ -2,6 +2,8 @@
 // demande : l'exerciseur n'importe que le chapitre ouvert.
 export const MODELES = {
   ch1: () => import("./ch01.js"),
+  ch2: () => import("./ch02.js"),
+  ch3: () => import("./ch03.js"),
 };
 
 /** Graine stable d'un exercice de banque (FNV-1a sur l'identifiant). */
