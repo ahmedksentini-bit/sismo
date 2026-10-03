@@ -3,11 +3,13 @@ import Psha from './sismo/psha.js';
 import Sismo from './sismo/signal.js';
 import Accelero from './sismo/accelerogramme.js';
 import Selection from './sismo/selection.js';
+import Intensite from './sismo/intensite.js';
 
 // src/banc-selection.js — banc « accélérogrammes » : sélection et mise à l'échelle d'un jeu d'accélérogrammes
 // synthétiques sur une cible (spectre moyen conditionnel à T1, UHS ou spectre élastique de l'EN 1998-1:2004),
 // puis contrôle des règles du § 3.2.3.1.2 (4). L'aléa vient du modèle du banc « aléa » (événement
-// alea:modele) ou du modèle d'école. Tout le calcul est dans src/sismo/ (psha, accelerogramme, selection).
+// alea:modele) ou du modèle d'école. Durée significative et intensité d'Arias de chaque enregistrement.
+// Tout le calcul est dans src/sismo/ (psha, accelerogramme, selection, intensite).
 (() => {
   'use strict';
   const Sp = Spectre;
@@ -17,6 +19,7 @@ import Selection from './sismo/selection.js';
   const POLICE = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const MONO = 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace';
   const g3 = x => (x >= 1 ? virg(x, 2) : x >= 0.1 ? virg(x, 3) : virg(x, 4));
+  const sig2 = x => (x >= 1 ? virg(x, 1) : x > 0 ? virg(x, 1 - Math.floor(Math.log10(x))) : '0'); // deux chiffres significatifs
   const tps = t => virg(t, t < 0.1 ? 2 : t < 1 && Math.abs(t * 10 - Math.round(t * 10)) > 1e-9 ? 2 : 1);
 
   // Périodes de calcul (s) : celles du modèle d'aléa et quelques intermédiaires
@@ -41,8 +44,10 @@ import Selection from './sismo/selection.js';
       if (etat.enCours !== jeton) return; // une autre banque a été demandée
       for (let k = 0; k < PAR_TRANCHE && liste.length < NB_BANQUE; k++) {
         const M = Math.round(u.entre(5, 7.6) * 10) / 10, R = Math.round(Math.exp(u.entre(Math.log(3), Math.log(150))));
-        const g = 1 + Math.floor(u() * 1e9), sp = Accelero.spectre(Accelero.simuler({ M, R, graine: g }), T);
-        liste.push({ id: liste.length + 1, M, R, graine: g, Sa: sp.Sa, pga: sp.pga });
+        const g = 1 + Math.floor(u() * 1e9), rec = Accelero.simuler({ M, R, graine: g }), sp = Accelero.spectre(rec, T);
+        // durées et énergie à l'échelle 1 : Arias varie comme s², CAV et PGV comme s, les durées ne changent pas
+        const im = Intensite.indicateurs(rec.acc, rec.dt);
+        liste.push({ id: liste.length + 1, M, R, graine: g, Sa: sp.Sa, pga: sp.pga, d595: im.d595, arias: im.arias, cav: im.cav, pgv: im.pgv });
       }
       $('#ac-etat').textContent = `banque : ${liste.length} / ${NB_BANQUE} accélérogrammes`;
       if (liste.length < NB_BANQUE) setTimeout(tranche, 0);
@@ -211,7 +216,8 @@ import Selection from './sismo/selection.js';
     if (!etat.sel) return message(cv, '—');
     const c = etat.sel.choisis[etat.vu], b = etat.banque[c.i], s = c.s * etat.facteur;
     const rec = Accelero.simuler({ M: b.M, R: b.R, graine: b.graine }), acc = Array.from(rec.acc, v => (v * s) / Sp.G);
-    const { ctx, W, H } = preparer(cv), m = { g: 50, d: 14, h: 30, b: 28 }, duree = acc.length * rec.dt;
+    const im = Intensite.indicateurs(rec.acc, rec.dt);
+    const { ctx, W, H } = preparer(cv), etroit = W < 600, m = { g: 50, d: 14, h: etroit ? 46 : 30, b: 28 }, duree = acc.length * rec.dt;
     let amax = 0, imax = 0;
     acc.forEach((v, i) => { if (Math.abs(v) > amax) { amax = Math.abs(v); imax = i; } });
     const ym = amax * 1.15, X = t => m.g + (t / duree) * (W - m.g - m.d), Y = v => m.h + (H - m.h - m.b) / 2 * (1 - v / ym);
@@ -220,6 +226,8 @@ import Selection from './sismo/selection.js';
     for (let t = 0; t <= duree; t += pasT) { const x = Math.round(X(t)) + 0.5; ctx.beginPath(); ctx.moveTo(x, m.h); ctx.lineTo(x, H - m.b); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(String(t), x, H - m.b + 5); }
     for (let v = -Math.floor(ym / pasA) * pasA; v <= ym + 1e-9; v += pasA) { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(m.g, y); ctx.lineTo(W - m.d, y); ctx.stroke(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(virg(v, pasA < 0.1 ? 2 : 1), m.g - 6, y); }
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('temps (s)', W - m.d - 4, H - m.b - 3);
+    // durée significative : de 5 % à 95 % de l'intensité d'Arias
+    ctx.fillStyle = COUL.soft; ctx.globalAlpha = 0.8; ctx.fillRect(X(im.t5), m.h, X(im.t95) - X(im.t5), H - m.h - m.b); ctx.globalAlpha = 1;
     ctx.strokeStyle = COUL.trace; ctx.lineWidth = 1; ctx.beginPath();
     const pas = Math.max(1, Math.floor(acc.length / (2 * (W - m.g - m.d))));
     for (let i = 0; i < acc.length; i += pas) {
@@ -232,7 +240,17 @@ import Selection from './sismo/selection.js';
     }
     ctx.stroke();
     ctx.fillStyle = COUL['pick-p']; ctx.beginPath(); ctx.arc(X(imax * rec.dt), Y(acc[imax]), 4, 0, 2 * Math.PI); ctx.fill();
+    // courbe de Husid (intensité d'Arias cumulée, normée) sur toute la hauteur du graphe
+    const Yh = h => H - m.b - h * (H - m.h - m.b), pasH = Math.max(1, Math.floor(acc.length / (W - m.g - m.d)));
+    ctx.strokeStyle = COUL['pick-s']; ctx.lineWidth = 1.8; ctx.beginPath();
+    for (let i = 0; i < acc.length; i += pasH) (i ? ctx.lineTo(X(i * rec.dt), Yh(im.husid[i])) : ctx.moveTo(X(0), Yh(0)));
+    ctx.lineTo(X((acc.length - 1) * rec.dt), Yh(1)); ctx.stroke();
+    ctx.strokeStyle = COUL['pick-s']; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+    for (const h of [0.05, 0.95]) { const y = Math.round(Yh(h)) + 0.5; ctx.beginPath(); ctx.moveTo(m.g, y); ctx.lineTo(W - m.d, y); ctx.stroke(); }
+    ctx.setLineDash([]);
     texte(ctx, `n° ${etat.vu + 1} · M ${virg(b.M, 1)} · Rjb ${b.R} km · ×${virg(s, 2)} · PGA ${g3(amax)} g`, m.g, 14, COUL.ink, `800 12px ${POLICE}`);
+    const droite = `D5–95 ${virg(im.d595, 1)} s · Ia ${g3(im.arias * s * s)} m/s`;
+    texte(ctx, droite, etroit ? m.g : W - m.d, etroit ? 31 : 14, COUL['pick-s'], `800 12px ${POLICE}`, etroit ? 'left' : 'right');
     texte(ctx, 'a (g)', m.g + 6, m.h + 8, COUL.muted, `10.5px ${MONO}`);
   }
 
@@ -240,9 +258,9 @@ import Selection from './sismo/selection.js';
   function majTable() {
     const sel = etat.sel;
     if (!sel) { $('#ac-table').innerHTML = '<tbody><tr><td>—</td></tr></tbody>'; return; }
-    $('#ac-table').innerHTML = `<thead><tr><th>n°</th><th>M</th><th>Rjb (km)</th><th>facteur</th><th>écart ln</th></tr></thead><tbody>${sel.choisis.map((c, j) => {
+    $('#ac-table').innerHTML = `<thead><tr><th>n°</th><th>M</th><th>Rjb (km)</th><th>facteur</th><th>écart ln</th><th><span style="white-space:nowrap">D5–95</span> (s)</th><th>Arias (m/s)</th></tr></thead><tbody>${sel.choisis.map((c, j) => {
       const b = etat.banque[c.i];
-      return `<tr class="${j === etat.vu ? 'vu' : ''}" data-ac-vu="${j}" tabindex="0"><td class="n">${j + 1}</td><td class="n">${virg(b.M, 1)}</td><td class="n">${b.R}</td><td class="n">×${virg(c.s * etat.facteur, 2)}</td><td class="n">${virg(c.e, 2)}</td></tr>`;
+      return `<tr class="${j === etat.vu ? 'vu' : ''}" data-ac-vu="${j}" tabindex="0"><td class="n">${j + 1}</td><td class="n">${virg(b.M, 1)}</td><td class="n">${b.R}</td><td class="n">×${virg(c.s * etat.facteur, 2)}</td><td class="n">${virg(c.e, 2)}</td><td class="n">${virg(b.d595, 1)}</td><td class="n">${sig2(b.arias * (c.s * etat.facteur) ** 2)}</td></tr>`;
     }).join('')}</tbody>`;
     $$('[data-ac-vu]').forEach(tr => {
       const choisir = () => { etat.vu = +tr.dataset.acVu; majTable(); dessinerBanque(); dessinerAccelero(); dessinerSpectres(); };
@@ -250,7 +268,8 @@ import Selection from './sismo/selection.js';
       tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisir(); } });
     });
     const smax = Math.max(...sel.choisis.map(c => Math.max(c.s, 1 / c.s)));
-    $('#ac-table-info').textContent = `${sel.admissibles} enregistrements admissibles sur ${NB_BANQUE}` + (sel.echanges ? ` · ${sel.echanges} échange${sel.echanges > 1 ? 's' : ''} glouton${sel.echanges > 1 ? 's' : ''}` : '') + ` · facteur extrême ×${virg(smax, 2)}`;
+    const dMoy = sel.choisis.reduce((x, c) => x + etat.banque[c.i].d595, 0) / sel.choisis.length;
+    $('#ac-table-info').textContent = `${sel.admissibles} enregistrements admissibles sur ${NB_BANQUE}` + (sel.echanges ? ` · ${sel.echanges} échange${sel.echanges > 1 ? 's' : ''} glouton${sel.echanges > 1 ? 's' : ''}` : '') + ` · facteur extrême ×${virg(smax, 2)} · D5–95 moyenne ${virg(dMoy, 1)} s`;
   }
   function majRegles() {
     const a = etat.analyse, v = etat.ec8Affiche;

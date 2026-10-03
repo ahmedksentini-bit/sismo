@@ -16,7 +16,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Sismicité** | catalogue simulé de 1900 à 2025 (Gutenberg-Richter, répliques d'Omori-Utsu, complétude qui s'améliore avec le temps) ; graphique de Stepp ; valeur b d'Aki sur une période ou de Weichert sur une table de complétude ; Mc par courbure maximale ; déclusterage de Gardner et Knopoff ; taux annuels, périodes de retour, probabilités de Poisson ; mode exercice noté |
 | **Géodésie** | réseau GNSS simulé sur les zones du modèle d'aléa (faille bloquée de Savage et Burford, bande de raccourcissement) ; budget de moment avec la faille F ; profil des vitesses ; taux de déformation par zone par moindres carrés, axes principaux et incertitudes ; taux de moment de Kostrov (Savage et Simpson), tirages et biais en région lente ; couplage χ ; loi de Gutenberg-Richter équilibrée en moment face au catalogue ; envoi des moments au banc « aléa » ; mode exercice noté |
 | **Aléa (PSHA)** | modèle d'école à deux zones sources discrétisées en points et une faille à ruptures flottantes (faille F, glissement réglable), site déplaçable et Vs30 ; arbre logique : modèle de taux (catalogue : (a, b) de chaque zone ; géodésie : couplage χ, moment conservé) × ΔMmax × loi d'atténuation (Akkar et al. 2014, Bindi et al. 2014, Boore et al. 2014, poids égaux), 108 réalisations en énumération complète ; courbes d'aléa de chaque réalisation, moyenne et fractiles 16/84 % ; UHS face aux spectres de l'EN 1998-1:2004 ; spectre moyen conditionnel à la grandeur choisie (Lin et al. 2013, corrélation de Baker et Jayaram 2008) avec sa dispersion ; carte d'aléa sur une grille de 20 km (niveau moyen de la grandeur choisie, isolignes) ; désagrégation magnitude-distance ; sensibilité aux branches ; mode exercice noté |
-| **Accélérogrammes** | banque de 160 accélérogrammes synthétiques (méthode stochastique, source à deux coins, calés en moyenne sur les trois lois d'atténuation) ; sélection et mise à l'échelle sur le spectre moyen conditionnel à T1 (calage à Sa(T1), échanges gloutons de Jayaram et al. 2011 sur la moyenne et la dispersion), l'UHS ou le spectre de l'EN 1998-1:2004 ; filtre sur le scénario de la désagrégation, facteur maximal ; contrôle du § 3.2.3.1.2 (4) (nombre, PGA moyen ≥ ag·S, moyenne ≥ 0,9·Se de 0,2·T1 à 2·T1), facteur commun minimal et réponse à retenir (§ 4.3.3.4.3 (3)) ; aléa repris du banc « aléa » ; mode exercice noté |
+| **Accélérogrammes** | banque de 160 accélérogrammes synthétiques (méthode stochastique, source à deux coins, calés en moyenne sur les trois lois d'atténuation) ; sélection et mise à l'échelle sur le spectre moyen conditionnel à T1 (calage à Sa(T1), échanges gloutons de Jayaram et al. 2011 sur la moyenne et la dispersion), l'UHS ou le spectre de l'EN 1998-1:2004 ; filtre sur le scénario de la désagrégation, facteur maximal ; durée significative D5–95, intensité d'Arias et courbe de Husid de chaque enregistrement (vérifiées contre eqsig) ; contrôle du § 3.2.3.1.2 (4) (nombre, PGA moyen ≥ ag·S, moyenne ≥ 0,9·Se de 0,2·T1 à 2·T1), facteur commun minimal et réponse à retenir (§ 4.3.3.4.3 (3)) ; aléa repris du banc « aléa » ; mode exercice noté |
 | **Site** | colonne de sol stratifiée sur rocher (profils types ou couches réglables : épaisseur, Vs, IP), ondes SH verticales (Kramer 1996) en linéaire ou en linéaire équivalent (courbes de Darendeli 2001, γeff = 0,65·γmax) ; fonction de transfert et f0 du quart d'onde, spectres au rocher et en surface face aux spectres de l'EN 1998-1:2004 (sol A et classe du site), profils de Vs compatible, de déformation, de G/G0 et ξ ; Vs30 et classe de sol (tableau 3.1) ; calcul vérifié contre pystrata ; mode exercice noté |
 | **Liquéfaction** | sondage CPT d'école (profils types, nappe réglable), séisme (amax, M) ; méthode simplifiée de Boulanger et Idriss (2014) : CSR, CRR(qc1Ncs)·MSF·Kσ, Ic et teneur en fines, coefficient de sécurité ; indice LPI d'Iwasaki et tassement de Zhang et al. (2002) ; variante SPT dans le moteur ; vérifié contre liquepy ; mode exercice noté |
 | **Ductilité** | oscillateur élastoplastique (écrouissage cinématique) de période T et de résistance Se(T)/R sous sept accélérogrammes calés sur le spectre de l'EN 1998-1:2004 à T ; boucle d'hystérésis, déplacement au cours du temps et résiduel ; spectres de ductilité à résistance constante face aux règles des égaux déplacements et de la méthode N2 ; déplacement cible N2 (annexe B) en format accélération–déplacement face à la moyenne des calculs temporels ; vérifié contre OpenSeesPy ; mode exercice noté |
@@ -65,6 +65,7 @@ src/sismo/selection.js    sélection et mise à l'échelle sur une cible, échan
                           EN 1998-1:2004 § 3.2.3.1.2 (4)
 src/sismo/isolignes.js    isolignes d'une grille (carrés marchants), niveaux ronds
 src/sismo/source.js       spectre des ondes S corrigé du trajet, modèle de Brune, M0, Mw, Δσ
+src/sismo/intensite.js    PGA, PGV, intensité d'Arias, durées significatives, CAV, courbe de Husid
 src/sismo/mecanisme.js    mécanisme au foyer : double couple, plans, axes, rayonnement P, Schmidt, inversion
 src/sismo/inelastique.js  oscillateur bilinéaire (Newmark, Newton), ductilité, facteur Rμ, méthode N2
 src/sismo/liquefaction.js déclenchement de la liquéfaction (CPT, SPT), LPI, tassement, sondage d'école
@@ -86,14 +87,15 @@ src/banc-mecanisme.js   banc « mécanisme »
 src/banc-source.js      banc « source »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, liquéfaction, inélastique, mécanisme, source, références (95 tests)
-tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy et ObsPy (npm run references)
+                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, références (98 tests)
+tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
 tools/pystrata/         référence des effets de site (Python, pystrata)
 tools/liquepy/          référence de la liquéfaction (Python, liquepy)
 tools/opensees/         référence de l'oscillateur inélastique (Python, OpenSeesPy)
 tools/obspy/            référence du mécanisme au foyer (Python, ObsPy)
+tools/eqsig/            référence des indicateurs d'accélérogramme (Python, eqsig)
 ```
 
 ## Modèle des signaux
@@ -175,13 +177,17 @@ des tenseurs des moments du site (convertis de NED en USE), les plans nodaux (`m
 près. Pour un plan auxiliaire vertical, `aux_plane` d'ObsPy rend un glissement de signe opposé dont le tenseur n'est
 plus le même : le test compare alors les tenseurs.
 
+Les indicateurs d'accélérogramme sont comparés à eqsig (eng-tools, licence MIT, non embarqué) : `tools/eqsig/intensite.py`
+calcule PGA, PGV, intensité d'Arias (g = 9,81 m/s²), durées significatives 5–95 % et 5–75 % et CAV sur les
+accélérogrammes de référence de l'inélastique et du site ; 10⁻¹² près en relatif, durées au pas de temps près exact.
+
 Pour les régénérer (environ dix minutes, le PSHA compris) :
 
 ```
 python3 -m venv ~/.venvs/oq
 ~/.venvs/oq/bin/pip install --no-deps openquake.engine
 ~/.venvs/oq/bin/pip install numpy scipy shapely pyproj h5py toml decorator pandas psutil pyzmq requests \
-    docutils numba alpha_shapes h3 geopandas pillow fiona pystrata liquepy openseespy obspy
+    docutils numba alpha_shapes h3 geopandas pillow fiona pystrata liquepy openseespy obspy eqsig
 PYTHON=~/.venvs/oq/bin/python npm run references
 ```
 

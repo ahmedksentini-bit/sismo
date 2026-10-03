@@ -673,8 +673,9 @@
         <canvas id="ac-mr" aria-label="Magnitude et distance des enregistrements de la banque"></canvas>
       </section>
       <section class="carte" aria-label="Accélérogramme">
-        <h2>Accélérogramme<small>Enregistrement choisi dans le tableau, mis à l'échelle (composante horizontale)</small></h2>
-        <canvas id="ac-acc" aria-label="Accélérogramme mis à l'échelle"></canvas>
+        <h2>Accélérogramme<small>Enregistrement choisi dans le tableau, mis à l'échelle (composante horizontale) ; zone teintée : durée significative D5–95</small></h2>
+        <canvas id="ac-acc" aria-label="Accélérogramme mis à l'échelle, courbe de Husid et durée significative"></canvas>
+        <p class="legende"><span><i style="background:var(--trace)"></i>accélération</span><span><i style="background:var(--pick-s)"></i>courbe de Husid : Ia cumulée / Ia (de 0 à 1)</span><span><i class="tirets" style="border-color:var(--pick-s)"></i>5 % et 95 %</span></p>
         <p class="aide">Synthétiques : méthode stochastique de Boore (2003), source à deux coins d'Atkinson et Silva (2000), calés en moyenne sur les trois lois
           d'atténuation du banc « aléa » au rocher (Vs30 = 800 m/s). Sans données régionales, ils tiennent lieu d'une base réelle (ESM, NGA-West2) : la démarche est la même.</p>
       </section>
@@ -734,6 +735,7 @@
           <li><b>L'UHS n'est pas un séisme</b> : il enveloppe des scénarios différents selon la période. Le spectre moyen conditionnel (CMS) est celui des séismes qui produisent l'UHS à T1 : la cible réaliste autour de la période de l'ouvrage.</li>
           <li><b>Mise à l'échelle</b> : sur un CMS, chaque enregistrement est calé à Sa(T1) puis jugé sur sa forme ; ailleurs, au mieux sur la plage. Des facteurs voisins de 1 respectent mieux le lien entre amplitude, durée et contenu fréquentiel.</li>
           <li><b>EN 1998-1:2004</b> (§ 3.2.3.1.3 (3), qui renvoie au § 3.2.3.1.2 (4)) : au moins 3 enregistrements, PGA moyen ≥ ag·S, moyenne ≥ 90 % du spectre élastique de 0,2·T1 à 2·T1. Avec moins de 7 analyses, on retient la réponse la plus défavorable (§ 4.3.3.4.3 (3)).</li>
+          <li><b>Durée et énergie</b> : la durée significative D5–95 (Trifunac et Brady 1975), temps entre 5 % et 95 % de l'intensité d'Arias Ia = π/(2g)·∫a²dt, croît avec la magnitude et la distance. Une mise à l'échelle multiplie Ia par s² mais laisse la durée intacte : un petit séisme proche amplifié reste bref, d'où l'intérêt de magnitudes voisines du scénario quand la réponse dépend du nombre de cycles (fatigue, liquéfaction, dégradation).</li>
           <li><b>CMS contre EC8</b> : un jeu fidèle à l'aléa du site passe souvent sous le spectre forfaitaire de l'EC8 loin de T1 ; le facteur commun qui le rend conforme mesure l'écart entre les deux approches.</li>
         </ul>
       </section>

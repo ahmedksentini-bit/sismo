@@ -111,3 +111,7 @@ la virgule décimale.
     générateur ; la correction de Reff dépend de Mw : itérée. La vérité est le Mw et le Δσ du générateur ; le
     banc se limite à Mw ≤ 6 (au-delà, fc passe sous 0,2 Hz et la fenêtre S ne suffit plus). La barre des bancs
     passe à la ligne (quinze onglets) : ne pas la remettre sur une seule ligne forcée.
+25. **Intensité** (`src/sismo/intensite.js`) : conventions d'eqsig (référence `tests/references/intensite.json`,
+    `tools/eqsig/`) : trapèzes, Arias avec g = 9,81 m/s², bornes de durée aux indices strictement compris entre les
+    fractions de Ia (Trifunac et Brady 1975). Les indicateurs de la banque sont calculés à l'échelle 1 : Arias se
+    multiplie par s², CAV et PGV par s, les durées sont invariantes (testé).
