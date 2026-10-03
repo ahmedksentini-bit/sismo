@@ -18,6 +18,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Aléa (PSHA)** | modèle d'école à deux zones sources discrétisées en points et une faille à ruptures flottantes (faille F, glissement réglable), site déplaçable et Vs30 ; arbre logique : modèle de taux (catalogue : (a, b) de chaque zone ; géodésie : couplage χ, moment conservé) × ΔMmax × loi d'atténuation (Akkar et al. 2014, Bindi et al. 2014, Boore et al. 2014, poids égaux), 108 réalisations en énumération complète ; courbes d'aléa de chaque réalisation, moyenne et fractiles 16/84 % ; UHS face aux spectres de l'EN 1998-1:2004 ; spectre moyen conditionnel à la grandeur choisie (Lin et al. 2013, corrélation de Baker et Jayaram 2008) avec sa dispersion ; carte d'aléa sur une grille de 20 km (niveau moyen de la grandeur choisie, isolignes) ; désagrégation magnitude-distance ; sensibilité aux branches ; mode exercice noté |
 | **Accélérogrammes** | banque de 160 accélérogrammes synthétiques (méthode stochastique, source à deux coins, calés en moyenne sur les trois lois d'atténuation) ; sélection et mise à l'échelle sur le spectre moyen conditionnel à T1 (calage à Sa(T1), échanges gloutons de Jayaram et al. 2011 sur la moyenne et la dispersion), l'UHS ou le spectre de l'EN 1998-1:2004 ; filtre sur le scénario de la désagrégation, facteur maximal ; contrôle du § 3.2.3.1.2 (4) (nombre, PGA moyen ≥ ag·S, moyenne ≥ 0,9·Se de 0,2·T1 à 2·T1), facteur commun minimal et réponse à retenir (§ 4.3.3.4.3 (3)) ; aléa repris du banc « aléa » ; mode exercice noté |
 | **Site** | colonne de sol stratifiée sur rocher (profils types ou couches réglables : épaisseur, Vs, IP), ondes SH verticales (Kramer 1996) en linéaire ou en linéaire équivalent (courbes de Darendeli 2001, γeff = 0,65·γmax) ; fonction de transfert et f0 du quart d'onde, spectres au rocher et en surface face aux spectres de l'EN 1998-1:2004 (sol A et classe du site), profils de Vs compatible, de déformation, de G/G0 et ξ ; Vs30 et classe de sol (tableau 3.1) ; calcul vérifié contre pystrata ; mode exercice noté |
+| **Liquéfaction** | sondage CPT d'école (profils types, nappe réglable), séisme (amax, M) ; méthode simplifiée de Boulanger et Idriss (2014) : CSR, CRR(qc1Ncs)·MSF·Kσ, Ic et teneur en fines, coefficient de sécurité ; indice LPI d'Iwasaki et tassement de Zhang et al. (2002) ; variante SPT dans le moteur ; vérifié contre liquepy ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
 Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
@@ -60,6 +61,7 @@ src/sismo/accelerogramme.js accélérogrammes synthétiques : fenêtre S stochas
 src/sismo/selection.js    sélection et mise à l'échelle sur une cible, échanges gloutons, contrôle
                           EN 1998-1:2004 § 3.2.3.1.2 (4)
 src/sismo/isolignes.js    isolignes d'une grille (carrés marchants), niveaux ronds
+src/sismo/liquefaction.js déclenchement de la liquéfaction (CPT, SPT), LPI, tassement, sondage d'école
 src/sismo/site.js         effets de site 1D : ondes SH, linéaire équivalent, Darendeli, Vs30 et classe EC8
 src/sismo/coefficients/   coefficients exportés de hazardlib et calage des accélérogrammes (fichiers produits)
 src/lecteur-station.js  banc « une station »
@@ -72,13 +74,15 @@ src/banc-geodesie.js    banc « géodésie »
 src/banc-alea.js        banc « aléa »
 src/banc-selection.js   banc « accélérogrammes »
 src/banc-site.js        banc « site »
+src/banc-liquefaction.js banc « liquéfaction »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, références (78 tests)
-tests/references/       valeurs calculées par OpenQuake et pystrata (npm run references)
+                        site, isolignes, liquéfaction, références (83 tests)
+tests/references/       valeurs calculées par OpenQuake, pystrata et liquepy (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
 tools/pystrata/         référence des effets de site (Python, pystrata)
+tools/liquepy/          référence de la liquéfaction (Python, liquepy)
 ```
 
 ## Modèle des signaux
@@ -143,13 +147,19 @@ déformations lu sur la courbe à γ = 10⁻⁶, FFT complétée à la puissance
 linéaire 10⁻¹³, G/G0 et ξ compatibles 3·10⁻⁵, γ 5·10⁻⁵, PGA en surface 3·10⁻⁶. Le spectre de réponse diffère de
 quelques % aux courtes périodes par la méthode seule (pystrata : oscillateur en fréquence ; le site : Newmark).
 
+La liquéfaction est comparée à liquepy (eng-tools, licence MIT), non embarqué : `tools/liquepy/` calcule un sondage CPT
+d'école de 200 points sous trois scénarios. Mêmes conventions que liquepy (Pa = 101 kPa, 100 kPa pour Kσ, eau à
+9,8 kN/m³, poids volumique de Robertson et Cabal, exposant n de Ic itéré, FS plafonné à 2 et fixé à 2,25 pour
+Ic > 2,6) : toutes les grandeurs, le LPI et la déformation volumique de Zhang et al. coïncident à 10⁻¹⁴ près ;
+CRR7,5 et Kσ du SPT aussi.
+
 Pour les régénérer (environ dix minutes, le PSHA compris) :
 
 ```
 python3 -m venv ~/.venvs/oq
 ~/.venvs/oq/bin/pip install --no-deps openquake.engine
 ~/.venvs/oq/bin/pip install numpy scipy shapely pyproj h5py toml decorator pandas psutil pyzmq requests \
-    docutils numba alpha_shapes h3 geopandas pillow fiona pystrata
+    docutils numba alpha_shapes h3 geopandas pillow fiona pystrata liquepy
 PYTHON=~/.venvs/oq/bin/python npm run references
 ```
 

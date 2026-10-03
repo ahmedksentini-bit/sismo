@@ -91,3 +91,8 @@ la virgule décimale.
     10^−1,5 et interpolé en ln γ, ξ0 = valeur de la courbe à 10⁻⁶ (pas Dmin), départ γ = PGV/Vs, γeff = 0,65·γmax
     au milieu des sous-couches (≤ 2,5 m). Vs30 = 800 m/s compte comme A (comme le banc « aléa »). Les
     accélérogrammes de référence viennent de `accelerogramme.js` : régénérer les références après `npm run calage`.
+21. **Liquéfaction** (`src/sismo/liquefaction.js`) : Boulanger et Idriss (2014), c0 = 2,8, aux conventions de
+    liquepy (référence `tests/references/liquefaction.json`, `tools/liquepy/`) : Pa = 101 kPa mais 100 kPa dans Kσ,
+    γw = 9,8, contraintes cumulées vers le bas avec pré-forage à 17 kN/m³, CRR7,5 = 4 au-dessus de la nappe et pour
+    Ic > 2,6 (FS = 2,25), FS plafonné à 2. L'annexe B de l'EN 1998-5 n'est pas recopiée de mémoire : seule la
+    valeur recommandée λ = 0,8 (FS ≥ 1,25) est citée.

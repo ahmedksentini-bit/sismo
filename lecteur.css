@@ -236,6 +236,10 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #si-acc { display: block; width: 100%; height: 240px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 #si-profils-choix, #si-couches { flex-wrap: wrap; }
 
+/* Banc liquéfaction */
+#lq-cpt, #lq-csr { display: block; width: 100%; height: 420px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+#lq-profils { flex-wrap: wrap; }
+
 /* Banc profil */
 #p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
 
@@ -257,6 +261,7 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
   #si-profils { height: 320px; }
   #si-transfert, #si-spectres { height: 280px; }
   #si-acc { height: 220px; }
+  #lq-cpt, #lq-csr { height: 380px; }
   #s-scene { height: 250px; }
   .hodo-cadre { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .curseur-lecture { margin-left: 0; width: 100%; }
