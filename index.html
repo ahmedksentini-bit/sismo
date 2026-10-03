@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#075985">
+<meta name="description" content="Sismologie et aléa sismique pour l'ingénieur : lecture de sismogrammes, localisation, exercices">
+<title>Lecteur de sismogramme</title>
+<link rel="stylesheet" href="lecteur.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">SI</span>
+    <span><strong>Sismologie</strong><small>Aléa sismique · Eurocode 8</small></span>
+  </div>
+  <nav class="mode-switch" aria-label="Bancs">
+    <button type="button" id="onglet-station" aria-pressed="true">Une station</button>
+    <button type="button" id="onglet-reseau" aria-pressed="false">Réseau · localisation</button>
+  </nav>
+</header>
+
+<main>
+  <section class="banniere">
+    <div>
+      <p class="eyebrow">Lire un sismogramme · prototype de bancs</p>
+      <h1>Lecteur de sismogramme</h1>
+      <p class="chapeau" id="chapeau-station">Une station trois composantes enregistre un séisme. Pointez les ondes P et S, mesurez l'amplitude
+        sur le Wood-Anderson simulé : le lecteur en déduit la distance, l'heure d'origine, la magnitude locale et la direction de la source.</p>
+      <p class="chapeau" id="chapeau-reseau" hidden>Quatre stations enregistrent le même séisme. Pointez P et S sur chacune : les cercles de distance,
+        le diagramme de Wadati et une recherche sur grille localisent l'épicentre, la profondeur et l'heure d'origine.</p>
+    </div>
+    <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
+  </section>
+
+  <div class="poste" id="banc-station">
+    <div class="colonne">
+      <section class="carte" aria-label="Sismogramme">
+        <div class="outils">
+          <div class="groupe" role="group" aria-label="Outils de lecture">
+            <button type="button" class="outil p" data-outil="P" aria-pressed="false"><span class="pastille"></span>Pointer P <kbd>P</kbd></button>
+            <button type="button" class="outil s" data-outil="S" aria-pressed="false"><span class="pastille"></span>Pointer S <kbd>S</kbd></button>
+            <button type="button" class="outil a" data-outil="A" aria-pressed="false"><span class="pastille"></span>Mesurer A <kbd>A</kbd></button>
+          </div>
+          <div class="groupe" role="group" aria-label="Zoom">
+            <button type="button" class="outil neutre" id="zoom-moins" aria-label="Dézoomer">−</button>
+            <button type="button" class="outil neutre" id="zoom-plus" aria-label="Zoomer">+</button>
+            <button type="button" class="outil neutre" id="zoom-tout">Tout</button>
+            <button type="button" class="outil neutre" id="effacer">Effacer les pointés</button>
+          </div>
+          <span class="curseur-lecture" id="curseur">t = —</span>
+        </div>
+        <p class="voie" id="voie"></p>
+        <div class="cadre-traces">
+          <canvas id="traces" tabindex="0" aria-label="Sismogramme trois composantes. Glisser pour se déplacer, double-clic pour zoomer, touches P, S et A pour les outils."></canvas>
+        </div>
+        <canvas id="apercu" aria-label="Vue d'ensemble de l'enregistrement : cliquer pour déplacer la fenêtre"></canvas>
+        <p class="aide" id="aide"></p>
+      </section>
+
+      <section class="carte" aria-label="Lectures">
+        <h2>Lectures<small>Calculées à partir de vos pointés et de votre mesure</small></h2>
+        <div class="afficheurs" id="afficheurs"></div>
+        <div class="etapes" id="etapes"></div>
+      </section>
+
+      <section class="carte" aria-label="Hodogramme">
+        <h2>Mouvement du sol pendant la P<small>Composantes N et E filtrées 1–10 Hz, 0,6 s après votre pointé P</small></h2>
+        <div class="hodo-cadre">
+          <canvas id="hodo" width="200" height="200" aria-label="Hodogramme nord-est"></canvas>
+          <div class="hodo-texte" id="hodo-texte"></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" id="panneau-explorer" aria-label="Séisme">
+        <p class="sous-titre">Séisme simulé</p>
+        <div class="champ"><label for="mw">Magnitude de moment Mw <output id="mw-v"></output></label><input type="range" id="mw" min="1.5" max="6.5" step="0.1"></div>
+        <div class="champ"><label for="dist">Distance épicentrale Δ <output id="dist-v"></output></label><input type="range" id="dist" min="0" max="1000" step="1"></div>
+        <div class="champ"><label for="prof">Profondeur h <output id="prof-v"></output></label><input type="range" id="prof" min="2" max="30" step="1"></div>
+        <div class="champ"><label for="baz">Azimut de la source vu de la station <output id="baz-v"></output></label><input type="range" id="baz" min="0" max="359" step="1"></div>
+        <div class="champ"><label for="bruit">Bruit du site</label>
+          <select id="bruit"><option value="calme">Site calme (rural, rocher)</option><option value="standard">Site courant</option><option value="urbain">Site urbain</option></select></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="tirage">Nouveau tirage du signal</button></div>
+        <p class="verite" id="verite-explo"></p>
+      </section>
+
+      <section class="carte" id="panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="exo-num"></span>
+        <p class="enonce">Un séisme local est enregistré à la station <b>XX.SIM1</b>. Pointez l'arrivée P puis l'arrivée S, mesurez
+          l'amplitude maximale du Wood-Anderson sur une composante horizontale, puis indiquez la polarité de la P sur la verticale.</p>
+        <div class="champ"><span class="etiquette">Premier mouvement de P sur Z</span>
+          <div class="segments polarites" role="group" aria-label="Polarité">
+            <button type="button" data-polarite="haut" aria-pressed="false">↑ Haut</button>
+            <button type="button" data-polarite="bas" aria-pressed="false">↓ Bas</button>
+            <button type="button" data-polarite="indet" aria-pressed="false">Indécis</button>
+          </div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="verifier">Vérifier</button><button type="button" class="bouton secondaire" id="nouvel-exo">Nouvel exercice</button></div>
+        <div id="corrige"></div>
+      </section>
+
+      <section class="carte" aria-label="Affichage">
+        <p class="sous-titre">Affichage</p>
+        <div class="champ"><span class="etiquette">Capteur</span>
+          <div class="segments" role="group" aria-label="Capteur">
+            <button type="button" data-capteur="HH" aria-pressed="true">HH · vélocimètre</button>
+            <button type="button" data-capteur="HN" aria-pressed="false">HN · accéléromètre</button>
+          </div></div>
+        <div class="champ"><label for="grandeur">Grandeur affichée</label>
+          <select id="grandeur"><option value="vitesse">Vitesse du sol</option><option value="acceleration">Accélération du sol</option><option value="deplacement">Déplacement du sol</option><option value="wa">Wood-Anderson simulé</option></select></div>
+        <div class="champ"><label for="filtre">Filtre passe-bande (Butterworth causal)</label>
+          <select id="filtre"><option value="aucun">Aucun</option><option value="large">0,5 – 20 Hz</option><option value="local">1 – 10 Hz · séismes locaux</option><option value="etroit">2 – 8 Hz</option><option value="surface">0,05 – 0,2 Hz · ondes de surface</option><option value="perso">Personnalisé</option></select></div>
+        <div class="duo-champs" id="perso" hidden>
+          <div class="champ"><label for="fmin">f min (Hz)</label><input type="number" id="fmin" min="0.01" max="40" step="0.01" value="0.5"></div>
+          <div class="champ"><label for="fmax">f max (Hz)</label><input type="number" id="fmax" min="0.05" max="45" step="0.1" value="15"></div>
+        </div>
+        <div class="champ"><span class="etiquette">Composantes</span>
+          <div class="segments" role="group" aria-label="Composantes">
+            <button type="button" data-compo="ZNE" aria-pressed="true">Z · N · E</button>
+            <button type="button" data-compo="ZRT" aria-pressed="false" id="btn-zrt">Z · R · T</button>
+          </div></div>
+        <div class="champ"><span class="etiquette">Échelle verticale</span>
+          <div class="segments" role="group" aria-label="Échelle">
+            <button type="button" data-echelle="commune" aria-pressed="true">Commune</button>
+            <button type="button" data-echelle="trace" aria-pressed="false">Par trace</button>
+          </div></div>
+        <label class="case" id="case-phases"><input type="checkbox" id="phases" checked> Phases théoriques (Pn, Pg, Sn, Sg, ondes de surface)</label>
+      </section>
+    </aside>
+  </div>
+
+  <div class="poste" id="banc-reseau" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Sismogrammes du réseau">
+        <div class="outils">
+          <div class="groupe" role="group" aria-label="Outils de lecture">
+            <button type="button" class="outil p" data-r-outil="P" aria-pressed="true"><span class="pastille"></span>Pointer P <kbd>P</kbd></button>
+            <button type="button" class="outil s" data-r-outil="S" aria-pressed="false"><span class="pastille"></span>Pointer S <kbd>S</kbd></button>
+          </div>
+          <div class="groupe" role="group" aria-label="Zoom">
+            <button type="button" class="outil neutre" id="r-zoom-moins" aria-label="Dézoomer">−</button>
+            <button type="button" class="outil neutre" id="r-zoom-plus" aria-label="Zoomer">+</button>
+            <button type="button" class="outil neutre" id="r-zoom-tout">Tout</button>
+            <button type="button" class="outil neutre" id="r-effacer">Effacer les pointés</button>
+          </div>
+          <label class="filtre-court" for="r-filtre">Filtre
+            <select id="r-filtre"><option value="aucun">Aucun</option><option value="local">1 – 10 Hz</option><option value="etroit">2 – 8 Hz</option></select></label>
+          <span class="curseur-lecture" id="r-curseur">t = —</span>
+        </div>
+        <p class="voie" id="r-voie"></p>
+        <div id="r-traces" class="r-traces"></div>
+        <p class="aide" id="r-aide"></p>
+      </section>
+
+      <section class="carte" aria-label="Localisation">
+        <h2>Localisation<small>Recherche sur grille (x, y, h) ; t₀ ajusté ; P pondérée 1, S pondérée 0,5</small></h2>
+        <div class="afficheurs" id="r-afficheurs"></div>
+        <div class="table-defile" style="margin-top:12px"><table class="resultats" id="r-residus"></table></div>
+        <ul class="notes-loc">
+          <li><b>Les cercles ne se coupent pas en un point.</b> Leur rayon est la distance hypocentrale : le foyer est en profondeur, sous l'épicentre.</li>
+          <li><b>Gap azimutal.</b> Au-delà de 180°, le séisme est hors du réseau : la zone compatible s'allonge dans l'axe station-séisme.</li>
+          <li><b>Profondeur.</b> Elle n'est bien contrainte que si une station est à une distance de l'ordre de la profondeur.</li>
+        </ul>
+      </section>
+    </div>
+
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="r-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="r-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" id="r-panneau-explorer" aria-label="Séisme">
+        <p class="sous-titre">Séisme simulé</p>
+        <div class="champ"><label for="r-mw">Magnitude de moment Mw <output id="r-mw-v"></output></label><input type="range" id="r-mw" min="2" max="5.5" step="0.1"></div>
+        <div class="champ"><label for="r-prof">Profondeur h <output id="r-prof-v"></output></label><input type="range" id="r-prof" min="2" max="30" step="1"></div>
+        <div class="champ"><label for="r-bruit">Bruit des sites</label>
+          <select id="r-bruit"><option value="calme">Sites calmes</option><option value="standard">Sites courants</option><option value="urbain">Sites urbains</option></select></div>
+        <label class="case"><input type="checkbox" id="r-auto" checked> Pointés automatiques (erreur de lecture ±0,05 s en P, ±0,15 s en S)</label>
+        <label class="case" style="margin-top:8px"><input type="checkbox" id="r-phases" checked> Phases théoriques sur les traces</label>
+        <div class="actions" style="margin-top:12px"><button type="button" class="bouton secondaire" id="r-tirage">Nouveau tirage du signal</button></div>
+        <p class="verite" id="r-verite"></p>
+      </section>
+      <section class="carte" id="r-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="r-exo-num"></span>
+        <p class="enonce">Quatre stations du réseau <b>XX</b> ont enregistré un séisme. Pointez P et S sur chacune : la localisation
+          se met à jour à chaque pointé. Vérifiez quand vous êtes satisfait des résidus.</p>
+        <div class="actions"><button type="button" class="bouton primaire" id="r-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="r-nouvel-exo">Nouvel exercice</button></div>
+        <div id="r-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Carte">
+        <h2>Carte du réseau<small id="r-carte-legende">Cercles : distance hypocentrale tirée de S − P</small></h2>
+        <canvas id="r-carte" aria-label="Carte des stations, des cercles de distance et de l'épicentre"></canvas>
+      </section>
+      <section class="carte" aria-label="Diagramme de Wadati">
+        <h2>Diagramme de Wadati<small>tS − tP en fonction de tP : la droite coupe l'axe à t₀ ; sa pente vaut Vp/Vs − 1</small></h2>
+        <canvas id="r-wadati" aria-label="Diagramme de Wadati"></canvas>
+        <p class="aide" id="r-wadati-texte"></p>
+      </section>
+    </aside>
+  </div>
+
+  <section class="carte" style="margin-top:16px" aria-label="Repères de lecture">
+    <h2>Cinq questions à poser à un enregistrement</h2>
+    <ul class="reperes">
+      <li><strong>Quoi ?</strong>Le code de voie le dit : <b>HH</b> = vélocimètre (vitesse), <b>HN</b> = accéléromètre. La dernière lettre donne la composante : Z, N, E.</li>
+      <li><strong>Quand ?</strong>La P arrive la première, surtout sur Z. La S, plus forte et plus lente, domine les horizontales.</li>
+      <li><strong>Où ?</strong>R ≈ 8,4 km/s × (tS − tP) en champ local. Pendant la P, le sol bouge dans l'axe station-source.</li>
+      <li><strong>Combien ?</strong>ML se lit sur un Wood-Anderson simulé (horizontale). Mw, elle, se tire du spectre ou du moment.</li>
+      <li><strong>Fiable ?</strong>Bruit du microséisme, saturation du vélocimètre en champ proche, ondes coniques au-delà de 140 km qui faussent S − P.</li>
+    </ul>
+    <p class="modele"><b>Modèle du banc.</b> Croûte de 32 km (Vp 6,0 ; Vs 3,5 km/s) sur manteau (8,0 ; 4,6 km/s), couche superficielle lente.
+      Signal par méthode stochastique de Boore (2003) : source de Brune (Δσ = 6 MPa), atténuation Q(f) = 130·f<sup>0,6</sup>, κ = 0,05 s, amplification générique du rocher ;
+      impulsions directes causales pour l'arrivée et la polarité ; coda d'Aki ; ondes de surface dispersées. Ce sont des signaux pédagogiques, pas une
+      simulation complète de la propagation : ML et Mw y diffèrent de −0,4 à +0,5 selon la magnitude et la distance, comme sur des données réelles non calibrées.</p>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript>Activez JavaScript pour utiliser le lecteur.</noscript>
+<script type="module" src="src/lecteur-station.js"></script>
+<script type="module" src="src/lecteur-reseau.js"></script>
+</body>
+</html>

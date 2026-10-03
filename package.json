@@ -1,0 +1,11 @@
+{
+  "name": "sismo-ksr-infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sismologie et aléa sismique pour l'ingénieur : bancs interactifs, exercices, Eurocode 8",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "serve": "npx serve ."
+  }
+}
