@@ -8,6 +8,6 @@
     "test": "node --test tests/*.test.mjs",
     "serve": "npx serve .",
     "calage": "node tools/calage-accelerogrammes.mjs",
-    "references": "node tools/oq/exporter-catalogue.mjs && ${PYTHON:-python3} tools/oq/coefficients.py && ${PYTHON:-python3} tools/oq/references.py && node tools/oq/exporter-modele.mjs && ${PYTHON:-python3} tools/oq/psha.py && node tools/pystrata/exporter-site.mjs && ${PYTHON:-python3} tools/pystrata/site.py && node tools/liquepy/exporter-liquefaction.mjs && ${PYTHON:-python3} tools/liquepy/liquefaction.py && node tools/opensees/exporter-inelastique.mjs && ${PYTHON:-python3} tools/opensees/sdof.py"
+    "references": "node tools/oq/exporter-catalogue.mjs && ${PYTHON:-python3} tools/oq/coefficients.py && ${PYTHON:-python3} tools/oq/references.py && node tools/oq/exporter-modele.mjs && ${PYTHON:-python3} tools/oq/psha.py && node tools/pystrata/exporter-site.mjs && ${PYTHON:-python3} tools/pystrata/site.py && node tools/liquepy/exporter-liquefaction.mjs && ${PYTHON:-python3} tools/liquepy/liquefaction.py && node tools/opensees/exporter-inelastique.mjs && ${PYTHON:-python3} tools/opensees/sdof.py && node tools/obspy/exporter-mecanisme.mjs && ${PYTHON:-python3} tools/obspy/mecanisme.py"
   }
 }
