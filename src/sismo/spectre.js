@@ -70,10 +70,19 @@ const Spectre = (() => {
     if (T <= TD) return ag * S * n * 2.5 * (TC / T);
     return ag * S * n * 2.5 * ((TC * TD) / (T * T));
   }
+  // EN 1998-1:2004, § 3.2.2.5 (4) : spectre de calcul pour l'analyse élastique, coefficient de comportement q,
+  // borne inférieure β·ag (β = 0,2 recommandé), expressions (3.13) à (3.16). Dans l'unité de ag.
+  function ec8Calcul(T, { type = 1, sol = 'A', ag, q = 1, beta = 0.2 }) {
+    const { S, TB, TC, TD } = EC8_2004[type][sol];
+    if (T <= TB) return ag * S * (2 / 3 + (T / TB) * (2.5 / q - 2 / 3));
+    if (T <= TC) return ag * S * (2.5 / q);
+    if (T <= TD) return Math.max(ag * S * (2.5 / q) * (TC / T), beta * ag);
+    return Math.max(ag * S * (2.5 / q) * ((TC * TD) / (T * T)), beta * ag);
+  }
   // Période fondamentale approchée (EN 1998-1, § 4.3.3.2.2) : T₁ = Ct·H^(3/4), H en m.
   const CT = { acier: 0.085, beton: 0.075, autres: 0.05 };
   const periodeApprochee = (H, systeme) => CT[systeme] * Math.pow(H, 0.75);
 
-  return { G, periodes, reponse, progressif, EC8_2004, eta, ec8, CT, periodeApprochee };
+  return { G, periodes, sousPas, surEchantillonner, reponse, progressif, EC8_2004, eta, ec8, ec8Calcul, CT, periodeApprochee };
 })();
 export default Spectre;

@@ -30,6 +30,7 @@
     <button type="button" data-onglet="site" aria-pressed="false">Site</button>
     <button type="button" data-onglet="liquefaction" aria-pressed="false">Liquéfaction</button>
     <button type="button" data-onglet="ductilite" aria-pressed="false">Ductilité</button>
+    <button type="button" data-onglet="batiment" aria-pressed="false">Bâtiment</button>
   </nav>
 </header>
 
@@ -66,6 +67,8 @@
         résistance CRR lue au pénétromètre (Boulanger et Idriss 2014) : coefficient de sécurité, couches liquéfiables, indice LPI et tassement.</p>
       <p class="chapeau" id="chapeau-ductilite" hidden>Un ouvrage dimensionné avec un coefficient de comportement plastifie : combien se déplace-t-il ?
         Oscillateur élastoplastique sous sept accélérogrammes, spectres de ductilité et méthode N2 de l'Eurocode 8 face aux calculs temporels.</p>
+      <p class="chapeau" id="chapeau-batiment" hidden>Un bâtiment à étages vibre selon plusieurs modes. Périodes, déformées et masses effectives ; efforts par la méthode des
+        forces latérales et par l'analyse modale spectrale de l'Eurocode 8, déplacements entre étages, et combinaisons modales confrontées à des calculs temporels.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -941,6 +944,96 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-batiment" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Modes propres">
+        <h2>Modes propres<small>Console de cisaillement : planchers rigides, masses concentrées aux niveaux ; déformées normées au sommet, période et part de la masse totale ; en bleu, les modes retenus</small></h2>
+        <canvas id="bt-modes" aria-label="Déformées des premiers modes propres"></canvas>
+      </section>
+      <section class="carte" aria-label="Spectre de calcul">
+        <h2>Spectre de calcul (EN 1998-1:2004, § 3.2.2.5)<small>Sd(T) pour le coefficient de comportement q, borne β·ag (β = 0,2) ; disques : modes (aire ∝ masse effective) ; triangles : périodes approchées du § 4.3.3.2.2 ; zone teintée : domaine de la méthode des forces latérales</small></h2>
+        <canvas id="bt-spectre" aria-label="Spectre de calcul et périodes des modes"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>Sd (calcul)</span><span><i class="tirets" style="border-color:var(--teal)"></i>Se (élastique)</span><span><i class="tirets" style="border-color:var(--muted)"></i>β·ag</span><span><i style="background:var(--pick-p)"></i>Ct·H^¾, béton (4.6)</span><span><i style="background:var(--amp)"></i>2·√d (4.9)</span></p>
+      </section>
+      <section class="carte" aria-label="Efforts et déplacements">
+        <h2>Efforts et déplacements entre étages<small>Effort tranchant de calcul dans chaque étage ; déplacement relatif de calcul dr = q·de, pondéré par ν et rapporté à la hauteur d'étage, face à la limite du § 4.4.3.2</small></h2>
+        <canvas id="bt-efforts" aria-label="Efforts tranchants d'étage et déplacements relatifs"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>forces latérales (tirets : hors domaine)</span><span><i style="background:var(--blue)"></i>modal SRSS</span><span><i class="tirets" style="border-color:var(--cyan)"></i>modal CQC</span></p>
+      </section>
+      <section class="carte" aria-label="Calcul temporel">
+        <h2>Combinaison modale contre calcul temporel<small>Effort à la base au cours du temps (calcul élastique, q = 1, accélérogramme calé sur Se(T1)) ; tirets : SRSS et CQC des maxima de chaque mode pour le même accélérogramme</small></h2>
+        <canvas id="bt-temps" aria-label="Effort à la base au cours du temps"></canvas>
+        <p class="aide">Superposition de tous les modes, chacun intégré par Newmark à accélération moyenne avec 5 % d'amortissement : le calcul couplé d'OpenSeesPy
+          (amortissement modal) est retrouvé à 10⁻¹⁰ près, comme les périodes, les masses effectives et les combinaisons à 10⁻¹².</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="bt-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="bt-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="bt-afficheurs"></div></section>
+      <section class="carte" id="bt-panneau-explorer" aria-label="Réglages">
+        <p class="sous-titre">Bâtiment</p>
+        <div class="segments compact" role="group" aria-label="Profil" id="bt-profils" style="margin-bottom:10px">
+          <button type="button" data-bt-profil="regulier">Régulier</button><button type="button" data-bt-profil="degressif">Rigidité dégressive</button><button type="button" data-bt-profil="souple">Étage souple</button><button type="button" data-bt-profil="toiture">Toiture lourde</button>
+        </div>
+        <div class="champ"><label for="bt-n">Nombre d'étages (3 m) <output id="bt-n-v"></output></label><input type="range" id="bt-n" min="1" max="10" step="1"></div>
+        <div class="champ"><label for="bt-m">Masse par niveau <output id="bt-m-v"></output></label><input type="range" id="bt-m" min="100" max="800" step="50"></div>
+        <div class="champ"><label for="bt-k">Rigidité d'étage <output id="bt-k-v"></output></label><input type="range" id="bt-k" min="1.5" max="3.5" step="0.01"></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Spectre (EN 1998-1:2004)</p>
+        <div class="champ"><label for="bt-ag">ag <output id="bt-ag-v"></output></label><input type="range" id="bt-ag" min="0.05" max="0.5" step="0.01"></div>
+        <div class="champ"><label for="bt-q">Coefficient de comportement q <output id="bt-q-v"></output></label><input type="range" id="bt-q" min="1" max="6" step="0.1"></div>
+        <div class="champ"><span class="etiquette">Classe de sol</span><div class="segments" role="group" aria-label="Classe de sol"><button type="button" data-bt-sol="A">A</button><button type="button" data-bt-sol="B">B</button><button type="button" data-bt-sol="C">C</button><button type="button" data-bt-sol="D">D</button><button type="button" data-bt-sol="E">E</button></div></div>
+        <div class="champ"><span class="etiquette">Type de spectre</span><div class="segments" role="group" aria-label="Type de spectre"><button type="button" data-bt-type="1">Type 1</button><button type="button" data-bt-type="2">Type 2</button></div></div>
+        <div class="champ"><span class="etiquette">Répartition des forces latérales</span><div class="segments" role="group" aria-label="Répartition"><button type="button" data-bt-forme="z">Selon z (4.11)</button><button type="button" data-bt-forme="phi">Selon le mode 1 (4.10)</button></div></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Limitation des dommages (§ 4.4.3.2)</p>
+        <div class="segments compact" role="group" aria-label="Éléments non structuraux" id="bt-limites" style="margin-bottom:10px"><button type="button" data-bt-limite="fragiles">Fragiles : 0,5 %</button><button type="button" data-bt-limite="ductiles">Ductiles : 0,75 %</button><button type="button" data-bt-limite="libres">Indépendants : 1 %</button></div>
+        <div class="segments" role="group" aria-label="Classe d'importance" style="margin-bottom:10px"><button type="button" data-bt-nu="0.5">Classes I–II : ν = 0,5</button><button type="button" data-bt-nu="0.4">III–IV : ν = 0,4</button></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="bt-tirage">Autres accélérogrammes</button></div>
+      </section>
+      <section class="carte" id="bt-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="bt-exo-num"></span>
+        <p class="enonce">Avec le tableau des modes ci-dessous, dites si la méthode des forces latérales est applicable, calculez Fb, le nombre de modes à
+          retenir et l'effort à la base de l'analyse modale spectrale (règle de combinaison de l'EN 1998-1:2004).</p>
+        <div id="bt-exo-donnees"></div>
+        <div class="champ"><span class="etiquette">Forces latérales applicables ?</span>
+          <div class="segments" role="group" aria-label="Forces latérales applicables"><button type="button" data-bt-rep="permis|oui" aria-pressed="false">Oui</button><button type="button" data-bt-rep="permis|non" aria-pressed="false">Non</button></div></div>
+        <div class="champ"><label for="bt-r-fb">Fb (kN)</label><input type="text" id="bt-r-fb" inputmode="decimal" autocomplete="off" placeholder="ex. 4 250"></div>
+        <div class="champ"><label for="bt-r-n">Nombre de modes à retenir</label><input type="text" id="bt-r-n" inputmode="numeric" autocomplete="off" placeholder="ex. 2"></div>
+        <div class="champ"><label for="bt-r-vb">Vb modal (kN)</label><input type="text" id="bt-r-vb" inputmode="decimal" autocomplete="off" placeholder="ex. 3 900"></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="bt-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="bt-nouvel-exo">Nouvel exercice</button></div>
+        <div id="bt-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Tableau des modes">
+        <p class="sous-titre">Modes propres</p>
+        <div class="table-defile"><table class="resultats" id="bt-modes-table"></table></div>
+        <p class="aide" id="bt-modes-info"></p>
+      </section>
+      <section class="carte" id="bt-ec8" aria-label="Contrôles EN 1998-1:2004">
+        <p class="sous-titre">EN 1998-1:2004</p>
+        <div id="bt-regles"></div>
+      </section>
+      <section class="carte" aria-label="Calculs temporels">
+        <p class="sous-titre">Combinaisons contre calculs temporels</p>
+        <div class="table-defile"><table class="resultats" id="bt-temps-table"></table></div>
+        <p class="aide" id="bt-temps-info"></p>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Masse effective</b> : l'effort à la base d'un mode vaut sa masse effective fois Sd(Tj). Le mode 1 en porte souvent 80 à 90 % ; un étage souple concentre presque tout sur lui.</li>
+          <li><b>Forces latérales</b> : toute la masse sur le mode 1, réparti selon la hauteur ; λ = 0,85 retire la part que portent les modes supérieurs. Réservée aux bâtiments réguliers en élévation et de période modérée.</li>
+          <li><b>Combinaison</b> : les maxima des modes ne sont pas simultanés ; SRSS les combine quand les périodes sont éloignées, CQC tient compte de la corrélation des modes voisins. Face au calcul temporel, l'erreur reste de l'ordre de 10 à 20 %.</li>
+          <li><b>Déplacements</b> : l'analyse avec le spectre de calcul sous-estime les déplacements de q ; dr = q·de, puis ν ramène au séisme de service pour la limitation des dommages.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <div class="poste" id="banc-mecanisme" hidden>
     <div class="colonne">
       <section class="carte" aria-label="Sphère focale">
@@ -1081,6 +1174,7 @@
 <script type="module" src="src/banc-ductilite.js"></script>
 <script type="module" src="src/banc-mecanisme.js"></script>
 <script type="module" src="src/banc-source.js"></script>
+<script type="module" src="src/banc-batiment.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
