@@ -24,6 +24,7 @@
     <button type="button" data-onglet="sismicite" aria-pressed="false">Sismicité</button>
     <button type="button" data-onglet="geodesie" aria-pressed="false">Géodésie</button>
     <button type="button" data-onglet="alea" aria-pressed="false">Aléa</button>
+    <button type="button" data-onglet="selection" aria-pressed="false">Accélérogrammes</button>
   </nav>
 </header>
 
@@ -48,6 +49,8 @@
         taux de moment de Kostrov, part sismique : on en tire des taux de séismes indépendants du catalogue, et on confronte les deux.</p>
       <p class="chapeau" id="chapeau-alea" hidden>Deux zones sources, une faille, trois lois d'atténuation et un arbre logique : le calcul probabiliste (PSHA) somme tous
         les séismes possibles pour donner la courbe d'aléa du site, le spectre à probabilité uniforme et le scénario qui domine. Moteur vérifié contre OpenQuake.</p>
+      <p class="chapeau" id="chapeau-selection" hidden>Un calcul temporel d'ouvrage demande un jeu d'accélérogrammes : on les choisit dans une banque
+        et on les met à l'échelle sur une cible — spectre moyen conditionnel, UHS ou spectre de l'Eurocode 8 — puis on contrôle les règles de l'EN 1998-1:2004.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -641,6 +644,85 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-selection" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Jeu d'accélérogrammes et cible">
+        <h2>Jeu d'accélérogrammes et cible<small>Spectres de réponse (ξ = 5 %) des enregistrements choisis, mis à l'échelle ; zone teintée : de 0,2·T1 à 2·T1, où la cible est ajustée et où l'EN 1998-1:2004 contrôle la moyenne</small></h2>
+        <canvas id="ac-spectres" aria-label="Spectres des enregistrements choisis, cible et spectre de l'Eurocode 8"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>cible</span><span><i style="background:var(--pick-p);opacity:.3;height:9px"></i>CMS · e<sup>±σ</sup></span><span><i style="background:var(--muted);opacity:.5"></i>enregistrements</span><span><i style="background:var(--cyan)"></i>enregistrement affiché</span><span><i style="background:var(--blue)"></i>moyenne géométrique</span><span><i class="tirets" style="border-color:var(--blue)"></i>moyenne arithmétique</span><span><i class="tirets" style="border-color:var(--teal)"></i>Se et 0,9·Se (EC8)</span><span id="ac-etat"></span></p>
+      </section>
+      <section class="carte" aria-label="Banque d'enregistrements">
+        <h2>Banque : magnitude et distance<small>160 accélérogrammes synthétiques ; numérotés, ceux du jeu ; croix : scénario moyen des séismes qui produisent l'UHS à T1</small></h2>
+        <canvas id="ac-mr" aria-label="Magnitude et distance des enregistrements de la banque"></canvas>
+      </section>
+      <section class="carte" aria-label="Accélérogramme">
+        <h2>Accélérogramme<small>Enregistrement choisi dans le tableau, mis à l'échelle (composante horizontale)</small></h2>
+        <canvas id="ac-acc" aria-label="Accélérogramme mis à l'échelle"></canvas>
+        <p class="aide">Synthétiques : méthode stochastique de Boore (2003), source à deux coins d'Atkinson et Silva (2000), calés en moyenne sur les trois lois
+          d'atténuation du banc « aléa » au rocher (Vs30 = 800 m/s). Sans données régionales, ils tiennent lieu d'une base réelle (ESM, NGA-West2) : la démarche est la même.</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="ac-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="ac-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Ouvrage et cible">
+        <p class="sous-titre">Ouvrage</p>
+        <div class="champ"><span class="etiquette">Période fondamentale T1</span><div class="segments compact" role="group" aria-label="Période fondamentale" id="ac-t1"></div></div>
+        <p class="sous-titre">Cible</p>
+        <div class="segments" role="group" aria-label="Cible" style="margin-bottom:10px">
+          <button type="button" data-ac-cible="cms">CMS à T1</button><button type="button" data-ac-cible="uhs">UHS</button><button type="button" data-ac-cible="ec8">Spectre EC8</button>
+        </div>
+        <div class="segments" role="group" aria-label="Probabilité" style="margin-bottom:10px">
+          <button type="button" data-ac-proba="0.1|50">10 % en 50 ans</button><button type="button" data-ac-proba="0.02|50">2 % en 50 ans</button>
+        </div>
+        <p class="aide" id="ac-cible-info" style="margin-top:0"></p>
+      </section>
+      <section class="carte" id="ac-panneau-explorer" aria-label="Jeu">
+        <p class="sous-titre">Jeu</p>
+        <div class="champ"><label for="ac-n">Nombre d'enregistrements <output id="ac-n-v"></output></label><input type="range" id="ac-n" min="3" max="11" step="1"></div>
+        <div class="champ"><label for="ac-smax">Facteur d'échelle maximal <output id="ac-smax-v"></output></label><input type="range" id="ac-smax" min="1.5" max="5" step="0.5"></div>
+        <label class="case"><input type="checkbox" id="ac-filtre"> Proches du scénario : M̄ ± 0,5 et Rjb de R̄/3 à 3·R̄</label>
+        <label class="case" style="margin-top:6px"><input type="checkbox" id="ac-optimiser"> Échanges gloutons sur la moyenne et la dispersion (Jayaram et al. 2011, cible CMS)</label>
+        <div class="actions" style="margin-top:10px"><button type="button" class="bouton secondaire" id="ac-banque">Nouvelle banque</button></div>
+      </section>
+      <section class="carte" id="ac-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="ac-exo-num"></span>
+        <p class="enonce">Ce jeu, calé sur le spectre moyen conditionnel à T1, doit servir à des calculs temporels selon l'EN 1998-1:2004. Avec les moyennes
+          ci-dessous, dites s'il respecte le § 3.2.3.1.2 (4), quel facteur commun minimal le rend conforme, et quelle valeur de réponse retenir.</p>
+        <div id="ac-exo-donnees"></div>
+        <div class="champ"><span class="etiquette">Jeu conforme ?</span>
+          <div class="segments" role="group" aria-label="Conformité"><button type="button" data-ac-rep="conforme|oui" aria-pressed="false">Oui</button><button type="button" data-ac-rep="conforme|non" aria-pressed="false">Non</button></div></div>
+        <div class="champ"><label for="ac-r-facteur">Facteur commun minimal</label><input type="text" id="ac-r-facteur" inputmode="decimal" autocomplete="off" placeholder="ex. 1,35"></div>
+        <div class="champ"><span class="etiquette">Réponse à retenir</span>
+          <div class="segments" role="group" aria-label="Réponse à retenir"><button type="button" data-ac-rep="reponse|moyenne" aria-pressed="false">Moyenne</button><button type="button" data-ac-rep="reponse|plus défavorable" aria-pressed="false">Plus défavorable</button></div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="ac-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="ac-nouvel-exo">Nouvel exercice</button></div>
+        <div id="ac-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Enregistrements choisis">
+        <p class="sous-titre">Enregistrements choisis</p>
+        <div class="table-defile"><table class="resultats" id="ac-table"></table></div>
+        <p class="aide" id="ac-table-info"></p>
+      </section>
+      <section class="carte" id="ac-ec8" aria-label="Contrôle EN 1998-1:2004">
+        <p class="sous-titre">EN 1998-1:2004, § 3.2.3.1.2 (4)</p>
+        <div id="ac-regles"></div>
+        <label class="case" style="margin-top:10px"><input type="checkbox" id="ac-conformer"> Appliquer le facteur commun minimal à tout le jeu</label>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>L'UHS n'est pas un séisme</b> : il enveloppe des scénarios différents selon la période. Le spectre moyen conditionnel (CMS) est celui des séismes qui produisent l'UHS à T1 : la cible réaliste autour de la période de l'ouvrage.</li>
+          <li><b>Mise à l'échelle</b> : sur un CMS, chaque enregistrement est calé à Sa(T1) puis jugé sur sa forme ; ailleurs, au mieux sur la plage. Des facteurs voisins de 1 respectent mieux le lien entre amplitude, durée et contenu fréquentiel.</li>
+          <li><b>EN 1998-1:2004</b> (§ 3.2.3.1.3 (3), qui renvoie au § 3.2.3.1.2 (4)) : au moins 3 enregistrements, PGA moyen ≥ ag·S, moyenne ≥ 90 % du spectre élastique de 0,2·T1 à 2·T1. Avec moins de 7 analyses, on retient la réponse la plus défavorable (§ 4.3.3.4.3 (3)).</li>
+          <li><b>CMS contre EC8</b> : un jeu fidèle à l'aléa du site passe souvent sous le spectre forfaitaire de l'EC8 loin de T1 ; le facteur commun qui le rend conforme mesure l'écart entre les deux approches.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -666,6 +748,7 @@
 <script type="module" src="src/banc-sismicite.js"></script>
 <script type="module" src="src/banc-geodesie.js"></script>
 <script type="module" src="src/banc-alea.js"></script>
+<script type="module" src="src/banc-selection.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
