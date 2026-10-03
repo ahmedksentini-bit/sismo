@@ -18,6 +18,7 @@
   <nav class="mode-switch" aria-label="Bancs">
     <button type="button" data-onglet="station" aria-pressed="true">Station</button>
     <button type="button" data-onglet="reseau" aria-pressed="false">Réseau</button>
+    <button type="button" data-onglet="mecanisme" aria-pressed="false">Mécanisme</button>
     <button type="button" data-onglet="sismometre" aria-pressed="false">Sismomètre</button>
     <button type="button" data-onglet="profil" aria-pressed="false">Profil</button>
     <button type="button" data-onglet="spectre" aria-pressed="false">Spectre</button>
@@ -40,6 +41,8 @@
         sur le Wood-Anderson simulé : le lecteur en déduit la distance, l'heure d'origine, la magnitude locale et la direction de la source.</p>
       <p class="chapeau" id="chapeau-reseau" hidden>Quatre stations enregistrent le même séisme. Pointez P et S sur chacune : les cercles de distance,
         le diagramme de Wadati et une recherche sur grille localisent l'épicentre, la profondeur et l'heure d'origine.</p>
+      <p class="chapeau" id="chapeau-mecanisme" hidden>Sur chaque verticale, la première arrivée P monte ou descend. Reportées sur la sphère focale,
+        ces polarités dessinent deux plans nodaux : le mécanisme au foyer, et le type de faille qui en découle.</p>
       <p class="chapeau" id="chapeau-sismometre" hidden>Un sismomètre est une masse suspendue dans un bâti posé sur le sol. Selon sa fréquence propre
         et son amortissement, le stylet recopie le déplacement du sol ou son accélération : c'est la même équation que celle d'un ouvrage.</p>
       <p class="chapeau" id="chapeau-profil" hidden>Douze stations alignées de 15 à 345 km enregistrent un séisme superficiel. Rangées par distance,
@@ -933,6 +936,63 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-mecanisme" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Sphère focale">
+        <h2>Sphère focale<small>Projection de Schmidt, hémisphère inférieur : ● compression (le sol monte), ○ dilatation ; en bleu, les plans nodaux et les quadrants en compression du modèle réglé ; cerclées de rouge, les polarités qu'il contredit</small></h2>
+        <canvas id="me-sphere" aria-label="Sphère focale avec polarités et plans nodaux"></canvas>
+        <p class="legende"><span><i style="background:var(--blue)"></i>modèle</span><span><i style="background:var(--amp)"></i>solutions de l'inversion</span><span><i class="tirets" style="border-color:var(--teal)"></i>solution vraie</span><span><i style="background:var(--pick-p)"></i>désaccord</span></p>
+      </section>
+      <section class="carte" aria-label="Premières arrivées">
+        <h2>Premières arrivées P sur les verticales<small>Vitesse verticale, 0,2 s avant et 0,4 s après l'arrivée (tirets), stations rangées par azimut ; C : compression, D : dilatation, lues sur le premier extrême ; un clic repère la station sur la sphère</small></h2>
+        <canvas id="me-traces" aria-label="Premières arrivées P des stations"></canvas>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="me-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="me-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="me-afficheurs"></div></section>
+      <section class="carte" aria-label="Modèle">
+        <p class="sous-titre">Plan nodal du modèle</p>
+        <div class="champ"><label for="me-az">Azimut (direction) <output id="me-az-v"></output></label><input type="range" id="me-az" min="0" max="359" step="1"></div>
+        <div class="champ"><label for="me-pd">Pendage <output id="me-pd-v"></output></label><input type="range" id="me-pd" min="5" max="90" step="1"></div>
+        <div class="champ"><label for="me-gl">Glissement (rake) <output id="me-gl-v"></output></label><input type="range" id="me-gl" min="-180" max="180" step="1"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="me-inverser">Inverser (recherche exhaustive)</button></div>
+      </section>
+      <section class="carte" id="me-reglages-seisme" aria-label="Séisme">
+        <p class="sous-titre">Séisme</p>
+        <div class="segments compact" role="group" aria-label="Type" id="me-types" style="margin-bottom:10px">
+          <button type="button" data-me-type="normale">Normale</button><button type="button" data-me-type="inverse">Inverse</button><button type="button" data-me-type="decrochement">Décrochement</button><button type="button" data-me-type="oblique">Oblique</button>
+        </div>
+        <div class="champ"><label for="me-n">Stations <output id="me-n-v"></output></label><input type="range" id="me-n" min="6" max="30" step="1"></div>
+        <label class="case"><input type="checkbox" id="me-montrer"> Montrer la solution vraie</label>
+        <div class="actions" style="margin-top:10px"><button type="button" class="bouton secondaire" id="me-nouveau">Autre séisme</button></div>
+        <canvas id="me-carte" aria-label="Carte du réseau" style="margin-top:12px"></canvas>
+      </section>
+      <section class="carte" id="me-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="me-exo-num"></span>
+        <p class="enonce">Réglez un plan nodal qui respecte les polarités, puis donnez le type de faille ; l'inversion se débloque après la vérification.</p>
+        <div class="champ"><span class="etiquette">Type de faille</span>
+          <div class="segments" role="group" aria-label="Type de faille"><button type="button" data-me-rep="normale" aria-pressed="false">Normale</button><button type="button" data-me-rep="inverse" aria-pressed="false">Inverse</button><button type="button" data-me-rep="decrochement" aria-pressed="false">Décrochement</button></div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="me-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="me-nouvel-exo">Nouvel exercice</button></div>
+        <div id="me-corrige"></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Double couple</b> : quatre quadrants, deux en compression, deux en dilatation, séparés par le plan de faille et le plan auxiliaire ; les polarités seules ne disent pas lequel a joué.</li>
+          <li><b>Axes</b> : P au milieu des quadrants en dilatation, T au milieu des quadrants en compression ; P vertical : faille normale, T vertical : faille inverse.</li>
+          <li><b>Couverture</b> : les stations lointaines (Pn) tombent près du centre de la sphère, les proches (Pg montante) vers le bord ; un réseau mal réparti laisse une famille de solutions.</li>
+          <li><b>Ingénieur</b> : le type de faille entre dans les lois d'atténuation (inverse, normale, décrochement) et dans l'aire de rupture.</li>
+        </ul>
+        <p class="aide">Rayonnement P du double couple (Aki et Richards), vérifié contre ObsPy (plans, axes, rayonnement à 10⁻¹² près).</p>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -962,6 +1022,7 @@
 <script type="module" src="src/banc-site.js"></script>
 <script type="module" src="src/banc-liquefaction.js"></script>
 <script type="module" src="src/banc-ductilite.js"></script>
+<script type="module" src="src/banc-mecanisme.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>

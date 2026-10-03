@@ -101,3 +101,8 @@ la virgule décimale.
     Newton depuis l'état validé, sous-pas ≤ T/20 comme le spectre élastique (limite élastique testée). Référence
     OpenSeesPy (`tools/opensees/`). N2 : déplacement cible de l'annexe B de l'EN 1998-1:2004 sur le système
     équivalent ; Rμ = plus petit R qui atteint la ductilité visée (non-unicité de μ(R)).
+23. **Mécanisme** (`src/sismo/mecanisme.js`) : Aki et Richards en NED (x nord, y est, z bas), émergence depuis la
+    verticale descendante, polarité positive = compression ; Schmidt sur l'hémisphère inférieur (rai montant →
+    direction opposée). Référence ObsPy (`tools/obspy/`, NED → USE). La vérité des exercices est le mécanisme du
+    générateur ; les lectures sont le signe du premier extrême de la trace bruitée (comme un analyste), non le
+    signe du rayonnement.
