@@ -23,3 +23,10 @@ la virgule décimale.
    sur le signal sans bruit), jamais d'une formule inverse.
 7. **Localisation** : P prédite = première arrivée (Pg ou Pn), S prédite = Sg.
    Les exercices placent le séisme à moins de 135 km de toutes les stations.
+8. **Sismomètre** : x est le déplacement de la masse par rapport au bâti ;
+   X/Ug = r²/(1 − r² + 2iξr). Toute intégration passe par Newmark à accélération
+   moyenne (`Oscillateur.integrer` ou `Oscillateur.pas`, identiques pas à pas, testé).
+9. **Profil** : les temps sont comptés depuis l'origine ; la réduction (t − Δ/V) n'est
+   qu'un affichage, les droites sont toujours calculées en temps vrais.
+10. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+    (ses canvas ont une largeur nulle) et se construit à sa première ouverture.
