@@ -26,6 +26,7 @@
     <button type="button" data-onglet="alea" aria-pressed="false">Aléa</button>
     <button type="button" data-onglet="selection" aria-pressed="false">Accélérogrammes</button>
     <button type="button" data-onglet="site" aria-pressed="false">Site</button>
+    <button type="button" data-onglet="liquefaction" aria-pressed="false">Liquéfaction</button>
   </nav>
 </header>
 
@@ -54,6 +55,8 @@
         et on les met à l'échelle sur une cible — spectre moyen conditionnel, UHS ou spectre de l'Eurocode 8 — puis on contrôle les règles de l'EN 1998-1:2004.</p>
       <p class="chapeau" id="chapeau-site" hidden>Le sol filtre et amplifie le mouvement du rocher. Une colonne de couches, des ondes de cisaillement
         verticales, une rigidité qui chute avec la déformation : fonction de transfert, spectres en surface et classes de sol de l'Eurocode 8.</p>
+      <p class="chapeau" id="chapeau-liquefaction" hidden>Sous la nappe, un sable lâche secoué perd sa résistance. Sollicitation cyclique CSR contre
+        résistance CRR lue au pénétromètre (Boulanger et Idriss 2014) : coefficient de sécurité, couches liquéfiables, indice LPI et tassement.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -806,6 +809,61 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-liquefaction" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Sondage CPT">
+        <h2>Sondage au pénétromètre statique<small>Résistance de pointe qc, rapport de frottement Rf = fs/qc, indice de comportement Ic (Robertson) : au-delà de 2,6, sol argileux, non liquéfiable au sens de la méthode</small></h2>
+        <canvas id="lq-cpt" aria-label="Sondage CPT : qc, Rf et Ic en profondeur"></canvas>
+      </section>
+      <section class="carte" aria-label="Sollicitation et résistance">
+        <h2>Sollicitation, résistance et sécurité<small>CSR = 0,65·(σv/σ'v)·amax·rd ; CRR = CRR7,5(qc1Ncs)·MSF·Kσ ; zones teintées : CRR &lt; CSR ; εv : déformation volumique après liquéfaction</small></h2>
+        <canvas id="lq-csr" aria-label="CSR, CRR, coefficient de sécurité et déformation volumique en profondeur"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>CSR</span><span><i style="background:var(--teal)"></i>CRR</span><span><i style="background:var(--blue)"></i>FS (plafonné à 2)</span><span><i class="tirets" style="border-color:var(--pick-p)"></i>FS = 1</span><span><i class="tirets" style="border-color:var(--amp)"></i>FS = 1,25</span><span><i style="background:var(--cyan)"></i>εv</span></p>
+        <p class="aide">Méthode de Boulanger et Idriss (2014), courbe déterministe (c0 = 2,8), vérifiée contre liquepy à la précision machine. Sondage d'école ;
+          poids volumique estimé du CPT (Robertson et Cabal 2010) ; la teneur en fines est déduite de Ic.</p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="lq-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="lq-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="lq-afficheurs"></div></section>
+      <section class="carte" id="lq-panneau-explorer" aria-label="Réglages">
+        <p class="sous-titre">Terrain</p>
+        <div class="segments compact" role="group" aria-label="Profils" id="lq-profils" style="margin-bottom:12px"></div>
+        <div class="champ"><label for="lq-gwl">Profondeur de la nappe <output id="lq-gwl-v"></output></label><input type="range" id="lq-gwl" min="0" max="8" step="0.5"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="lq-tirage">Autre sondage</button></div>
+        <div class="separateur"></div>
+        <p class="sous-titre">Séisme</p>
+        <div class="champ"><label for="lq-amax">Accélération maximale en surface amax <output id="lq-amax-v"></output></label><input type="range" id="lq-amax" min="0.05" max="0.6" step="0.01"></div>
+        <div class="champ"><label for="lq-m">Magnitude M <output id="lq-m-v"></output></label><input type="range" id="lq-m" min="5" max="8" step="0.1"></div>
+        <p class="aide" style="margin-top:0">amax : PGA en surface, par exemple ag·S de l'EN 1998-1 ou le résultat du banc « site ». M : séisme dominant de la désagrégation.</p>
+      </section>
+      <section class="carte" id="lq-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="lq-exo-num"></span>
+        <p class="enonce">À la profondeur indiquée, calculez la sollicitation CSR et le coefficient de sécurité FS, puis dites si la couche se liquéfie.</p>
+        <div id="lq-exo-donnees"></div>
+        <div class="champ"><label for="lq-r-csr">CSR</label><input type="text" id="lq-r-csr" inputmode="decimal" autocomplete="off" placeholder="ex. 0,21"></div>
+        <div class="champ"><label for="lq-r-fs">FS</label><input type="text" id="lq-r-fs" inputmode="decimal" autocomplete="off" placeholder="ex. 0,85"></div>
+        <div class="champ"><span class="etiquette">Liquéfaction ?</span>
+          <div class="segments" role="group" aria-label="Liquéfaction"><button type="button" data-lq-rep="oui" aria-pressed="false">Oui</button><button type="button" data-lq-rep="non" aria-pressed="false">Non</button></div></div>
+        <div class="actions"><button type="button" class="bouton primaire" id="lq-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="lq-nouvel-exo">Nouvel exercice</button></div>
+        <div id="lq-corrige"></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Trois conditions</b> : un sol granulaire lâche, saturé (sous la nappe), et un séisme assez fort et assez long. Remonter la nappe ou densifier le sol réduit le risque.</li>
+          <li><b>MSF</b> : un séisme plus petit compte moins de cycles ; la résistance mobilisable croît. <b>Kσ</b> : en profondeur, la résistance relative diminue.</li>
+          <li><b>EN 1998-5:2004</b> : le sol est jugé liquéfiable quand la sollicitation dépasse λ fois la résistance, avec λ = 0,8 recommandé, soit un coefficient de sécurité de 1,25. Son annexe B donne d'autres courbes de résistance, à lire dans la norme.</li>
+          <li><b>Conséquences</b> : le LPI (Iwasaki) pondère les couches proches de la surface ; le tassement (Zhang et al. 2002) cumule la déformation volumique des couches liquéfiées et proches de l'être.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -833,6 +891,7 @@
 <script type="module" src="src/banc-alea.js"></script>
 <script type="module" src="src/banc-selection.js"></script>
 <script type="module" src="src/banc-site.js"></script>
+<script type="module" src="src/banc-liquefaction.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
