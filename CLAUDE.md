@@ -84,3 +84,9 @@ la virgule décimale.
     arithmétiques, réponse retenue selon § 4.3.3.4.3 (3). Spectre EC8 calé comme au banc « aléa » : ag·S = PGA
     de l'UHS, sol par Vs30, type 2 si M̄ (Mw, en guise de Ms) ≤ 5,5. Le banc ne recalcule l'aléa reçu
     (`alea:modele`) qu'à son ouverture.
+20. **Site** (`src/sismo/site.js`) : ondes SH verticales (Kramer 1996), G* = G·(√(1 − 4ξ²) + 2iξ) (Dormieux et
+    Canou), entrée à l'affleurement du rocher (2·A), surface libre. Linéaire équivalent comme pystrata (référence
+    `tests/references/site.json`, `tools/pystrata/`) : Darendeli échantillonné sur 20 déformations de 10⁻⁶ à
+    10^−1,5 et interpolé en ln γ, ξ0 = valeur de la courbe à 10⁻⁶ (pas Dmin), départ γ = PGV/Vs, γeff = 0,65·γmax
+    au milieu des sous-couches (≤ 2,5 m). Vs30 = 800 m/s compte comme A (comme le banc « aléa »). Les
+    accélérogrammes de référence viennent de `accelerogramme.js` : régénérer les références après `npm run calage`.
