@@ -535,6 +535,298 @@
     <a class="secondary" href="labo.html#mecanisme">Travaux pratiques : banc « Mécanisme »</a></div>
 </section>
 
+<section id="ch4" class="card">
+  <h2>4 · La taille de la source : moment et Mw</h2>
+
+  <h3>Le moment sismique</h3>
+  <p>La magnitude locale du chapitre 1 mesure une amplitude ; elle sature pour les grands séismes. La
+     mesure physique de la taille d'un séisme est le <strong>moment sismique</strong>, produit de la
+     rigidité de la roche, de la surface rompue et du glissement moyen :</p>
+  <p class="formula">M<sub>0</sub> = μ · A · D</p>
+  <p class="method-note">μ ≈ 30 GPa dans la croûte ; A = L × W, longueur et largeur de la rupture ; D,
+     glissement moyen. M<sub>0</sub> s'exprime en N·m.</p>
+  <p>Hanks et Kanamori (1979) en ont tiré la <strong>magnitude de moment</strong>, calée pour prolonger
+     les anciennes échelles :</p>
+  <p class="formula">Mw = (log<sub>10</sub> M<sub>0</sub> − 9,05) / 1,5</p>
+  <p class="method-note">La formule normalisée de l'IASPEI (2013) écrit 9,1 au lieu de 9,05 : l'écart est
+     de 0,03 en magnitude. Ce cours et ses bancs gardent 9,05, comme les sources du calcul d'aléa
+     (chapitre 10).</p>
+  <p>Une unité de Mw multiplie le moment par 10<sup>1,5</sup> ≈ 32 ; deux unités, par 1 000. Un séisme
+     de magnitude 7 équivaut, en moment, à mille séismes de magnitude 5.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Une rupture de 10 km de long sur 8 km de large glisse en moyenne de 0,5 m : M<sub>0</sub> =
+       3·10<sup>10</sup> × 10 000 × 8 000 × 0,5 = 1,2·10<sup>18</sup> N·m, et Mw = (18,08 − 9,05) / 1,5
+       ≈ <strong>6,0</strong>.</p></div>
+
+  <div class="calc" id="calcMoment">
+    <h3>Du glissement à la magnitude</h3>
+    <div class="data-grid">
+      <div class="field"><label for="moL">Longueur de la rupture L</label>
+        <div class="input-wrap"><input id="moL" type="text" inputmode="decimal" value="10" data-curseur="1 400 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="moW">Largeur de la rupture W</label>
+        <div class="input-wrap"><input id="moW" type="text" inputmode="decimal" value="8" data-curseur="1 40 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="moD">Glissement moyen D</label>
+        <div class="input-wrap"><input id="moD" type="text" inputmode="decimal" value="0.5" data-curseur="0.01 10 0.01"><span class="unit">m</span></div></div>
+      <div class="field"><label for="moMu">Rigidité μ</label>
+        <div class="input-wrap"><input id="moMu" type="text" inputmode="decimal" value="30" data-curseur="10 50 1"><span class="unit">GPa</span></div></div>
+    </div>
+    <p class="final-result" id="moOut"></p>
+  </div>
+
+  <h3>Les lois d'échelle</h3>
+  <p>Les grands séismes rompent de grandes failles. Wells et Coppersmith (1994) ont relié, sur les
+     séismes historiques, la surface rompue à la magnitude ; leur loi médiane, toutes failles
+     confondues, s'écrit log<sub>10</sub> A = −3,49 + 0,91 Mw (A en km²). Elle sert à dimensionner les
+     ruptures d'un modèle d'aléa : la plus grande magnitude d'une faille est celle dont la rupture la
+     couvre entière.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Mw 6 : A ≈ 93 km² (par exemple 12 km × 8 km), glissement moyen M<sub>0</sub>/(μA) ≈ 0,4 m.
+       Mw 7 : A ≈ 760 km² (par exemple 50 km × 15 km), glissement moyen ≈ 1,6 m. La surface est
+       multipliée par 8 environ, le glissement par 4.</p></div>
+
+  <h3>Le spectre de la source</h3>
+  <p>Vu de loin, le glissement d'une faille est une impulsion de déplacement. Son spectre de Fourier,
+     corrigé du trajet, présente un <strong>plateau</strong> aux basses fréquences, proportionnel au
+     moment, puis décroît comme 1/f² au-delà d'une <strong>fréquence coin</strong> f<sub>c</sub>,
+     d'autant plus basse que la rupture est grande. C'est le modèle de Brune (1970) :</p>
+  <p class="formula">Ω(f) = Ω<sub>0</sub> / (1 + (f / f<sub>c</sub>)²), avec Ω<sub>0</sub> ∝ M<sub>0</sub></p>
+  <p>Brune relie la fréquence coin au rayon de la rupture et à la <strong>chute de contrainte</strong>
+     Δσ, part de la contrainte de cisaillement relâchée par le séisme :</p>
+  <p class="formula">f<sub>c</sub> = 0,49 · β · (Δσ / M<sub>0</sub>)<sup>1/3</sup></p>
+  <p class="method-note">β : vitesse des ondes S près de la source (3 500 m/s) ; Δσ en Pa ; M<sub>0</sub> en
+     N·m. Δσ vaut de 1 à 10 MPa pour la plupart des séismes crustaux, sans dépendre de la magnitude :
+     les séismes sont semblables à eux-mêmes, et f<sub>c</sub> varie comme M<sub>0</sub><sup>−1/3</sup>,
+     divisée par √10 ≈ 3,2 à chaque unité de Mw.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Avec Δσ = 6 MPa : f<sub>c</sub> ≈ 3,0 Hz pour Mw 4 ; 0,95 Hz pour Mw 5 ; 0,30 Hz pour Mw 6 ;
+       0,095 Hz pour Mw 7.</p></div>
+
+  <h3>Pourquoi ML sature</h3>
+  <p>Le Wood-Anderson de la magnitude locale lit le mouvement autour de 1,25 Hz (période de 0,8 s). Tant
+     que la fréquence coin dépasse 1,25 Hz, l'amplitude à cette fréquence suit le plateau, donc le moment :
+     ML et Mw grandissent ensemble. Dès que f<sub>c</sub> passe sous 1,25 Hz, le Wood-Anderson lit la pente
+     en 1/f², où l'amplitude ne croît plus que comme M<sub>0</sub><sup>1/3</sup> : d'une magnitude à la
+     suivante, elle n'est plus multipliée que par 3 environ au lieu de 32. C'est la saturation de ML,
+     vers 6 à 6,5.</p>
+
+  <div class="calc" id="calcBrune">
+    <h3>Spectre de Brune et fréquence coin</h3>
+    <div class="data-grid">
+      <div class="field"><label for="brMw">Magnitude Mw</label>
+        <div class="input-wrap"><input id="brMw" type="text" inputmode="decimal" value="5" data-curseur="3 8 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="brDs">Chute de contrainte Δσ</label>
+        <div class="input-wrap"><input id="brDs" type="text" inputmode="decimal" value="6" data-curseur="0.5 30 0.5"><span class="unit">MPa</span></div></div>
+    </div>
+    <div class="figure" id="brFig"></div>
+    <p class="final-result" id="brOut"></p>
+  </div>
+
+  <h3>Mesurer le moment sur un enregistrement</h3>
+  <p>Pour mesurer M<sub>0</sub>, on prend le spectre de la fenêtre des ondes S sur les deux
+     horizontales et on le corrige de tout ce que le trajet a ajouté ou retiré :</p>
+  <ul class="liste-cours">
+    <li>l'<strong>expansion géométrique</strong> : l'énergie se répartit sur une surface qui grandit, en
+      1/R près de la source, plus lentement au-delà de quelques dizaines de kilomètres, quand les ondes
+      sont guidées par la croûte ;</li>
+    <li>l'<strong>atténuation anélastique</strong> exp(−πfR / (Qβ)) : la roche dissipe une petite fraction
+      de l'énergie à chaque cycle, d'autant plus que la fréquence est haute ; Q croît avec la
+      fréquence ;</li>
+    <li>le <strong>filtre κ</strong> exp(−πκf) des couches de surface, qui coupe les hautes fréquences
+      (κ ≈ 0,02 à 0,06 s) ;</li>
+    <li>l'<strong>amplification</strong> du site, par les couches de vitesse décroissante sous la
+      station.</li>
+  </ul>
+  <p>On ajuste ensuite le modèle de Brune : le plateau Ω<sub>0</sub>, ramené à la distance de référence
+     R<sub>0</sub> = 1 km, donne M<sub>0</sub> = Ω<sub>0</sub> · 4πρβ³ · R<sub>0</sub> / (R<sub>θφ</sub> · F), avec ρ la masse volumique, R<sub>θφ</sub> ≈ 0,63 le
+     rayonnement moyen des ondes S et F = 2 l'effet de la surface libre ; la fréquence coin donne Δσ. Les
+     agences publient Mw à partir des formes d'onde complètes (inversion du tenseur des moments), mais le
+     principe est le même : la magnitude de moment se lit dans les basses fréquences.</p>
+
+  <div class="calc" id="calcSource">
+    <h3>Le spectre des ondes S d'un enregistrement</h3>
+    <p class="method-note">Le générateur des bancs simule un séisme (source de Brune, trajet, κ et site du
+       cours), enregistré sans bruit à la distance choisie. Le spectre brut de la fenêtre S, corrigé du
+       trajet et du site, est ajusté par le modèle de Brune.</p>
+    <div class="data-grid">
+      <div class="field"><label for="soMw">Magnitude Mw vraie</label>
+        <div class="input-wrap"><input id="soMw" type="text" inputmode="decimal" value="4.5" data-curseur="3 6 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="soDs">Chute de contrainte vraie</label>
+        <div class="input-wrap"><input id="soDs" type="text" inputmode="decimal" value="6" data-curseur="1 20 1"><span class="unit">MPa</span></div></div>
+      <div class="field"><label for="soR">Distance épicentrale</label>
+        <div class="input-wrap"><input id="soR" type="text" inputmode="decimal" value="60" data-curseur="30 140 10"><span class="unit">km</span></div></div>
+    </div>
+    <div class="figure" id="soFig"></div>
+    <p class="final-result" id="soOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>La magnitude des lois d'atténuation et du calcul de l'aléa est Mw. Un catalogue ancien en ML, en
+       magnitude de durée ou en intensité doit être converti en Mw avant de tirer la loi de
+       Gutenberg-Richter (chapitre 8) ; une conversion biaisée de 0,2 se reporte entière sur l'aléa. La
+       fréquence coin explique aussi pourquoi les grands séismes, riches en basses fréquences, sollicitent
+       davantage les structures souples (chapitre 7).</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Croire qu'un séisme de magnitude 7 est « un peu plus fort » qu'un 6. Il rompt une faille huit fois
+       plus grande, libère 32 fois plus de moment et dure plus longtemps ; de 2 à 10 km, en
+       revanche, son accélération maximale médiane n'est que 1,4 à 1,6 fois plus forte (trois lois du cours,
+       au rocher). Le spectre de réponse,
+       pas le pic d'accélération, rend compte de la différence.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>M<sub>0</sub> = μ·A·D (N·m) ; Mw = (log<sub>10</sub> M<sub>0</sub> − 9,05)/1,5 ; + 1 en Mw = × 32
+        en moment.</li>
+      <li>Spectre de Brune : plateau ∝ M<sub>0</sub>, puis 1/f² au-delà de f<sub>c</sub> ∝
+        (Δσ/M<sub>0</sub>)<sup>1/3</sup> ; Δσ ≈ 1 à 10 MPa.</li>
+      <li>Le spectre enregistré se corrige de l'expansion géométrique, de Q, de κ et du site avant
+        l'ajustement.</li>
+      <li>ML sature quand f<sub>c</sub> passe sous 1,25 Hz ; Mw ne sature pas.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch4">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch4">Exerciseur</a>
+    <a class="secondary" href="labo.html#source">Travaux pratiques : banc « Source »</a></div>
+</section>
+
+<section id="ch5" class="card">
+  <h2>5 · Comment fonctionne un sismomètre</h2>
+
+  <h3>Une masse suspendue dans un bâti</h3>
+  <p>Comment mesurer le mouvement du sol, quand l'appareil est posé sur ce sol et bouge avec lui ? Il
+     faut un point qui reste, au moins un temps, immobile : une <strong>masse</strong> suspendue à un
+     <strong>ressort</strong> dans un bâti fixé au sol, freinée par un <strong>amortisseur</strong>. Quand
+     le sol bouge, le bâti le suit ; la masse, par inertie, tarde à le suivre. Le sismomètre enregistre
+     le déplacement x de la masse <em>par rapport au bâti</em>. Si ug est le déplacement du sol,
+     l'équilibre de la masse s'écrit :</p>
+  <p class="formula">ẍ + 2ξω<sub>0</sub> ẋ + ω<sub>0</sub>² x = −üg</p>
+  <p class="method-note">ω<sub>0</sub> = √(k/m) est la pulsation propre (f<sub>0</sub> = ω<sub>0</sub>/2π
+     la fréquence propre, T<sub>0</sub> = 1/f<sub>0</sub> la période propre) ; ξ = c/(2mω<sub>0</sub>)
+     le taux d'amortissement critique. Le mouvement du sol n'entre que par son accélération üg.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Une masse de 2 kg sur un ressort de 79 N/m : ω<sub>0</sub> = √(79/2) = 6,28 rad/s, soit
+       f<sub>0</sub> = 1,0 Hz et T<sub>0</sub> = 1,0 s. Pour ξ = 0,7, l'amortisseur doit valoir
+       c = 2ξmω<sub>0</sub> = 2 × 0,7 × 2 × 6,28 ≈ 17,6 N·s/m.</p></div>
+
+  <h3>Les oscillations libres et l'amortissement</h3>
+  <p>Écartée puis lâchée, la masse oscille à la période propre amortie T<sub>d</sub> =
+     T<sub>0</sub>/√(1 − ξ²), et ses oscillations décroissent en e<sup>−ξω<sub>0</sub>t</sup>. Le
+     rapport de deux maxima successifs donne l'amortissement : c'est le <strong>décrément
+     logarithmique</strong>.</p>
+  <p class="formula">δ = ln(x<sub>n</sub> / x<sub>n+1</sub>) = 2πξ / √(1 − ξ²) ≈ 2πξ</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Un oscillateur de période 1 s passe de 7,3 mm à 5,3 mm d'un maximum au suivant : δ = ln(7,3/5,3)
+       ≈ 0,32 et ξ ≈ 0,32 / 2π ≈ <strong>5 %</strong> — l'amortissement conventionnel des structures en
+       béton armé. Un sismomètre est bien plus amorti (ξ ≈ 0,7) pour ne pas résonner.</p></div>
+
+  <div class="calc" id="calcLibre">
+    <h3>Oscillations libres</h3>
+    <p class="method-note">Lâcher de la masse depuis 10 mm, intégration pas à pas (Newmark à accélération
+       moyenne, comme tous les calculs temporels du cours).</p>
+    <div class="data-grid">
+      <div class="field"><label for="liT">Période propre T<sub>0</sub></label>
+        <div class="input-wrap"><input id="liT" type="text" inputmode="decimal" value="1" data-curseur="0.1 5 0.1"><span class="unit">s</span></div></div>
+      <div class="field"><label for="liXi">Amortissement ξ</label>
+        <div class="input-wrap"><input id="liXi" type="text" inputmode="decimal" value="0.05" data-curseur="0 1 0.01"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="liFig"></div>
+    <p class="final-result" id="liOut"></p>
+  </div>
+
+  <h3>La réponse en fréquence</h3>
+  <p>Pour un mouvement du sol sinusoïdal de fréquence f, la masse répond à la même fréquence, avec une
+     amplitude qui dépend du rapport r = f/f<sub>0</sub> :</p>
+  <p class="formula">X / Ug = r² / (1 − r² + 2iξr)</p>
+  <ul class="liste-cours">
+    <li><strong>f ≫ f<sub>0</sub></strong> (r ≥ 3) : X ≈ −Ug. La masse reste immobile et le bâti bouge
+      autour d'elle : on lit directement le <strong>déplacement</strong> du sol. C'est le régime des
+      sismomètres classiques ;</li>
+    <li><strong>f ≪ f<sub>0</sub></strong> (r ≤ 0,3) : X ≈ −üg/ω<sub>0</sub>². La masse suit le sol, le
+      ressort se tend en proportion de la force d'inertie : on lit l'<strong>accélération</strong> du
+      sol. C'est le régime des accéléromètres, de fréquence propre élevée (25 Hz et plus) ;</li>
+    <li><strong>f ≈ f<sub>0</sub></strong> : <strong>résonance</strong>. Peu amortie, la masse amplifie le
+      mouvement, d'un facteur 1/(2ξ) à r = 1. Avec ξ ≈ 0,7, la réponse reste plate et sans pic.</li>
+  </ul>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Un instrument de 1 Hz amorti à 0,7 : à 5 Hz, |X/Ug| = 1,00 (on lit le déplacement) ; à 0,2 Hz,
+       |X·ω<sub>0</sub>²/üg| = 1,00 (on lit l'accélération) ; à 1 Hz, les deux valent 0,71. Le même
+       instrument amorti à 0,05 amplifierait 10 fois le mouvement à 1 Hz.</p></div>
+
+  <div class="calc" id="calcReponse">
+    <h3>Réponse en fréquence d'un instrument</h3>
+    <div class="data-grid">
+      <div class="field"><label for="reF0">Fréquence propre f<sub>0</sub></label>
+        <div class="input-wrap"><input id="reF0" type="text" inputmode="decimal" value="1" data-curseur="0.05 50 0.05"><span class="unit">Hz</span></div></div>
+      <div class="field"><label for="reXi">Amortissement ξ</label>
+        <div class="input-wrap"><input id="reXi" type="text" inputmode="decimal" value="0.7" data-curseur="0.02 1.5 0.01"><span class="unit">—</span></div></div>
+    </div>
+    <div class="figure" id="reFig"></div>
+    <p class="final-result" id="reOut"></p>
+  </div>
+
+  <h3>Vélocimètres, accéléromètres et Wood-Anderson</h3>
+  <p>Dans un <strong>vélocimètre</strong> électromagnétique, une bobine liée à la masse se déplace dans
+     un aimant lié au bâti : la tension produite est proportionnelle à la <strong>vitesse</strong>
+     relative. Au-dessus de f<sub>0</sub>, cette vitesse relative est celle du sol : l'instrument mesure
+     la vitesse du sol. Les sismomètres « large bande » modernes maintiennent la masse en place par une
+     force électrique (contre-réaction) et mesurent cette force : leur réponse est plate en vitesse de
+     120 s à 50 Hz. Très sensibles, ils saturent dans le mouvement fort.</p>
+  <p>L'<strong>accéléromètre</strong> a une fréquence propre bien au-dessus des fréquences utiles : il
+     mesure l'accélération, sans saturer jusqu'à 2 g ou plus. C'est l'instrument du génie
+     parasismique.</p>
+  <p>Le <strong>Wood-Anderson</strong> de la magnitude locale est un sismomètre à torsion de période
+     0,8 s, amorti à 0,8 ; au-dessus de 4 Hz environ, il lit le déplacement du sol (à 2 Hz, il en
+     rend encore 85 %). On le simule
+     aujourd'hui sur les enregistrements numériques (chapitre 1).</p>
+
+  <div class="calc" id="calcSinus">
+    <h3>Un instrument sous un mouvement sinusoïdal</h3>
+    <p class="method-note">Mouvement du sol sinusoïdal de 1 mm d'amplitude, démarré progressivement ;
+       réponse de la masse intégrée pas à pas. En régime établi, le rapport des amplitudes rejoint |X/Ug|
+       de la réponse en fréquence.</p>
+    <div class="data-grid">
+      <div class="field"><label for="siInst">Instrument</label>
+        <div class="input-wrap"><select id="siInst">
+          <option value="woodAnderson">Wood-Anderson (T₀ = 0,8 s, ξ = 0,8)</option>
+          <option value="courtePeriode">courte période (f₀ = 1 Hz, ξ = 0,7)</option>
+          <option value="longuePeriode">longue période (T₀ = 20 s, ξ = 0,7)</option>
+          <option value="accelerometre">accéléromètre (f₀ = 25 Hz, ξ = 0,7)</option>
+        </select></div></div>
+      <div class="field"><label for="siF">Fréquence du sol f</label>
+        <div class="input-wrap"><input id="siF" type="text" inputmode="decimal" value="2" data-curseur="0.05 20 0.05"><span class="unit">Hz</span></div></div>
+    </div>
+    <div class="figure" id="siFig"></div>
+    <p class="final-result" id="siOut"></p>
+  </div>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Un bâtiment d'un étage — une dalle de masse m sur des poteaux de raideur k — obéit exactement à la
+       même équation : sa « lecture » x est le déplacement de la dalle par rapport au sol, qui fait les
+       efforts dans les poteaux. Le spectre de réponse du chapitre 7 n'est rien d'autre que la plus grande
+       lecture d'une famille de tels sismomètres, de toutes les périodes, sous un accélérogramme. Et la
+       résonance est le danger d'un ouvrage dont la période propre tombe dans les fréquences fortes du
+       mouvement du sol.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Confondre la fréquence propre de l'instrument et la fréquence du sol. Un sismomètre « de 1 Hz » ne
+       mesure pas seulement à 1 Hz : il lit le déplacement au-dessus de 3 Hz, l'accélération au-dessous de
+       0,3 Hz, et doit être corrigé de sa réponse entre les deux.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>ẍ + 2ξω<sub>0</sub>ẋ + ω<sub>0</sub>²x = −üg : x relatif au bâti, le sol n'entre que par son
+        accélération.</li>
+      <li>Décrément logarithmique δ = ln(x<sub>n</sub>/x<sub>n+1</sub>) ≈ 2πξ.</li>
+      <li>f ≫ f<sub>0</sub> : on lit le déplacement ; f ≪ f<sub>0</sub> : l'accélération ; f ≈
+        f<sub>0</sub> : résonance, amplification 1/(2ξ).</li>
+      <li>Le même oscillateur modélise un ouvrage : c'est la base du spectre de réponse.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch5">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch5">Exerciseur</a>
+    <a class="secondary" href="labo.html#sismometre">Travaux pratiques : banc « Sismomètre »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -589,5 +881,7 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch1.js"></script>
 <script type="module" src="src/cours-ch2.js"></script>
 <script type="module" src="src/cours-ch3.js"></script>
+<script type="module" src="src/cours-ch4.js"></script>
+<script type="module" src="src/cours-ch5.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>
