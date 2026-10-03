@@ -1,6 +1,7 @@
 import Sismo from './sismo/signal.js';
 import Spectre from './sismo/spectre.js';
 import Psha from './sismo/psha.js';
+import Isolignes from './sismo/isolignes.js';
 
 // src/banc-alea.js — banc « aléa » : calcul probabiliste de l'aléa sismique (PSHA) sur un modèle d'école,
 // avec son arbre logique ; courbe d'aléa, spectre à probabilité uniforme face à l'EC8, désagrégation et
@@ -34,7 +35,7 @@ import Psha from './sismo/psha.js';
   });
   const etat = {
     pret: false, mode: 'explorer', r: reglagesDefaut(), zone: 0, proba: [0.1, 50], k: K_PGA,
-    modele: null, res: null, desag: null, sens: null, exo: null, verifie: false, dom: null,
+    modele: null, res: null, desag: null, sens: null, exo: null, verifie: false, dom: null, carte: null,
   };
 
   // ── Calcul ──────────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ import Psha from './sismo/psha.js';
   const niveau = (courbe) => Psha.niveauPourProba(etat.res.niveaux, courbe, poeCible());
   const uhs = courbes => courbes.map(c => niveau(c));
   function calculer() {
+    arreterCarte();
     etat.modele = construire(etat.r);
     etat.res = Psha.calculer(etat.modele);
     analyser();
@@ -66,6 +68,7 @@ import Psha from './sismo/psha.js';
   }
   // Ce qui dépend de la grandeur et de la probabilité choisies
   function analyser() {
+    if (etat.carte && (etat.carte.k !== etat.k || etat.carte.poe !== poeCible())) arreterCarte();
     const res = etat.res;
     etat.uhs = { moy: uhs(res.moyenne), q16: uhs(res.fractiles[0.16]), q84: uhs(res.fractiles[0.84]) };
     etat.desag = etat.uhs.moy[etat.k] > 0 ? Psha.desagregation(etat.modele, BASE.imts[etat.k], etat.uhs.moy[etat.k]) : null;
@@ -73,6 +76,30 @@ import Psha from './sismo/psha.js';
     // Spectre moyen conditionnel à la grandeur choisie, au niveau de l'UHS moyen
     const xk = etat.uhs.moy[etat.k];
     etat.cms = xk > 0 ? Psha.spectreConditionnel(etat.modele, BASE.imts[etat.k], xk, poeCible()) : null;
+  }
+
+  // ── Carte d'aléa : niveau moyen à la probabilité visée, site par site, sur une grille de 20 km ──
+  const PAS_CARTE = 20;
+  function arreterCarte() {
+    etat.carte = null;
+    const b = $('#al-carte-alea');
+    if (b) { b.textContent = 'Carte d\'aléa'; b.disabled = enExercice(); }
+  }
+  function lancerCarte() {
+    const grille = Psha.grilleCarte({ ...DOMAINE, pas: PAS_CARTE }), modele = etat.modele, k = etat.k, poe = poeCible();
+    const carte = { k, poe, grille, valeurs: new Float64Array(grille.sites.length).fill(NaN), n: 0, t0: performance.now() };
+    etat.carte = carte;
+    $('#al-carte-alea').disabled = true;
+    const tranche = () => {
+      if (etat.carte !== carte) return; // modèle, grandeur ou probabilité changés
+      const fin = Math.min(grille.sites.length, carte.n + 6);
+      for (; carte.n < fin; carte.n++) carte.valeurs[carte.n] = Psha.niveauSite(modele, grille.sites[carte.n], BASE.imts[k], poe);
+      $('#al-carte-alea').textContent = carte.n < grille.sites.length ? `Carte : ${Math.round((100 * carte.n) / grille.sites.length)} %` : 'Carte d\'aléa';
+      if (carte.n >= grille.sites.length) { carte.duree = performance.now() - carte.t0; $('#al-carte-alea').disabled = false; }
+      dessinerCarte();
+      if (carte.n < grille.sites.length) setTimeout(tranche, 0);
+    };
+    setTimeout(tranche, 0);
   }
 
   // ── Dessin ──────────────────────────────────────────────────────────────
@@ -106,6 +133,40 @@ import Psha from './sismo/psha.js';
     const cx = (W - s * (DOMAINE.x1 - DOMAINE.x0)) / 2, cy = (H - s * (DOMAINE.y1 - DOMAINE.y0)) / 2;
     return { s, X: x => cx + (x - DOMAINE.x0) * s, Y: y => H - cy - (y - DOMAINE.y0) * s, x: X => DOMAINE.x0 + (X - cx) / s, y: Y => DOMAINE.y0 + (H - cy - Y) / s };
   }
+  // Couleur opaque entre le fond et `vers` (couleurs #rrggbb), t de 0 à 1
+  const rgb = c => (/^#[0-9a-f]{6}$/i.test(c) ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : null);
+  function melange(t, vers) {
+    const a = rgb(COUL.paper), b = rgb(vers);
+    if (!a || !b) return vers;
+    return `rgb(${a.map((x, i) => Math.round(x + (b[i] - x) * t)).join(',')})`;
+  }
+  // Cases colorées (échelle logarithmique), isolignes aux niveaux ronds, légende
+  function dessinerCarteAlea(ctx, g, W, H) {
+    const c = etat.carte, gr = c.grille, v = Array.from(c.valeurs).filter(x => x > 0);
+    if (!v.length) return;
+    const vmin = Math.min(...v), vmax = Math.max(...v), t = x => (vmax > vmin ? Math.log(x / vmin) / Math.log(vmax / vmin) : 1), d = (PAS_CARTE * g.s) / 2;
+    gr.sites.forEach((s, n) => {
+      const x = c.valeurs[n];
+      if (!(x > 0)) return;
+      ctx.fillStyle = melange(0.06 + 0.5 * t(x), COUL['pick-p']);
+      ctx.fillRect(Math.floor(g.X(s.x) - d), Math.floor(g.Y(s.y) - d), Math.ceil(2 * d) + 1, Math.ceil(2 * d) + 1);
+    });
+    if (c.n < gr.sites.length) return;
+    const places = [];
+    for (const niv of Isolignes.niveauxRonds(vmin, vmax, 5)) {
+      const segs = Isolignes.segments(c.valeurs, gr.nx, gr.ny, niv), P = ([i, j]) => [g.X(gr.x0 + i * PAS_CARTE), g.Y(gr.y0 + j * PAS_CARTE)];
+      ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.1; ctx.globalAlpha = 0.7; ctx.beginPath();
+      for (const [a, b] of segs) { const [x1, y1] = P(a), [x2, y2] = P(b); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); }
+      ctx.stroke(); ctx.globalAlpha = 1;
+      // étiquette : le point le plus à droite qui ne chevauche pas une étiquette déjà posée
+      const lab = segs.map(([a]) => P(a)).filter(([x, y]) => x > 40 && x < W - 40 && y > 30 && y < H - 30).sort((a, b) => b[0] - a[0])
+        .find(([x, y]) => places.every(([u, w]) => Math.abs(u - x) > 46 || Math.abs(w - y) > 16));
+      if (lab) { places.push(lab); texte(ctx, g3(niv), lab[0], lab[1], COUL.ink, `700 10.5px ${MONO}`, 'center'); }
+    }
+    const lib = W >= 520 ? `${nomImt(c.k)} moyen à ${virg(100 * etat.proba[0], 0)} % en ${etat.proba[1]} ans : ${g3(vmin)} à ${g3(vmax)} g`
+      : `${nomImt(c.k)}, Tr ${milliers(periodeRetour())} ans : ${g3(vmin)} à ${g3(vmax)} g`;
+    texte(ctx, lib, 8, H - 8, COUL['pick-p'], `800 11.5px ${POLICE}`, 'left', 'bottom');
+  }
   function dessinerCarte() {
     const cv = $('#al-carte');
     if (cv.clientWidth < 50) return;
@@ -115,6 +176,7 @@ import Psha from './sismo/psha.js';
     for (let x = -100; x <= DOMAINE.x1; x += 50) { const X = Math.round(g.X(x)) + 0.5; ctx.beginPath(); ctx.moveTo(X, g.Y(DOMAINE.y1)); ctx.lineTo(X, g.Y(DOMAINE.y0)); ctx.stroke(); }
     for (let y = -100; y <= DOMAINE.y1; y += 50) { const Y = Math.round(g.Y(y)) + 0.5; ctx.beginPath(); ctx.moveTo(g.X(DOMAINE.x0), Y); ctx.lineTo(g.X(DOMAINE.x1), Y); ctx.stroke(); }
     ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('quadrillage 50 km', 8, 6);
+    if (etat.carte && !enExercice()) dessinerCarteAlea(ctx, g, W, H);
     // Zones : surface, contour, points de calcul
     etat.modele.zones.forEach((z, i) => {
       const c = COUL[COUL_ZONES[i]];
@@ -469,6 +531,7 @@ import Psha from './sismo/psha.js';
     $('#al-lam').addEventListener('input', e => { etat.r.zones[etat.zone].lam = Math.round(Math.pow(10, parseFloat(e.target.value)) * 100) / 100; majControles(); planifier(); });
     $('#al-b').addEventListener('input', e => { etat.r.zones[etat.zone].b = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-mmax').addEventListener('input', e => { etat.r.zones[etat.zone].mmax = parseFloat(e.target.value); majControles(); planifier(); });
+    $('#al-carte-alea').addEventListener('click', lancerCarte);
     $('#al-inc-ab').addEventListener('change', e => { etat.r.incAB = e.target.checked; recalculer(); });
     $('#al-inc-mmax').addEventListener('change', e => { etat.r.incMmax = e.target.checked; recalculer(); });
     $('#al-inc-geo').addEventListener('change', e => { etat.r.geo.actif = e.target.checked; recalculer(); });

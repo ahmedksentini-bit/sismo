@@ -49,7 +49,8 @@ la virgule décimale.
     χ·Ṁ0 (a recalculé comme `TruncatedGRMFD._set_a`). Une réalisation se désigne par sa clé
     « variante|ΔMmax|loi ». Un fractile peut sauter de
     quelques % quand deux réalisations quasi égales changent d'ordre : le test vérifie
-    l'algorithme sur les courbes d'OpenQuake. Après tout changement du modèle d'école,
+    l'algorithme sur les courbes d'OpenQuake. La carte d'aléa (`niveauSite`) est la moyenne de l'arbre site par
+    site, sans fractiles, comparée au job `carte` d'OpenQuake (six sites). Après tout changement du modèle d'école,
     relancer `npm run references` (OpenQuake, ~10 min).
 14. **Géodésie** (`src/sismo/geodesie.js`) : le champ vrai ne dépend que de x (faille de
     Savage et Burford, bande de raccourcissement uniforme) ; ε̇ en ns/an (1 mm/an/km = 1000 ns/an) ;

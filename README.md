@@ -15,7 +15,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Spectre de réponse** | six bâtiments (T = 0,1 à 4 s) sur une table vibrante ; spectre Sa ou Sd qui se construit pendant la lecture de l'accélérogramme ; spectre élastique de l'EN 1998-1:2004 (types 1 et 2, sols A à E, η, ag calé sur le PGA ou imposé) ; période de l'ouvrage, T₁ = Ct·H^¾ |
 | **Sismicité** | catalogue simulé de 1900 à 2025 (Gutenberg-Richter, répliques d'Omori-Utsu, complétude qui s'améliore avec le temps) ; graphique de Stepp ; valeur b d'Aki sur une période ou de Weichert sur une table de complétude ; Mc par courbure maximale ; déclusterage de Gardner et Knopoff ; taux annuels, périodes de retour, probabilités de Poisson ; mode exercice noté |
 | **Géodésie** | réseau GNSS simulé sur les zones du modèle d'aléa (faille bloquée de Savage et Burford, bande de raccourcissement) ; budget de moment avec la faille F ; profil des vitesses ; taux de déformation par zone par moindres carrés, axes principaux et incertitudes ; taux de moment de Kostrov (Savage et Simpson), tirages et biais en région lente ; couplage χ ; loi de Gutenberg-Richter équilibrée en moment face au catalogue ; envoi des moments au banc « aléa » ; mode exercice noté |
-| **Aléa (PSHA)** | modèle d'école à deux zones sources discrétisées en points et une faille à ruptures flottantes (faille F, glissement réglable), site déplaçable et Vs30 ; arbre logique : modèle de taux (catalogue : (a, b) de chaque zone ; géodésie : couplage χ, moment conservé) × ΔMmax × loi d'atténuation (Akkar et al. 2014, Bindi et al. 2014, Boore et al. 2014, poids égaux), 108 réalisations en énumération complète ; courbes d'aléa de chaque réalisation, moyenne et fractiles 16/84 % ; UHS face aux spectres de l'EN 1998-1:2004 ; spectre moyen conditionnel à la grandeur choisie (Lin et al. 2013, corrélation de Baker et Jayaram 2008) avec sa dispersion ; désagrégation magnitude-distance ; sensibilité aux branches ; mode exercice noté |
+| **Aléa (PSHA)** | modèle d'école à deux zones sources discrétisées en points et une faille à ruptures flottantes (faille F, glissement réglable), site déplaçable et Vs30 ; arbre logique : modèle de taux (catalogue : (a, b) de chaque zone ; géodésie : couplage χ, moment conservé) × ΔMmax × loi d'atténuation (Akkar et al. 2014, Bindi et al. 2014, Boore et al. 2014, poids égaux), 108 réalisations en énumération complète ; courbes d'aléa de chaque réalisation, moyenne et fractiles 16/84 % ; UHS face aux spectres de l'EN 1998-1:2004 ; spectre moyen conditionnel à la grandeur choisie (Lin et al. 2013, corrélation de Baker et Jayaram 2008) avec sa dispersion ; carte d'aléa sur une grille de 20 km (niveau moyen de la grandeur choisie, isolignes) ; désagrégation magnitude-distance ; sensibilité aux branches ; mode exercice noté |
 | **Accélérogrammes** | banque de 160 accélérogrammes synthétiques (méthode stochastique, source à deux coins, calés en moyenne sur les trois lois d'atténuation) ; sélection et mise à l'échelle sur le spectre moyen conditionnel à T1 (calage à Sa(T1), échanges gloutons de Jayaram et al. 2011 sur la moyenne et la dispersion), l'UHS ou le spectre de l'EN 1998-1:2004 ; filtre sur le scénario de la désagrégation, facteur maximal ; contrôle du § 3.2.3.1.2 (4) (nombre, PGA moyen ≥ ag·S, moyenne ≥ 0,9·Se de 0,2·T1 à 2·T1), facteur commun minimal et réponse à retenir (§ 4.3.3.4.3 (3)) ; aléa repris du banc « aléa » ; mode exercice noté |
 | **Site** | colonne de sol stratifiée sur rocher (profils types ou couches réglables : épaisseur, Vs, IP), ondes SH verticales (Kramer 1996) en linéaire ou en linéaire équivalent (courbes de Darendeli 2001, γeff = 0,65·γmax) ; fonction de transfert et f0 du quart d'onde, spectres au rocher et en surface face aux spectres de l'EN 1998-1:2004 (sol A et classe du site), profils de Vs compatible, de déformation, de G/G0 et ξ ; Vs30 et classe de sol (tableau 3.1) ; calcul vérifié contre pystrata ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
@@ -59,6 +59,7 @@ src/sismo/accelerogramme.js accélérogrammes synthétiques : fenêtre S stochas
                           Silva (2000), correction spectrale calée sur les lois d'atténuation
 src/sismo/selection.js    sélection et mise à l'échelle sur une cible, échanges gloutons, contrôle
                           EN 1998-1:2004 § 3.2.3.1.2 (4)
+src/sismo/isolignes.js    isolignes d'une grille (carrés marchants), niveaux ronds
 src/sismo/site.js         effets de site 1D : ondes SH, linéaire équivalent, Darendeli, Vs30 et classe EC8
 src/sismo/coefficients/   coefficients exportés de hazardlib et calage des accélérogrammes (fichiers produits)
 src/lecteur-station.js  banc « une station »
@@ -73,7 +74,7 @@ src/banc-selection.js   banc « accélérogrammes »
 src/banc-site.js        banc « site »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, références (74 tests)
+                        site, isolignes, références (78 tests)
 tests/references/       valeurs calculées par OpenQuake et pystrata (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
@@ -122,7 +123,8 @@ variante de taux × ΔMmax écrite comme un modèle de sources de l'arbre, la va
 géodésiques étant calculée par OpenQuake lui-même (`_set_a`) — puis lance les calculateurs `classical` et
 `disaggregation`. Écarts mesurés : courbes des 108 réalisations à 0,22 % près (au niveau extrême de 3 g,
 où la queue tronquée amplifie les écarts de distance ; 0,06 % ailleurs), moyenne à 0,1 %, UHS moyen à 0,03 %,
-fractiles et cartes d'aléa identiques sur les mêmes courbes, cases de la désagrégation à 0,25 %.
+fractiles et cartes d'aléa identiques sur les mêmes courbes, cases de la désagrégation à 0,25 % ; carte d'aléa :
+PGA moyen à 10 % en 50 ans en six sites de la grille à 0,05 % près (job `carte`, sites multiples).
 Pour la désagrégation, OpenQuake classe les distances en Rrup, distance en ligne droite au foyer (ou aux
 nœuds de la rupture) sur la Terre sphérique ; le moteur sait la calculer (`distance: 'rrup'`), le banc
 affiche Rjb. Sous 40 km, OpenQuake dilate de 5 m la projection d'une rupture de faille : le moteur aussi.
