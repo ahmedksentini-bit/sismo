@@ -1,6 +1,6 @@
 // src/parcours.js — plan du cours : chapitres et bancs dans l'ordre de lecture, ancres d'adresse, leçons (cours/).
 // Données pures, utilisées par src/onglets.js (barre des bancs, fil du parcours) et cours/ (sommaire), vérifiées par
-// les tests contre index.html.
+// les tests contre labo.html.
 const Parcours = (() => {
   'use strict';
   const CHAPITRES = [
@@ -16,9 +16,9 @@ const Parcours = (() => {
     selection: 'accelerogrammes', site: 'effets-de-site', liquefaction: 'liquefaction',
     ductilite: 'ductilite', batiment: 'batiment', poussee: 'poussee-progressive', isolation: 'isolation',
   };
-  // Leçon de cours associée à chaque banc (le banc en est le TP) ; fichier null : leçon à venir.
+  // Chapitre du cours associé à chaque banc (le banc en est le TP) ; fichier null : chapitre en préparation.
   const LECONS = {
-    station: { titre: 'Lire un sismogramme', fichier: 'lecon-01.html', duree: 20 },
+    station: { titre: 'Lire un sismogramme', fichier: 'cours.html#ch1', duree: 20 },
     reseau: { titre: 'Localiser un séisme avec un réseau', fichier: null, duree: 20 },
     mecanisme: { titre: 'Le mécanisme au foyer', fichier: null, duree: 25 },
     source: { titre: 'La taille de la source : moment et Mw', fichier: null, duree: 25 },

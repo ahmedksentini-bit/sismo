@@ -1,13 +1,13 @@
-// Plan du cours : chaque banc de index.html figure une fois dans le parcours, dans l'ordre de la barre, avec son
+// Plan du cours : chaque banc de labo.html figure une fois dans le parcours, dans l'ordre de la barre, avec son
 // poste, son chapeau, son ancre et son script.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import P from '../src/parcours.js';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf-8');
+const html = readFileSync(new URL('../labo.html', import.meta.url), 'utf-8');
 
-test('le parcours couvre exactement les onglets de index.html, dans le même ordre', () => {
+test('le parcours couvre exactement les onglets de labo.html, dans le même ordre', () => {
   const onglets = [...html.matchAll(/data-onglet="([a-z]+)"/g)].map(m => m[1]);
   assert.deepEqual(onglets, P.ordre);
   assert.equal(new Set(P.ordre).size, P.ordre.length);
@@ -30,7 +30,7 @@ test('ancres uniques et réversibles ; précédent et suivant enchaînent tout l
   assert.equal(P.situer('ductilite').chapitre, 3);
 });
 
-test('chaque banc a un script qui l\'ouvre sur « banc:ouvert », chargé par index.html', () => {
+test('chaque banc a un script qui l\'ouvre sur « banc:ouvert », chargé par labo.html', () => {
   const scripts = [...html.matchAll(/<script type="module" src="(src\/[^"]+)"/g)].map(m => m[1]);
   const textes = scripts.map(s => readFileSync(new URL(`../${s}`, import.meta.url), 'utf-8'));
   for (const b of P.ordre.filter(x => x !== 'station' && x !== 'reseau')) assert.ok(textes.some(t => t.includes(`'${b}'`) && t.includes('banc:ouvert')), `script de ${b}`);
