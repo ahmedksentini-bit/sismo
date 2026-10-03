@@ -21,6 +21,7 @@
     <button type="button" data-onglet="sismometre" aria-pressed="false">Sismomètre</button>
     <button type="button" data-onglet="profil" aria-pressed="false">Profil</button>
     <button type="button" data-onglet="spectre" aria-pressed="false">Spectre</button>
+    <button type="button" data-onglet="sismicite" aria-pressed="false">Sismicité</button>
   </nav>
 </header>
 
@@ -39,6 +40,8 @@
         leurs premières arrivées dessinent deux droites : leurs pentes et leur intersection donnent les vitesses et l'épaisseur de la croûte.</p>
       <p class="chapeau" id="chapeau-spectre" hidden>Six bâtiments de périodes différentes sur une table vibrante : chacun retient son pic de réponse.
         En balayant les périodes, on obtient le spectre de réponse de l'accélérogramme, que l'on compare au spectre élastique de l'Eurocode 8.</p>
+      <p class="chapeau" id="chapeau-sismicite" hidden>Un siècle de catalogue sismique : choisir la période et la magnitude à partir desquelles il est complet,
+        retirer les répliques, ajuster la loi de Gutenberg-Richter, puis en tirer des taux annuels et des probabilités sur la durée de vie d'un ouvrage.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -388,6 +391,59 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-sismicite" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Catalogue">
+        <h2>Catalogue 1900 – 2025<small>Magnitude en fonction du temps ; un clic fixe le début de l'analyse et Mc</small></h2>
+        <canvas id="sc-catalogue" aria-label="Magnitudes du catalogue en fonction du temps"></canvas>
+        <p class="legende"><span><i style="background:var(--ink)"></i>retenus</span><span><i style="background:var(--amp)"></i>répliques retirées</span><span><i style="background:var(--muted)"></i>hors analyse</span><span><i class="tirets" style="border-color:var(--teal)"></i>complétude vraie</span><span class="curseur-lecture" id="sc-curseur" style="margin-left:0">—</span></p>
+      </section>
+      <section class="carte" aria-label="Loi de Gutenberg-Richter">
+        <h2>Loi de Gutenberg-Richter<small>Disques : nombre annuel cumulé N(≥ M) ; carrés : par classe de 0,1 ; droite : ajustement au maximum de vraisemblance</small></h2>
+        <canvas id="sc-fmd" aria-label="Distribution fréquence-magnitude"></canvas>
+      </section>
+    </div>
+    <aside class="colonne">
+      <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
+        <button type="button" id="sc-mode-explorer" aria-pressed="true">Explorer</button>
+        <button type="button" id="sc-mode-exercice" aria-pressed="false">Exercice</button>
+      </div>
+      <section class="carte" id="sc-panneau-explorer" aria-label="Catalogue simulé">
+        <p class="sous-titre">Catalogue simulé</p>
+        <div class="champ"><label for="sc-b">Valeur b <output id="sc-b-v"></output></label><input type="range" id="sc-b" min="0.7" max="1.3" step="0.01"></div>
+        <div class="champ"><label for="sc-taux">Chocs principaux M ≥ 4 <output id="sc-taux-v"></output></label><input type="range" id="sc-taux" min="0.5" max="8" step="0.1"></div>
+        <div class="champ"><label for="sc-mmax">Magnitude maximale Mmax <output id="sc-mmax-v"></output></label><input type="range" id="sc-mmax" min="6" max="8" step="0.1"></div>
+        <label class="case"><input type="checkbox" id="sc-rep"> Répliques (Omori-Utsu, loi de Båth)</label>
+        <div class="actions" style="margin-top:12px"><button type="button" class="bouton secondaire" id="sc-tirage">Nouveau tirage du catalogue</button></div>
+        <p class="verite" id="sc-verite"></p>
+      </section>
+      <section class="carte" id="sc-panneau-exercice" aria-label="Exercice" hidden>
+        <p class="sous-titre">Exercice</p>
+        <span class="numero" id="sc-exo-num"></span>
+        <p class="enonce">Voici un catalogue de 125 ans. Choisissez la période et la magnitude de complétude, décidez du déclusterage,
+          puis vérifiez votre valeur b et le taux annuel λ(M ≥ 5) des chocs principaux.</p>
+        <div class="actions"><button type="button" class="bouton primaire" id="sc-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="sc-nouvel-exo">Nouvel exercice</button></div>
+        <div id="sc-corrige"></div>
+      </section>
+      <section class="carte" aria-label="Analyse">
+        <p class="sous-titre">Analyse</p>
+        <div class="champ"><label for="sc-debut">Début de la période analysée <output id="sc-debut-v"></output></label><input type="range" id="sc-debut" min="1900" max="2015" step="1"></div>
+        <div class="champ"><label for="sc-mc">Magnitude de complétude Mc <output id="sc-mc-v"></output></label><input type="range" id="sc-mc" min="2.5" max="6" step="0.1"></div>
+        <div class="actions" style="margin-bottom:10px"><button type="button" class="bouton secondaire" id="sc-mc-auto">Mc par courbure maximale</button></div>
+        <label class="case" style="margin-bottom:12px"><input type="checkbox" id="sc-declus"> Déclusterage de Gardner et Knopoff (1974)</label>
+        <div class="afficheurs deux" id="sc-afficheurs"></div>
+      </section>
+      <section class="carte" aria-label="Probabilité de Poisson">
+        <p class="sous-titre">Probabilité sur une durée</p>
+        <div class="champ"><label for="sc-m">Magnitude <output id="sc-m-v"></output></label><input type="range" id="sc-m" min="4" max="7.5" step="0.1"></div>
+        <div class="champ"><label for="sc-t">Durée (durée de vie de l'ouvrage) <output id="sc-t-v"></output></label><input type="range" id="sc-t" min="1" max="100" step="1"></div>
+        <div class="afficheurs deux" id="sc-poisson"></div>
+        <p class="aide">L'EN 1998-1 retient 10 % en 50 ans (475 ans) pour le non-effondrement et 10 % en 10 ans (95 ans) pour la limitation des dommages.
+          Ces probabilités portent sur le mouvement du sol, pas sur la magnitude : c'est le rôle du calcul d'aléa (PSHA).</p>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -410,6 +466,7 @@
 <script type="module" src="src/banc-sismometre.js"></script>
 <script type="module" src="src/banc-profil.js"></script>
 <script type="module" src="src/banc-spectre.js"></script>
+<script type="module" src="src/banc-sismicite.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
