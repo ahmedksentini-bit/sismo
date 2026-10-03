@@ -1,7 +1,8 @@
 // src/onglets.js — onglets des bancs. Chaque banc écoute l'événement « banc:ouvert » et se construit
 // à sa première ouverture ; l'ancre de l'adresse (#localisation, #sismometre, #profil, #spectre, #sismicite, #geodesie, #alea,
-// #accelerogrammes, #effets-de-site, #liquefaction) ouvre le banc voulu.
-const ANCRES = { station: 'station', reseau: 'localisation', sismometre: 'sismometre', profil: 'profil', spectre: 'spectre', sismicite: 'sismicite', geodesie: 'geodesie', alea: 'alea', selection: 'accelerogrammes', site: 'effets-de-site', liquefaction: 'liquefaction' };
+// #accelerogrammes, #effets-de-site, #liquefaction,
+// #ductilite) ouvre le banc voulu.
+const ANCRES = { station: 'station', reseau: 'localisation', sismometre: 'sismometre', profil: 'profil', spectre: 'spectre', sismicite: 'sismicite', geodesie: 'geodesie', alea: 'alea', selection: 'accelerogrammes', site: 'effets-de-site', liquefaction: 'liquefaction', ductilite: 'ductilite' };
 
 function ouvrir(banc) {
   for (const b of Object.keys(ANCRES)) {
