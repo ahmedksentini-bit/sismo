@@ -72,3 +72,15 @@ la virgule décimale.
     (testé) ; `oq` rend les sommes non normalisées qu'écrit OpenQuake. OpenQuake 3.26 relie mal groupes de
     sources et réalisations au-delà de dix modèles de sources (ordre de `numpy.unique` sur des chaînes) :
     `tools/oq/psha.py` réagrège avec ses briques, jamais lire `cs-stats` tel quel.
+18. **Accélérogrammes** (`src/sismo/accelerogramme.js`) : fenêtre S seule (Boore 2003), source à deux
+    coins d'Atkinson et Silva (2000), trajet et site de `signal.js` (le calage des sismogrammes n'y est pour
+    rien) ; variabilité tirée de la graine (fa, κ, terme d'événement). La correction c(f) est un fichier
+    produit (`npm run calage`) qui cale la moyenne des ln Sa sur la médiane des trois lois : à relancer après
+    tout changement du trajet, du site, de la source ou des lois ; le test hors calage tolère 0,12 en ln.
+    Dans l'assemblage autonome, le nom importé doit être celui de la constante du module.
+19. **Sélection** (`src/sismo/selection.js`) : cible CMS → chaque enregistrement calé à Sa(T*) ; UHS ou EC8 →
+    moindres carrés en ln sur [0,2·T1 ; 2·T1] ; échanges gloutons (Jayaram et al. 2011) sur la moyenne et
+    l'écart type des ln. Contrôle de l'EN 1998-1:2004 § 3.2.3.1.2 (4) (par § 3.2.3.1.3 (3)) sur moyennes
+    arithmétiques, réponse retenue selon § 4.3.3.4.3 (3). Spectre EC8 calé comme au banc « aléa » : ag·S = PGA
+    de l'UHS, sol par Vs30, type 2 si M̄ (Mw, en guise de Ms) ≤ 5,5. Le banc ne recalcule l'aléa reçu
+    (`alea:modele`) qu'à son ouverture.

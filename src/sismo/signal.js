@@ -573,6 +573,7 @@ const Sismo = (() => {
     predicteur, localiser, wadati, gapAzimutal, azimut,
     aleatoire, fft, MODELE, kmS, WA, NIVEAUX, CAPTEURS, temps, source,
     generer, enregistrer, convertir, distanceSP, origineDepuis, ML, azimutP, mlVraie, passeBande,
+    stochastique, saragoniHart, puissance2, etalement: G, Q, ampSite, Reff,
   };
 })();
 export default Sismo;

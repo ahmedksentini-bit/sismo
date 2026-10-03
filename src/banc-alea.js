@@ -61,6 +61,8 @@ import Psha from './sismo/psha.js';
     etat.modele = construire(etat.r);
     etat.res = Psha.calculer(etat.modele);
     analyser();
+    // le banc « accélérogrammes » reprend le modèle exploré (jamais celui, caché, d'un exercice)
+    if (etat.mode === 'explorer') window.dispatchEvent(new CustomEvent('alea:modele', { detail: { modele: etat.modele } }));
   }
   // Ce qui dépend de la grandeur et de la probabilité choisies
   function analyser() {
