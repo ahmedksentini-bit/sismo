@@ -57,5 +57,11 @@ la virgule décimale.
     (1997) ; M0 = 10^(1,5M + 9,05) ; équilibre en moment par l'intégrale continue de
     `_set_a`, pas `from_moment` (qui intègre depuis M = 0 avec 9,1). La vérité des exercices est
     le tenseur moyen du générateur sur la zone, jamais un ajustement bruité.
-15. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+15. **Failles** (`src/sismo/faille.js`) : maillage et ruptures flottantes comme `SimpleFaultSource`
+    (nœuds tous les `pasFaille` = 1 km = `rupture_mesh_spacing`, arrondis à la Python, taux de la
+    classe partagé également entre positions) ; aire de rupture de WC1994 ; aléa en Rjb. La loi d'une
+    faille va du Mmax de sa zone (ΔMmax compris) à son Mmax et libère μ·L·W·s (catalogue) ou χ·μ·L·W·s
+    (géodésie, le fond de la zone recevant χ·(Ṁ0 − Ṁfailles)). Rrup « à la OpenQuake »
+    (`rrupSphere` : nœuds, Terre sphérique) ne sert qu'à comparer la désagrégation.
+16. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.

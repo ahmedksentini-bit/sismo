@@ -1,9 +1,11 @@
 import Gmpe from './gmpe.js';
 import Geodesie from './geodesie.js';
+import Faille from './faille.js';
 
 // src/sismo/psha.js — calcul probabiliste de l'aléa sismique (PSHA, Cornell-McGuire) avec arbre logique.
 // Sources : zones discrétisées en points, ruptures ponctuelles (Rjb = distance épicentrale, comme la
-// PointMSR d'OpenQuake), loi de Gutenberg-Richter tronquée par classes de magnitude. Écarts types
+// PointMSR d'OpenQuake) ; failles à ruptures flottantes (comme SimpleFaultSource, src/sismo/faille.js),
+// qui portent les séismes au-delà du Mmax de leur zone. Loi de Gutenberg-Richter tronquée par classes. Écarts types
 // des lois d'atténuation tronqués à ±t·σ. Arbre logique : modèle de taux (catalogue : (a, b) par
 // zone ; géodésie : couplage χ commun, loi équilibrée en moment), ΔMmax commun, loi d'atténuation ;
 // énumération complète, moyenne et fractiles pondérés comme hazardlib.stats.
@@ -102,8 +104,13 @@ const Psha = (() => {
   // Variantes du modèle de sources. Catalogue : produit des branches (a, b) de chaque zone, taux
   // conservés quand Mmax change. Géodésie : une variante par couplage χ, même χ pour toutes les zones,
   // taux de moment χ·Ṁ0 conservé quand Mmax change (a recalculé comme TruncatedGRMFD._set_a).
+  // Failles : moment μ·L·W·s (glissement géologique). Catalogue : la faille libère tout ce moment.
+  // Géodésie : la faille et le fond de sa zone se partagent χ·Ṁ0 de la zone (fond = χ·(Ṁ0 − Ṁfailles)).
+  const geomFaille = (modele, f) => Faille.geometrie(f, modele.pasFaille || 1);
+  const momentFaille = (modele, f) => Faille.moment(geomFaille(modele, f), f.glissement, f.mu || 3e10);
   function variantes(modele) {
-    const out = [];
+    const out = [], failles = modele.failles || [];
+    const mF = failles.map(f => momentFaille(modele, f));
     for (const t of modele.taux || [{ id: 'catalogue', poids: 1 }]) {
       if (t.id === 'catalogue') {
         let l = [{ cle: [], poids: t.poids, zones: [], etiquettes: { modele: 'catalogue' } }];
@@ -111,18 +118,28 @@ const Psha = (() => {
           l = l.flatMap(v => z.ab.map((br, i) => ({ cle: [...v.cle, i], poids: v.poids * br.poids,
             zones: [...v.zones, { a: br.a, b: br.b }], etiquettes: { ...v.etiquettes, ['ab' + iz]: i } })));
         });
-        out.push(...l.map(v => ({ id: 'c' + v.cle.join(''), poids: v.poids, zones: v.zones, etiquettes: v.etiquettes })));
+        out.push(...l.map(v => ({ id: 'c' + v.cle.join(''), poids: v.poids, zones: v.zones, failles: mF.map(m => ({ moment: m })), etiquettes: v.etiquettes })));
       } else if (t.id === 'geodesie') {
         t.couplage.forEach((c, i) => out.push({ id: 'g' + i, poids: t.poids * c.poids,
-          zones: modele.zones.map((z, iz) => ({ moment: c.chi * t.moments[iz], b: z.ajustement.b })), etiquettes: { modele: 'geodesie', chi: i } }));
+          zones: modele.zones.map((z, iz) => ({
+            moment: c.chi * Math.max(t.moments[iz] - failles.reduce((s, f, jf) => s + (f.zone === iz ? mF[jf] : 0), 0), 0), b: z.ajustement.b })),
+          failles: mF.map(m => ({ moment: c.chi * m })), etiquettes: { modele: 'geodesie', chi: i } }));
       }
     }
     return out.filter(v => v.poids > 0);
   }
+  // Loi de la faille jf : b de sa zone, de Mmax de la zone (branche ΔMmax comprise) à Mmax de la faille,
+  // équilibrée en moment. null si la zone va déjà au-delà de la faille.
+  function loiFaille(modele, v, jf, d) {
+    const f = modele.failles[jf], z = modele.zones[f.zone], mmin = z.mmax + d;
+    if (mmin >= f.mmax - 1e-9) return null;
+    const b = z.ajustement.b;
+    return { a: Geodesie.aDepuisMoment({ moment: v.failles[jf].moment, b, mmin, mmax: f.mmax }), b, mmin, mmax: f.mmax };
+  }
   // Loi de la zone iz pour une variante et un ΔMmax : { a, b, mmin, mmax }.
   function loiZone(modele, v, iz, d) {
     const z = modele.zones[iz], p = v.zones[iz], mmax = z.mmax + d;
-    const a = p.moment !== undefined ? Geodesie.aDepuisMoment({ moment: p.moment, b: p.b, mmin: z.mmin, mmax }) : p.a;
+    const a = p.moment !== undefined ? (p.moment > 0 ? Geodesie.aDepuisMoment({ moment: p.moment, b: p.b, mmin: z.mmin, mmax }) : -Infinity) : p.a;
     return { a, b: p.b, mmin: z.mmin, mmax };
   }
   // Énumération complète de l'arbre : variante de taux × ΔMmax × loi d'atténuation. Chaque réalisation a
@@ -147,6 +164,25 @@ const Psha = (() => {
       const mags = mfdGR({ a: 0, b: 1, mmin: z.mmin, mmax: z.mmax + dmMax, pas: modele.pasMfd }).map(c => c.M);
       return { zone, mags, S: modele.gmpe.map(g => probabilitesZone(zone, site, Gmpe.LOIS[g.id], imts, niveaux, mags, opts)) };
     });
+    // Failles : probabilité moyenne sur les ruptures flottantes d'une magnitude, mise en cache par classe
+    const parFaille = (modele.failles || []).map(f => ({ f, g: geomFaille(modele, f), S: modele.gmpe.map(() => new Map()) }));
+    const probaFaille = (jf, ig, M) => {
+      const pf = parFaille[jf], cle = M.toFixed(4);
+      if (!pf.S[ig].has(cle)) {
+        const rups = Faille.ruptures(pf.g, M, pf.f.rake, pf.f.rapport || 1), loi = Gmpe.LOIS[modele.gmpe[ig].id], lnNiv = niveaux.map(Math.log);
+        const S = imts.map(() => new Float64Array(niveaux.length));
+        for (const rup of rups) {
+          const R = Faille.rjb(pf.g, rup, site);
+          if (R > modele.distanceMax) continue;
+          imts.forEach((imt, k) => {
+            const { ln, sigma } = loi.calculer({ M, Rjb: R, vs30: site.vs30, rake: pf.f.rake }, imt);
+            for (let l = 0; l < lnNiv.length; l++) S[k][l] += opts.sf((lnNiv[l] - ln) / sigma) / rups.length;
+          });
+        }
+        pf.S[ig].set(cle, S);
+      }
+      return pf.S[ig].get(cle);
+    };
     // Taux par zone pour chaque (variante, ΔMmax, loi) : λ = Σm taux_m · S_m
     const cache = new Map();
     const tauxZone = (iz, iv, idm, ig) => {
@@ -162,12 +198,22 @@ const Psha = (() => {
       cache.set(cle, lam);
       return lam;
     };
+    const tauxFaille = (jf, iv, idm, ig) => {
+      const cle = `f${jf}|${iv}|${idm}|${ig}`;
+      if (cache.has(cle)) return cache.get(cle);
+      const lam = imts.map(() => new Float64Array(niveaux.length)), loi = loiFaille(modele, vars[iv], jf, modele.dMmax[idm].d);
+      if (loi) for (const c of mfdGR({ ...loi, pas: modele.pasMfd })) {
+        const S = probaFaille(jf, ig, c.M);
+        imts.forEach((_, k) => { const o = lam[k]; for (let l = 0; l < o.length; l++) o[l] += c.taux * S[k][l]; });
+      }
+      cache.set(cle, lam);
+      return lam;
+    };
     const rlz = realisations(modele).map(r => {
       const lam = imts.map(() => new Float64Array(niveaux.length));
-      for (let iz = 0; iz < Z; iz++) {
-        const lz = tauxZone(iz, r.iv, r.idm, r.ig);
-        lam.forEach((o, k) => { for (let l = 0; l < o.length; l++) o[l] += lz[k][l]; });
-      }
+      const ajouter = lz => lam.forEach((o, k) => { for (let l = 0; l < o.length; l++) o[l] += lz[k][l]; });
+      for (let iz = 0; iz < Z; iz++) ajouter(tauxZone(iz, r.iv, r.idm, r.ig));
+      parFaille.forEach((_, jf) => ajouter(tauxFaille(jf, r.iv, r.idm, r.ig)));
       return { ...r, lam, poe: lam.map(v => Float64Array.from(v, x => 1 - Math.exp(-x * dureeVie))) };
     });
     const poids = rlz.map(r => r.poids);
@@ -220,15 +266,16 @@ const Psha = (() => {
   // Désagrégation magnitude-distance du taux de dépassement d'un niveau x (classes de `largeurM` en
   // magnitude, de `largeurR` km en distance). Sans `cle`, chaque case est le taux moyen pondéré sur
   // l'arbre (comme la moyenne d'OpenQuake) ; avec `cle`, celui d'une seule réalisation. Distance des
-  // classes : épicentrale (Rjb des ruptures ponctuelles) ou hypocentrale (`distance: 'rrup'`, celle
-  // d'OpenQuake, voir distanceHypocentrale). Renvoie aussi les parts (somme 1), M̄, R̄ et la part de chaque zone.
+  // classes : Rjb (épicentrale pour les ruptures ponctuelles) ou Rrup d'OpenQuake (`distance: 'rrup'`,
+  // voir distanceHypocentrale et Faille.rrupSphere). Renvoie aussi les parts (somme 1), M̄, R̄ et la part
+  // de chaque zone (fond) et de chaque faille.
   function desagregation(modele, imt, x, { largeurM = 0.5, largeurR = 20, cle = null, distance = 'rjb' } = {}) {
     const sf = tableSurvie(modele.troncature), lnx = Math.log(x), site = modele.site, vars = variantes(modele);
-    const cases = new Map(), parZone = modele.zones.map(() => 0);
-    const ajouter = (M, R, v, iz) => {
-      const cle = `${Math.floor(M / largeurM + 1e-9)}|${Math.floor(R / largeurR)}`;
-      cases.set(cle, (cases.get(cle) || 0) + v);
-      parZone[iz] += v;
+    const cases = new Map(), parZone = modele.zones.map(() => 0), parFaille = (modele.failles || []).map(() => 0);
+    const ajouter = (M, R, v, iz, jf = -1) => {
+      const k = `${Math.floor(M / largeurM + 1e-9)}|${Math.floor(R / largeurR)}`;
+      cases.set(k, (cases.get(k) || 0) + v);
+      if (jf >= 0) parFaille[jf] += v; else parZone[iz] += v;
     };
     // Poids retenus : ceux de l'arbre, ou 1 pour la seule réalisation demandée
     const [vSel, dmSel, gSel] = cle ? cle.split('|') : [];
@@ -261,6 +308,32 @@ const Psha = (() => {
         }
       });
     });
+    // Failles : chaque rupture flottante à sa distance (Rjb, ou Rrup d'OpenQuake)
+    (modele.failles || []).forEach((f, jf) => {
+      const g = geomFaille(modele, f), taux = new Map();
+      vars.forEach((v, iv) => modele.dMmax.forEach((dm, idm) => {
+        const w = wV[iv] * wDm[idm], loi = w ? loiFaille(modele, v, jf, dm.d) : null;
+        if (!loi) return;
+        for (const c of mfdGR({ ...loi, pas: modele.pasMfd })) {
+          const k = c.M.toFixed(6);
+          taux.set(k, { M: c.M, t: (taux.has(k) ? taux.get(k).t : 0) + w * c.taux });
+        }
+      }));
+      modele.gmpe.forEach((gm, ig) => {
+        if (!wG[ig]) return;
+        const loi = Gmpe.LOIS[gm.id];
+        for (const { M, t } of taux.values()) {
+          const rups = Faille.ruptures(g, M, f.rake, f.rapport || 1);
+          for (const rup of rups) {
+            const R = Faille.rjb(g, rup, site);
+            if (R > modele.distanceMax) continue;
+            const { ln, sigma } = loi.calculer({ M, Rjb: R, vs30: site.vs30, rake: f.rake }, imt);
+            const v = (wG[ig] * t * sf((lnx - ln) / sigma)) / rups.length;
+            if (v) ajouter(M, distance === 'rrup' ? Faille.rrupSphere(g, rup, site) : R, v, f.zone, jf);
+          }
+        }
+      });
+    });
     let total = 0;
     for (const v of cases.values()) total += v;
     const out = [];
@@ -270,7 +343,7 @@ const Psha = (() => {
     }
     out.sort((p, q) => p.m0 - q.m0 || p.r0 - q.r0);
     const mMoy = out.reduce((s, c) => s + c.part * (c.m0 + c.m1) / 2, 0), rMoy = out.reduce((s, c) => s + c.part * (c.r0 + c.r1) / 2, 0);
-    return { cases: out, total, mMoy, rMoy, zones: parZone.map(v => v / total) };
+    return { cases: out, total, mMoy, rMoy, zones: parZone.map(v => v / total), failles: parFaille.map(v => v / total) };
   }
 
   // Sensibilité : pour chaque ensemble de branches, niveau moyen à la probabilité P quand on impose
@@ -302,7 +375,8 @@ const Psha = (() => {
 
   // Modèle d'école (aucune donnée régionale) : un site au rocher, une zone proche peu active et une
   // zone lointaine plus active, en km autour du site ; foyers à 10 km de profondeur (sans effet sur les
-  // lois en Rjb, seulement sur la distance hypocentrale). Deux modèles de taux à poids égaux : le
+  // lois en Rjb, seulement sur la distance hypocentrale), et la faille F dans la zone A, qui porte les
+  // séismes de M > Mmax de la zone. Deux modèles de taux à poids égaux : le
   // catalogue (ajustement de Weichert : b, σ(b), taux au-dessus de 4) et la géodésie (taux de moment de
   // Kostrov du champ GNSS d'école, μ = 30 GPa, H = 15 km ; couplage χ de 0,3 à 0,9).
   const niveauxDefaut = (n = 30, x0 = 1e-3, x1 = 3) => Array.from({ length: n }, (_, i) => x0 * Math.pow(x1 / x0, i / (n - 1)));
@@ -312,7 +386,7 @@ const Psha = (() => {
       site: { x: 0, y: 0, vs30: 800 },
       imts: ['PGA', 0.04, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.7, 1, 1.5, 2, 3],
       niveaux: niveauxDefaut(),
-      dureeVie: 50, troncature: 3, distanceMax: 300, pasGrille: 10, pasMfd: 0.1,
+      dureeVie: 50, troncature: 3, distanceMax: 300, pasGrille: 10, pasMfd: 0.1, pasFaille: 1,
       zones: [
         { id: 'z1', nom: 'Zone A (proche)', rake: 0, profondeur: 10, mmin: 4, mmax: 6.5,
           polygone: [[-60, -40], [50, -55], [70, 35], [-15, 60], [-70, 20]],
@@ -323,6 +397,10 @@ const Psha = (() => {
       ].map(z => ({ ...z, ab: branchesAB(z.ajustement) })),
       dMmax: [{ d: -0.3, poids: 0.3 }, { d: 0, poids: 0.5 }, { d: 0.3, poids: 0.2 }],
       gmpe: [{ id: 'akkar2014', poids: 0.5 }, { id: 'bindi2014', poids: 0.5 }],
+      // Faille F : la faille cartographiée de la zone A (banc « géodésie »), décrochement vertical bloqué
+      // jusqu'à 12 km, 80 km de long ; glissement géologique 0,8 mm/an ; Mmax : rupture de toute la faille.
+      failles: [{ id: 'f1', nom: 'Faille F', zone: 0, trace: [[-10, -40], [-10, 40]], pendage: 90, zHaut: 0, zBas: 12, rake: 0,
+        glissement: 0.8, mu: 3e10, mmax: 7.1, rapport: 1 }],
     };
     m.taux = [
       { id: 'catalogue', nom: 'Catalogue', poids: 0.5 },
@@ -331,6 +409,6 @@ const Psha = (() => {
     return m;
   }
 
-  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite };
+  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite };
 })();
 export default Psha;

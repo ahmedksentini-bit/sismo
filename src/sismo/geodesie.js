@@ -14,7 +14,7 @@ const Geodesie = (() => {
   // - bande de raccourcissement E–O entre x0 et x1 : vE = −V·(x − x0)/(x1 − x0), bornée à [0, V] ;
   // - translation d'ensemble (repère de référence), sans effet sur la déformation.
   function champDefaut() {
-    return { faille: { x: -10, s: 0.4, D: 12 }, bande: { x0: 95, x1: 215, V: 2.4 }, translation: { e: 0, n: 0 } };
+    return { faille: { x: -10, s: 0.8, D: 12 }, bande: { x0: 95, x1: 215, V: 2.4 }, translation: { e: 0, n: 0 } };
   }
   function vitesse(x, y, c) {
     const { faille: f, bande: b, translation: t } = c;

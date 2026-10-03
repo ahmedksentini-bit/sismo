@@ -472,7 +472,7 @@
       <section class="carte" aria-label="Réseau GNSS">
         <h2>Réseau GNSS et vitesses<small>Flèches : vitesse de chaque station (cercles : 95 %) ; croix : axes principaux du taux de déformation estimé dans chaque zone</small></h2>
         <canvas id="ge-carte" aria-label="Stations GNSS, vitesses et taux de déformation par zone"></canvas>
-        <p class="legende"><span><i style="background:var(--ink)"></i>vitesse mesurée</span><span><i style="background:var(--pick-p)"></i>raccourcissement</span><span><i style="background:var(--pick-s)"></i>allongement</span><span><i class="tirets" style="border-color:var(--amp)"></i>faille cartographiée</span><span class="curseur-lecture" id="ge-curseur" style="margin-left:0">—</span></p>
+        <p class="legende"><span><i style="background:var(--ink)"></i>vitesse mesurée</span><span><i style="background:var(--pick-p)"></i>raccourcissement</span><span><i style="background:var(--pick-s)"></i>allongement</span><span><i class="tirets" style="border-color:var(--amp)"></i>faille cartographiée</span><span><i style="background:var(--teal)"></i>faille F du modèle d'aléa</span><span class="curseur-lecture" id="ge-curseur" style="margin-left:0">—</span></p>
       </section>
       <section class="carte" aria-label="Profil E–O">
         <h2>Profil est–ouest<small>Le champ ne varie qu'avec x : composante nord (la faille de la zone A) et composante est (la bande de la zone B) ; la pente est le taux de déformation</small></h2>
@@ -482,7 +482,7 @@
       <section class="carte" aria-label="Budget de moment">
         <h2>Budget de moment<small>Taux de moment géodésique (Kostrov) face au moment libéré par les séismes du catalogue ; leur rapport est le couplage apparent</small></h2>
         <canvas id="ge-moment" aria-label="Taux de moment géodésique et sismique par zone"></canvas>
-        <p class="legende"><span><i style="background:var(--pick-p)"></i>géodésie : estimation (point) et tirages 16–84 % (trait)</span><span><i style="background:var(--teal)"></i>vrai (cercle)</span><span><i style="background:var(--ink)"></i>catalogue (carré)</span><span><i style="background:var(--blue)"></i>χ × géodésie (triangle)</span></p>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>géodésie : estimation (point) et tirages 16–84 % (trait)</span><span><i style="background:var(--teal)"></i>vrai (cercle)</span><span><i style="background:var(--ink)"></i>catalogue (carré), avec la faille F (losange)</span><span><i style="background:var(--blue)"></i>χ × géodésie (triangle)</span></p>
       </section>
       <section class="carte" aria-label="Récurrence">
         <h2>Récurrence des séismes<small>Nombre annuel de séismes de magnitude ≥ M : catalogue (Weichert) et géodésie (loi de Gutenberg-Richter équilibrée en moment, même b et même Mmax)</small></h2>
@@ -535,6 +535,7 @@
           <li><b>Kostrov</b> : un tenseur de déformation moyen sur une zone d'aire A et d'épaisseur H équivaut à un taux de moment Ṁ0 = 2μHA·max(|ε̇1|, |ε̇2|, |ε̇1 + ε̇2|) (Savage et Simpson, 1997).</li>
           <li><b>Couplage χ</b> : toute la déformation n'est pas sismique (fluage, déformation asismique). C'est l'incertitude majeure du modèle, à porter dans l'arbre logique.</li>
           <li><b>Équilibre en moment</b> : à moment fixé, augmenter Mmax réduit le nombre de séismes modérés, l'inverse d'un modèle fondé sur les taux observés.</li>
+          <li><b>Moment manquant</b> : dans la zone A, le catalogue (M &lt; 6,5) ne libère que 30 % du moment géodésique ; les grands séismes de la faille F, trop rares pour figurer au catalogue, portent le reste.</li>
           <li><b>Région lente</b> : quand le bruit domine, le moment estimé est biaisé vers le haut (c'est une valeur absolue). Densifier le réseau ou allonger les séries avant de conclure.</li>
         </ul>
       </section>
@@ -546,7 +547,7 @@
       <section class="carte" aria-label="Modèle de sources">
         <h2>Modèle de sources<small>Zones discrétisées en points tous les 10 km ; un clic déplace le site</small></h2>
         <canvas id="al-carte" aria-label="Zones sources et site"></canvas>
-        <p class="legende"><span><i style="background:var(--pick-s)"></i>zone A</span><span><i style="background:var(--amp)"></i>zone B</span><span><i class="tirets" style="border-color:var(--muted)"></i>50, 100 et 200 km du site</span><span class="curseur-lecture" id="al-curseur" style="margin-left:0">—</span></p>
+        <p class="legende"><span><i style="background:var(--pick-s)"></i>zone A</span><span><i style="background:var(--amp)"></i>zone B</span><span><i style="background:var(--teal)"></i>faille F</span><span><i class="tirets" style="border-color:var(--muted)"></i>50, 100 et 200 km du site</span><span class="curseur-lecture" id="al-curseur" style="margin-left:0">—</span></p>
       </section>
       <section class="carte" aria-label="Courbe d'aléa">
         <h2>Courbe d'aléa<small>Probabilité de dépasser chaque niveau en 50 ans : une courbe fine par réalisation de l'arbre logique, la moyenne et les fractiles</small></h2>
@@ -560,7 +561,7 @@
         <p class="legende"><span><i style="background:var(--pick-p)"></i>UHS moyen</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>fractiles 16 – 84 %</span><span><i class="tirets" style="border-color:var(--teal)"></i>EC8 type 1</span><span><i class="tirets" style="border-color:var(--amp)"></i>EC8 type 2</span><span id="al-legende-ec8"></span></p>
       </section>
       <section class="carte" aria-label="Désagrégation">
-        <h2>Désagrégation magnitude – distance<small>Part de chaque couple (M, R) dans le taux de dépassement du niveau de l'UHS moyen, pour la grandeur choisie</small></h2>
+        <h2>Désagrégation magnitude – distance<small>Part de chaque couple (M, R) dans le taux de dépassement du niveau de l'UHS moyen, pour la grandeur choisie ; R est la distance de Joyner-Boore à la rupture</small></h2>
         <canvas id="al-desag" aria-label="Désagrégation en magnitude et distance"></canvas>
       </section>
       <section class="carte" aria-label="Sensibilité à l'arbre logique">
@@ -590,6 +591,10 @@
         <div class="champ"><label for="al-b">Valeur b <output id="al-b-v"></output></label><input type="range" id="al-b" min="0.7" max="1.3" step="0.01"></div>
         <div class="champ"><label for="al-mmax">Magnitude maximale Mmax <output id="al-mmax-v"></output></label><input type="range" id="al-mmax" min="5.5" max="7.6" step="0.1"></div>
         <div class="separateur"></div>
+        <p class="sous-titre">Faille F (zone A)</p>
+        <label class="case"><input type="checkbox" id="al-faille"> Ruptures flottantes de M = Mmax de la zone A à 7,1 (Wells et Coppersmith)</label>
+        <div class="champ" style="margin-top:12px"><label for="al-glissement">Vitesse de glissement géologique <output id="al-glissement-v"></output></label><input type="range" id="al-glissement" min="0" max="3" step="0.05"></div>
+        <div class="separateur"></div>
         <p class="sous-titre">Arbre logique</p>
         <label class="case"><input type="checkbox" id="al-inc-ab"> (a, b) de chaque zone : b ± 1,645 σ (poids 0,185 / 0,63 / 0,185)</label>
         <label class="case" style="margin-top:6px"><input type="checkbox" id="al-inc-mmax"> Mmax − 0,3 / + 0 / + 0,3 (poids 0,3 / 0,5 / 0,2)</label>
@@ -618,6 +623,7 @@
           <li><b>Incertitude aléatoire</b> : magnitudes, positions et dispersion σ des lois sont intégrées dans chaque courbe. Tronquer à 3σ coupe les queues.</li>
           <li><b>Incertitude épistémique</b> : on ne sait pas quel modèle est le bon ; l'arbre logique donne une courbe par réalisation, la moyenne en fait la synthèse et les fractiles mesurent la dispersion.</li>
           <li><b>Désagrégation</b> : courtes périodes, séismes modérés et proches ; longues périodes, grands séismes lointains. C'est la raison d'être des spectres de type 1 et 2 de l'EC8.</li>
+          <li><b>Faille</b> : un grand séisme rompt une surface ; la distance utile est celle de la rupture (Rjb), pas de l'épicentre. Sa récurrence vient du glissement (Ṁ0 = μ·L·W·s) : une faille lente pèse peu à 475 ans, beaucoup à 2 475 ans.</li>
           <li><b>L'EN 1998-1:2004</b> recommande 10 % en 50 ans (475 ans) pour le non-effondrement ; agR, accélération de référence au rocher (sol A) à cette probabilité, est fixée par l'annexe nationale à partir d'une étude d'aléa comme celle-ci.</li>
         </ul>
         <p class="aide" id="al-verif"></p>

@@ -30,6 +30,7 @@ import Psha from './sismo/psha.js';
     zones: BASE.zones.map(z => ({ lam: z.ajustement.lamPivot, b: z.ajustement.b, mmax: z.mmax })),
     incAB: true, incMmax: true, poidsAkkar: 0.5,
     geo: { actif: true, poids: 0.5, moments: BASE.taux.find(t => t.id === 'geodesie').moments.slice(), source: 'champ GNSS du modèle d\'école' },
+    faille: { actif: true, glissement: BASE.failles[0].glissement },
   });
   const etat = {
     pret: false, mode: 'explorer', r: reglagesDefaut(), zone: 0, proba: [0.1, 50], k: K_PGA,
@@ -47,7 +48,8 @@ import Psha from './sismo/psha.js';
     const wGeo = r.geo.actif ? r.geo.poids : 0;
     const taux = [{ id: 'catalogue', nom: 'Catalogue', poids: 1 - wGeo }];
     if (wGeo > 0) taux.push({ id: 'geodesie', nom: 'Géodésie', poids: wGeo, couplage: Psha.COUPLAGE, moments: r.geo.moments });
-    return { ...BASE, site: { ...r.site }, zones, dMmax: r.incMmax ? BASE.dMmax : [{ d: 0, poids: 1 }], gmpe, taux };
+    const failles = r.faille.actif && r.faille.glissement > 0 ? BASE.failles.map(f => ({ ...f, glissement: r.faille.glissement })) : [];
+    return { ...BASE, site: { ...r.site }, zones, failles, dMmax: r.incMmax ? BASE.dMmax : [{ d: 0, poids: 1 }], gmpe, taux };
   }
   // Probabilité visée P en t années → probabilité en 50 ans (durée des courbes) et période de retour.
   const periodeRetour = () => Psha.periodeRetour(etat.proba[0], etat.proba[1]);
@@ -122,6 +124,14 @@ import Psha from './sismo/psha.js';
         texte(ctx, `λ(M≥4) ${virg(p.lam, 2)}/an · b ${virg(p.b, 2)} · Mmax ${virg(p.mmax, 1)}`, g.X(xm), g.Y(ymax) - 8, c, `700 10.5px ${MONO}`, 'center');
       } else texte(ctx, z.nom.split(' (')[0], g.X(xm), g.Y(ymax) - 9, c, `800 11.5px ${POLICE}`, 'center');
     });
+    // Failles : trace épaisse, projection en surface si elle est pentée
+    for (const f of BASE.failles) {
+      const actif = etat.modele.failles.length > 0, [[x0, y0], [x1, y1]] = f.trace;
+      ctx.strokeStyle = COUL.teal; ctx.globalAlpha = actif ? 1 : 0.35; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(g.X(x0), g.Y(y0)); ctx.lineTo(g.X(x1), g.Y(y1)); ctx.stroke(); ctx.lineCap = 'butt'; ctx.globalAlpha = 1;
+      const lib = W >= 520 ? `${f.nom} · ${virg(etat.r.faille.glissement, 1)} mm/an · M ≤ ${virg(f.mmax, 1)}` : f.nom;
+      texte(ctx, lib, g.X(x0) - 6, g.Y(y0) + 4, COUL.teal, `800 11px ${POLICE}`, 'right', 'top');
+    }
     // Cercles de distance et site
     ctx.save();
     for (const R of [50, 100, 200]) {
@@ -260,7 +270,7 @@ import Psha from './sismo/psha.js';
     ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1; ctx.fillStyle = COUL.muted; ctx.font = `10.5px ${MONO}`;
     for (let R = 0; R <= Rmax; R += 20) { const x = Math.round(X(R)) + 0.5; ctx.beginPath(); ctx.moveTo(x, m.h); ctx.lineTo(x, H - m.b); ctx.stroke(); if (R % (Rmax > 160 ? 40 : 20) === 0) { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(String(R), x, H - m.b + 5); } }
     for (let M = M0; M <= M1; M += 0.5) { const y = Math.round(Y(M)) + 0.5; ctx.beginPath(); ctx.moveTo(m.g, y); ctx.lineTo(W - m.d, y); ctx.stroke(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(virg(M, 1), m.g - 6, y); }
-    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('distance épicentrale (km)', W - m.d - 4, H - m.b - 3);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('distance Rjb (km) : épicentrale pour les zones', W - m.d - 4, H - m.b - 3);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('M', m.g + 4, m.h + 2);
     const titre = `${nomImt(etat.k)} ≥ ${enExercice() ? 'UHS moyen' : g3(etat.uhs.moy[etat.k]) + ' g'} · Tr ${milliers(periodeRetour())} ans · parts en %`;
     texte(ctx, titre, m.g, 14, COUL.ink, `800 12px ${POLICE}`);
@@ -268,7 +278,8 @@ import Psha from './sismo/psha.js';
       const xm = X(d.rMoy), ym = Y(d.mMoy);
       ctx.strokeStyle = COUL.blue; ctx.lineWidth = 2.4;
       ctx.beginPath(); ctx.moveTo(xm - 7, ym); ctx.lineTo(xm + 7, ym); ctx.moveTo(xm, ym - 7); ctx.lineTo(xm, ym + 7); ctx.stroke();
-      const zones = d.zones.map((p, i) => `${etat.modele.zones[i].nom.split(' (')[0]} ${virg(100 * p, 0)} %`).join(' · ');
+      const zones = [...d.zones.map((p, i) => `${etat.modele.zones[i].nom.split(' (')[0]} ${virg(100 * p, 0)} %`),
+        ...d.failles.map((p, i) => `${etat.modele.failles[i].nom} ${virg(100 * p, 0)} %`)].join(' · ');
       texte(ctx, `M̄ ${virg(d.mMoy, 1)} · R̄ ${virg(d.rMoy, 0)} km · ${zones}`, etroit ? m.g : W - m.d, etroit ? 31 : 14, COUL.blue, `800 12px ${POLICE}`, etroit ? 'left' : 'right');
     }
   }
@@ -337,6 +348,9 @@ import Psha from './sismo/psha.js';
     $('#al-inc-ab').checked = r.incAB; $('#al-inc-mmax').checked = r.incMmax; $('#al-inc-geo').checked = r.geo.actif;
     $('#al-poids-geo').value = r.geo.poids; $('#al-poids-geo-v').textContent = `${virg(r.geo.poids, 2)} / ${virg(1 - r.geo.poids, 2)}`;
     $('#al-poids-geo').disabled = !r.geo.actif;
+    $('#al-faille').checked = r.faille.actif; $('#al-glissement').value = r.faille.glissement; $('#al-glissement').disabled = !r.faille.actif;
+    const mF = Psha.momentFaille(BASE, { ...BASE.failles[0], glissement: r.faille.glissement });
+    $('#al-glissement-v').textContent = `${virg(r.faille.glissement, 2)} mm/an · Ṁ0 ${sci(mF)} N·m/an`;
     $('#al-poids').value = r.poidsAkkar; $('#al-poids-v').textContent = `${virg(r.poidsAkkar, 2)} / ${virg(1 - r.poidsAkkar, 2)}`;
     $$('[data-al-proba]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alProba === etat.proba.join('|'))));
     $$('[data-al-imt]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alImt === etat.k)));
@@ -360,7 +374,7 @@ import Psha from './sismo/psha.js';
         { lam: Math.round(u.entre(0.1, 0.5) * 100) / 100, b: Math.round(u.entre(0.9, 1.1) * 100) / 100, mmax: Math.round(u.entre(6, 6.8) * 10) / 10 },
         { lam: Math.round(u.entre(0.6, 3) * 10) / 10, b: Math.round(u.entre(0.8, 1) * 100) / 100, mmax: Math.round(u.entre(7, 7.6) * 10) / 10 },
       ],
-      incAB: true, incMmax: true, poidsAkkar: 0.5, geo: { ...reglagesDefaut().geo, actif: false },
+      incAB: true, incMmax: true, poidsAkkar: 0.5, geo: { ...reglagesDefaut().geo, actif: false }, faille: { ...reglagesDefaut().faille, actif: false },
     };
     etat.proba = [0.1, 50]; etat.verifie = false; etat.dom = null;
     $('#al-exo-num').textContent = 'Exercice n° ' + numero;
@@ -408,6 +422,8 @@ import Psha from './sismo/psha.js';
     $('#al-inc-ab').addEventListener('change', e => { etat.r.incAB = e.target.checked; recalculer(); });
     $('#al-inc-mmax').addEventListener('change', e => { etat.r.incMmax = e.target.checked; recalculer(); });
     $('#al-inc-geo').addEventListener('change', e => { etat.r.geo.actif = e.target.checked; recalculer(); });
+    $('#al-faille').addEventListener('change', e => { etat.r.faille.actif = e.target.checked; recalculer(); });
+    $('#al-glissement').addEventListener('input', e => { etat.r.faille.glissement = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-poids-geo').addEventListener('input', e => { etat.r.geo.poids = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-poids').addEventListener('input', e => { etat.r.poidsAkkar = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-defaut').addEventListener('click', () => { etat.r = reglagesDefaut(); etat.geoRecu = null; recalculer(); });

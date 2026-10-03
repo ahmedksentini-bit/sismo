@@ -9,6 +9,9 @@ probabilité uniforme, désagrégation magnitude-distance.
 Traduction du modèle :
 - chaque zone devient une multiPointSource (PointMSR : rupture de 10 m × 10 m, donc Rjb égale à la
   distance épicentrale) dont chaque point porte la part 1/n du taux : a_point = a_zone − log10(n) ;
+- chaque faille devient une simpleFaultSource (WC1994, maillage de rupture_mesh_spacing = pasFaille) dont la
+  loi va du Mmax de sa zone (ΔMmax compris) au Mmax de la faille, a calculé par OpenQuake (_set_a) pour
+  libérer le moment de la variante ;
 - variantes « catalogue » : a et b donnés, inchangés quand Mmax varie ; variantes « géodésie » : a
   calculé par OpenQuake (TruncatedGRMFD._set_a) pour libérer le taux de moment χ·Ṁ0 avec le Mmax de
   la branche ;
@@ -58,10 +61,26 @@ def loi_zone(modele, variante, iz, d):
     z, p = modele['zones'][iz], variante['zones'][iz]
     mmax = z['mmax'] + d
     if 'moment' in p:
+        if p['moment'] <= 0:
+            return None
         mfd = TruncatedGRMFD(z['mmin'], mmax, modele['pasMfd'], 0.0, p['b'])
         mfd._set_a(p['moment'])
         return mfd.a_val, p['b'], z['mmin'], mmax
     return p['a'], p['b'], z['mmin'], mmax
+
+
+def loi_faille(modele, variante, jf, d):
+    """Loi de la faille jf : b de sa zone, de Mmax de la zone (ΔMmax compris) à Mmax de la faille, a calculé
+    par OpenQuake (_set_a) pour libérer le moment de la variante ; None si la zone dépasse la faille."""
+    f = modele['failles'][jf]
+    z = modele['zones'][f['zone']]
+    mmin = z['mmax'] + d
+    if mmin >= f['mmax'] - 1e-9:
+        return None
+    b = z['ajustement']['b']
+    mfd = TruncatedGRMFD(mmin, f['mmax'], modele['pasMfd'], 0.0, b)
+    mfd._set_a(variante['failles'][jf]['moment'])
+    return mfd.a_val, b, mmin, f['mmax']
 
 
 def sources(modele, variante, idm):
@@ -70,7 +89,10 @@ def sources(modele, variante, idm):
     d = modele['dMmax'][idm]['d']
     blocs = []
     for iz, z in enumerate(modele['zones']):
-        a, b, mmin, mmax = loi_zone(modele, variante, iz, d)
+        loi = loi_zone(modele, variante, iz, d)
+        if loi is None:
+            continue
+        a, b, mmin, mmax = loi
         n = len(z['points'])
         a -= math.log10(n)
         pos = ' '.join(f"{p['lon']!r} {p['lat']!r}" for p in z['points'])
@@ -84,6 +106,19 @@ def sources(modele, variante, idm):
    <nodalPlaneDist><nodalPlane probability="1" strike="0" dip="90" rake="{z['rake']}"/></nodalPlaneDist>
    <hypoDepthDist><hypoDepth probability="1" depth="{z['profondeur']!r}"/></hypoDepthDist>
   </multiPointSource>''')
+    for jf, f in enumerate(modele.get('failles', [])):
+        loi = loi_faille(modele, variante, jf, d)
+        if loi is None:
+            continue
+        a, b, mmin, mmax = loi
+        pos = ' '.join(f"{x / modele['kmParDegre']!r} {y / modele['kmParDegre']!r}" for x, y in f['trace'])
+        blocs.append(f'''  <simpleFaultSource id="{f['id']}" name="{f['id']}" tectonicRegion="{TRT}">
+   <simpleFaultGeometry><gml:LineString><gml:posList>{pos}</gml:posList></gml:LineString>
+    <dip>{f['pendage']!r}</dip><upperSeismoDepth>{f['zHaut']!r}</upperSeismoDepth><lowerSeismoDepth>{f['zBas']!r}</lowerSeismoDepth></simpleFaultGeometry>
+   <magScaleRel>WC1994</magScaleRel><ruptAspectRatio>{f['rapport']!r}</ruptAspectRatio>
+   <truncGutenbergRichterMFD aValue="{a!r}" bValue="{b!r}" minMag="{mmin!r}" maxMag="{mmax!r}"/>
+   <rake>{f['rake']!r}</rake>
+  </simpleFaultSource>''')
     return NRML.format(f' <sourceModel name="modele">\n <sourceGroup name="zones" tectonicRegion="{TRT}">\n'
                        + '\n'.join(blocs) + '\n </sourceGroup>\n </sourceModel>')
 
@@ -111,6 +146,7 @@ def ecrire_jobs(modele, dossier):
     (dossier / 'gmmlt.xml').write_text(NRML.format(
         f' <logicTree logicTreeID="lois">\n  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs_lois" applyToTectonicRegionType="{TRT}">\n'
         + '\n'.join(gs) + '\n  </logicTreeBranchSet>\n </logicTree>'), encoding='utf-8')
+    assert modele.get('pasFaille', 1.0) == 1.0, 'rupture_mesh_spacing du job = pasFaille'
     commun = f'''[general]
 description = Modele d'ecole du site sismo
 random_seed = 23
