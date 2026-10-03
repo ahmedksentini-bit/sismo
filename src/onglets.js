@@ -1,6 +1,6 @@
 // src/onglets.js — onglets des bancs. Chaque banc écoute l'événement « banc:ouvert » et se construit
-// à sa première ouverture ; l'ancre de l'adresse (#localisation, #sismometre, #profil) ouvre le banc voulu.
-const ANCRES = { station: 'station', reseau: 'localisation', sismometre: 'sismometre', profil: 'profil' };
+// à sa première ouverture ; l'ancre de l'adresse (#localisation, #sismometre, #profil, #spectre) ouvre le banc voulu.
+const ANCRES = { station: 'station', reseau: 'localisation', sismometre: 'sismometre', profil: 'profil', spectre: 'spectre' };
 
 function ouvrir(banc) {
   for (const b of Object.keys(ANCRES)) {
@@ -8,7 +8,7 @@ function ouvrir(banc) {
     document.getElementById('chapeau-' + b).hidden = b !== banc;
     document.querySelector(`[data-onglet="${b}"]`).setAttribute('aria-pressed', String(b === banc));
   }
-  document.getElementById('reperes').hidden = banc === 'sismometre' || banc === 'profil';
+  document.getElementById('reperes').hidden = banc !== 'station' && banc !== 'reseau';
   try { history.replaceState(null, '', '#' + ANCRES[banc]); } catch (e) { /* adresse figée : sans conséquence */ }
   window.dispatchEvent(new CustomEvent('banc:ouvert', { detail: banc }));
 }

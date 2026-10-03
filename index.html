@@ -20,6 +20,7 @@
     <button type="button" data-onglet="reseau" aria-pressed="false">Réseau</button>
     <button type="button" data-onglet="sismometre" aria-pressed="false">Sismomètre</button>
     <button type="button" data-onglet="profil" aria-pressed="false">Profil</button>
+    <button type="button" data-onglet="spectre" aria-pressed="false">Spectre</button>
   </nav>
 </header>
 
@@ -36,6 +37,8 @@
         et son amortissement, le stylet recopie le déplacement du sol ou son accélération : c'est la même équation que celle d'un ouvrage.</p>
       <p class="chapeau" id="chapeau-profil" hidden>Douze stations alignées de 15 à 345 km enregistrent un séisme superficiel. Rangées par distance,
         leurs premières arrivées dessinent deux droites : leurs pentes et leur intersection donnent les vitesses et l'épaisseur de la croûte.</p>
+      <p class="chapeau" id="chapeau-spectre" hidden>Six bâtiments de périodes différentes sur une table vibrante : chacun retient son pic de réponse.
+        En balayant les périodes, on obtient le spectre de réponse de l'accélérogramme, que l'on compare au spectre élastique de l'Eurocode 8.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
   </section>
@@ -318,6 +321,73 @@
     </aside>
   </div>
 
+  <div class="poste" id="banc-spectre" hidden>
+    <div class="colonne">
+      <section class="carte" aria-label="Table vibrante">
+        <div class="outils">
+          <div class="groupe" role="group" aria-label="Lecture">
+            <button type="button" class="outil neutre" id="sp-lecture">Jouer le séisme</button>
+            <button type="button" class="outil neutre" id="sp-ralenti" aria-pressed="false">Ralenti ×¼</button>
+          </div>
+        </div>
+        <canvas id="sp-table" aria-label="Six oscillateurs de périodes 0,1 à 4 s sur une table vibrante"></canvas>
+        <canvas id="sp-accelero" aria-label="Accélérogramme joué sur la table"></canvas>
+        <p class="aide">Chaque bâtiment est un oscillateur à un degré de liberté (le sismomètre de l'onglet précédent, retourné).
+          Sous chacun, sa pseudo-accélération maximale Sa = ω²·max|x| : ce sont six points du spectre de réponse.</p>
+      </section>
+      <section class="carte" aria-label="Spectre de réponse">
+        <div class="outils">
+          <div class="segments compact" role="group" aria-label="Grandeur">
+            <button type="button" data-sp-grandeur="Sa" aria-pressed="true">Sa (g)</button>
+            <button type="button" data-sp-grandeur="Sd" aria-pressed="false">Sd (cm)</button>
+          </div>
+        </div>
+        <canvas id="sp-spectre" aria-label="Spectre de réponse et spectre élastique de l'Eurocode 8"></canvas>
+        <p class="legende"><span><i style="background:var(--pick-p)"></i>spectre de l'enregistrement</span><span><i class="tirets" style="border-color:var(--teal)"></i><span id="sp-legende-ec8"></span></span><span><i class="tirets" style="border-color:var(--amp)"></i>période de l'ouvrage T₁</span></p>
+      </section>
+    </div>
+    <aside class="colonne">
+      <section class="carte" aria-label="Séisme">
+        <p class="sous-titre">Séisme simulé (rocher)</p>
+        <div class="champ"><label for="sp-mw">Magnitude Mw <output id="sp-mw-v"></output></label><input type="range" id="sp-mw" min="4" max="7" step="0.1"></div>
+        <div class="champ"><label for="sp-r">Distance épicentrale <output id="sp-r-v"></output></label><input type="range" id="sp-r" min="5" max="150" step="1"></div>
+        <div class="champ"><label for="sp-xi">Amortissement ξ <output id="sp-xi-v"></output></label><input type="range" id="sp-xi" min="2" max="20" step="1"></div>
+        <div class="actions" style="margin-bottom:12px"><button type="button" class="bouton secondaire" id="sp-tirage">Nouveau tirage du signal</button></div>
+        <div class="afficheurs deux" id="sp-afficheurs-seisme"></div>
+      </section>
+      <section class="carte" aria-label="Eurocode 8">
+        <p class="sous-titre">Eurocode 8 · EN 1998-1:2004, § 3.2.2.2</p>
+        <div class="champ"><span class="etiquette">Type de spectre</span>
+          <div class="segments" role="group" aria-label="Type"><button type="button" data-sp-type="1">Type 1 (Ms &gt; 5,5)</button><button type="button" data-sp-type="2">Type 2</button></div></div>
+        <div class="champ"><span class="etiquette">Classe de sol</span>
+          <div class="segments" role="group" aria-label="Classe de sol"><button type="button" data-sp-sol="A">A</button><button type="button" data-sp-sol="B">B</button><button type="button" data-sp-sol="C">C</button><button type="button" data-sp-sol="D">D</button><button type="button" data-sp-sol="E">E</button></div></div>
+        <div class="champ"><span class="etiquette">Accélération de calcul ag</span>
+          <div class="segments" role="group" aria-label="Calage"><button type="button" data-sp-calage="pga">Calée sur le PGA</button><button type="button" data-sp-calage="imposer">Imposée</button></div></div>
+        <div class="champ" id="sp-champ-ag" hidden><label for="sp-ag">ag (rocher) <output id="sp-ag-v"></output></label><input type="range" id="sp-ag" min="0.02" max="0.5" step="0.01"></div>
+        <div class="afficheurs deux" id="sp-afficheurs-ec8"></div>
+        <p class="aide" id="sp-conseil"></p>
+      </section>
+      <section class="carte" aria-label="Votre ouvrage">
+        <p class="sous-titre">Votre ouvrage</p>
+        <div class="champ"><label for="sp-t1">Période fondamentale T₁ <output id="sp-t1-v"></output></label><input type="range" id="sp-t1" min="0.05" max="4" step="0.01"></div>
+        <div class="champ"><label for="sp-h">Hauteur du bâtiment H <output id="sp-h-v"></output></label><input type="range" id="sp-h" min="3" max="40" step="1"></div>
+        <div class="champ"><label for="sp-systeme">Système de contreventement</label><select id="sp-systeme"><option value="beton">Portiques en béton (Ct = 0,075)</option><option value="acier">Portiques en acier (Ct = 0,085)</option><option value="autres">Autres structures (Ct = 0,050)</option></select></div>
+        <p class="aide" id="sp-T1-calc"></p>
+        <div class="actions" style="margin-bottom:12px"><button type="button" class="bouton secondaire" id="sp-appliquer">Prendre T₁ = Ct·H^¾ (§ 4.3.3.2.2)</button></div>
+        <div class="afficheurs deux" id="sp-afficheurs-ouvrage"></div>
+      </section>
+      <section class="carte" aria-label="À retenir">
+        <p class="sous-titre">À retenir</p>
+        <ul class="notes-loc">
+          <li><b>Un enregistrement est dentelé</b> ; le spectre réglementaire est une enveloppe lissée de nombreux enregistrements.</li>
+          <li><b>Petit séisme proche</b> : énergie en courte période, d'où le type 2. <b>Grand séisme lointain</b> : spectre décalé vers les longues périodes, d'où le type 1.</li>
+          <li><b>En période nulle</b>, Sa = PGA : un ouvrage infiniment raide suit le sol.</li>
+          <li><b>Le signal est simulé sur rocher.</b> Changer de classe de sol modifie l'EC8, pas le signal : l'effet de site doit venir de l'enregistrement ou d'une étude de site.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
   <section class="carte" id="reperes" style="margin-top:16px" aria-label="Repères de lecture">
     <h2>Cinq questions à poser à un enregistrement</h2>
     <ul class="reperes">
@@ -339,6 +409,7 @@
 <script type="module" src="src/lecteur-reseau.js"></script>
 <script type="module" src="src/banc-sismometre.js"></script>
 <script type="module" src="src/banc-profil.js"></script>
+<script type="module" src="src/banc-spectre.js"></script>
 <script type="module" src="src/onglets.js"></script>
 </body>
 </html>
