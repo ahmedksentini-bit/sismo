@@ -194,6 +194,10 @@ select, input[type="number"] { width: 100%; min-width: 0; padding: 8px 10px; bor
 #sp-accelero { display: block; width: 100%; height: 110px; margin-top: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 #sp-spectre { display: block; width: 100%; height: 340px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 
+/* Banc sismicité */
+#sc-catalogue { display: block; width: 100%; height: 290px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
+#sc-fmd { display: block; width: 100%; height: 320px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+
 /* Banc profil */
 #p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
 

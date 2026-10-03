@@ -33,5 +33,8 @@ la virgule décimale.
     et le calcul d'un bloc donnent le même spectre (testé). Le spectre EC8 affiché est
     celui de l'EN 1998-1:2004 (valeurs recommandées) ; la 2ᵉ génération viendra du
     texte de l'EN 1998-1-1:2024, pas de mémoire.
-11. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
+11. **Sismicité** : magnitudes rangées par classes de 0,1 ; b d'Aki avec la correction
+    d'Utsu (Mc − ΔM/2). Les taux et les probabilités de Poisson se calculent sur le
+    catalogue déclusteré ; la vérité des exercices est la loi des chocs principaux.
+12. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture.

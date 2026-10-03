@@ -13,11 +13,12 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Réseau · localisation** | quatre stations sur un même axe des temps ; cercles de distance, diagramme de Wadati, localisation par recherche sur grille (x, y, h, t₀), zone compatible, gap azimutal ; épicentre déplaçable en exploration ; mode exercice noté |
 | **Sismomètre** | masse, ressort et amortisseur dans un bâti animé ; sol sinusoïdal, lâcher de la masse ou séisme simulé ; préréglages (Wood-Anderson, courte et longue période, accéléromètre) ; réponse en fréquence en déplacement et en accélération ; mesure du régime permanent |
 | **Spectre de réponse** | six bâtiments (T = 0,1 à 4 s) sur une table vibrante ; spectre Sa ou Sd qui se construit pendant la lecture de l'accélérogramme ; spectre élastique de l'EN 1998-1:2004 (types 1 et 2, sols A à E, η, ag calé sur le PGA ou imposé) ; période de l'ouvrage, T₁ = Ct·H^¾ |
+| **Sismicité** | catalogue simulé de 1900 à 2025 (Gutenberg-Richter, répliques d'Omori-Utsu, complétude qui s'améliore avec le temps) ; choix de la période et de Mc (courbure maximale), déclusterage de Gardner et Knopoff, valeur b au maximum de vraisemblance, taux annuels, périodes de retour, probabilités de Poisson ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
 Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
 **Exercice** (séisme tiré au hasard, numéroté, corrigé avec tolérances). Les ancres
-`#localisation`, `#sismometre`, `#profil` et `#spectre` ouvrent directement le banc voulu.
+`#localisation`, `#sismometre`, `#profil`, `#spectre` et `#sismicite` ouvrent directement le banc voulu.
 
 ## Lancer
 
@@ -39,13 +40,16 @@ src/sismo/oscillateur.js  oscillateur à un degré de liberté : réponse en fr�
 src/sismo/refraction.js   droites t = tᵢ + Δ/V, épaisseur de la croûte, croisement
 src/sismo/spectre.js      spectres de réponse (Sd, Sv, Sa), calcul progressif,
                           spectre élastique EN 1998-1:2004, T₁ = Ct·H^¾
+src/sismo/sismicite.js    catalogue simulé, Mc, valeur b (Aki-Utsu, Shi-Bolt),
+                          déclusterage de Gardner et Knopoff, Poisson
 src/lecteur-station.js  banc « une station »
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
 src/banc-profil.js      banc « profil par distance »
 src/banc-spectre.js     banc « spectre de réponse »
+src/banc-sismicite.js   banc « sismicité »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
-tests/                  signal, localisation, bancs, spectre (22 tests)
+tests/                  signal, localisation, bancs, spectre, sismicité (28 tests)
 ```
 
 ## Modèle des signaux
