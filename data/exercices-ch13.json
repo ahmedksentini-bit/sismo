@@ -1,0 +1,210 @@
+{
+ "chapitre": "ch13",
+ "exercices": [
+  {
+   "id": "ch13-csr",
+   "titre": "Sollicitation cyclique d'une couche de sable",
+   "difficulte": 1,
+   "graine": 2827580771,
+   "enonce": "Une couche de sable saturé est étudiée à 12,0 m de profondeur ; la nappe est à 3,0 m, le poids volumique vaut 18 kN/m³ (γw = 9,8 kN/m³). Le séisme de projet donne a_max = 0,24 g en surface, pour une magnitude 5,7 ; à cette profondeur, r_d = 0,728.",
+   "donnees": [
+    {
+     "label": "z, nappe",
+     "valeur": "12,0 m, 3,0 m"
+    },
+    {
+     "label": "a_max",
+     "valeur": "0,24 g"
+    },
+    {
+     "label": "r_d",
+     "valeur": "0,728"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Contrainte verticale totale σv ?",
+     "type": "nombre",
+     "unite": "kPa",
+     "reponse": 216,
+     "explication": "σv = 18 × 12,0 = 216 kPa.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Contrainte verticale effective σ'v ?",
+     "type": "nombre",
+     "unite": "kPa",
+     "reponse": 127.8,
+     "explication": "u = 9,8 × (12,0 − 3,0) = 88,2 kPa ; σ'v = 216 − 88,2 = 128 kPa.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "Rapport de contrainte cyclique CSR ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.191946,
+     "explication": "CSR = 0,65 × (216/128) × 0,24 × 0,728 = 0,192.",
+     "toleranceRel": 0.02
+    }
+   ]
+  },
+  {
+   "id": "ch13-spt",
+   "titre": "Coefficient de sécurité au SPT",
+   "difficulte": 2,
+   "graine": 3700674966,
+   "enonce": "À 5,0 m (nappe à 1,0 m, γ = 18 kN/m³), un sable à 5 % de fines donne N60 = 16. Pour a_max = 0,25 g et M = 7,5, la méthode de Boulanger et Idriss (2014) donne : CSR = 0,277, (N1)60cs = 21,5, CRR7,5 = 0,225, MSF = 1,000, Kσ = 1,096.",
+   "donnees": [
+    {
+     "label": "CSR",
+     "valeur": "0,277"
+    },
+    {
+     "label": "CRR7,5",
+     "valeur": "0,225"
+    },
+    {
+     "label": "MSF, Kσ",
+     "valeur": "1,000 ; 1,096"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Rapport de résistance cyclique CRR ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.246822,
+     "explication": "CRR = 0,225 × 1,000 × 1,096 = 0,247.",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Coefficient de sécurité FS (non plafonné) ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.892271,
+     "explication": "FS = 0,247 / 0,277 = 0,89.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Conclusion selon l'EN 1998-5 (valeur recommandée λ = 0,8) ?",
+     "type": "choix",
+     "options": [
+      "la marge est tenue (FS ≥ 1,25)",
+      "la couche se liquéfie (FS < 1)",
+      "la couche ne se liquéfie pas mais la marge n'est pas tenue"
+     ],
+     "reponse": 1,
+     "explication": "FS = 0,89 ; il faut FS ≥ 1/λ = 1,25."
+    }
+   ]
+  },
+  {
+   "id": "ch13-lpi",
+   "titre": "Indice de potentiel de liquéfaction",
+   "difficulte": 2,
+   "graine": 55685768,
+   "enonce": "Sous la nappe, à partir de 1,0 m, un sondage traverse trois couches homogènes de sable : 2,0 m à FS = 0,80, puis 2,0 m à FS = 1,15, puis 2,0 m à FS = 0,75.",
+   "donnees": [
+    {
+     "label": "Couche 1",
+     "valeur": "2,0 m, FS 0,80, milieu à 2,00 m"
+    },
+    {
+     "label": "Couche 2",
+     "valeur": "2,0 m, FS 1,15, milieu à 4,00 m"
+    },
+    {
+     "label": "Couche 3",
+     "valeur": "2,0 m, FS 0,75, milieu à 6,00 m"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Poids de profondeur w = 10 − 0,5·z au milieu de la première couche ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 9,
+     "explication": "z = 1,0 + 2,0/2 = 2,00 m ; w = 10 − 0,5 × 2,00 = 9,000.",
+     "tolerance": 0.02
+    },
+    {
+     "texte": "LPI = Σ (1 − FS)·(10 − 0,5·z)·Δz, sur les couches à FS < 1 ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 7.1,
+     "explication": "couche 1 : (1 − 0,80) × (10 − 0,5 × 2,00) × 2,0 = 3,60 ; couche 2 : FS ≥ 1, rien ; couche 3 : (1 − 0,75) × (10 − 0,5 × 6,00) × 2,0 = 3,50 ; LPI = 7,10 (z au milieu de chaque couche).",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Classe du LPI (Iwasaki et al., 1982) ?",
+     "type": "choix",
+     "options": [
+      "nul",
+      "faible",
+      "élevé",
+      "très élevé"
+     ],
+     "reponse": 2,
+     "explication": "0 : nul ; jusqu'à 5 : faible ; jusqu'à 15 : élevé ; au-delà : très élevé."
+    }
+   ]
+  },
+  {
+   "id": "ch13-notions",
+   "titre": "Liquéfaction : mécanisme et parades",
+   "difficulte": 1,
+   "graine": 1002795813,
+   "enonce": "Questions sur la liquéfaction.",
+   "questions": [
+    {
+     "texte": "Pour le calcul, l'accélération a_max est…",
+     "type": "choix",
+     "options": [
+      "la PGA de 2 475 ans quel que soit l'ouvrage",
+      "a_g·S, l'accélération en surface",
+      "a_g au rocher",
+      "la moitié de a_g"
+     ],
+     "reponse": 1,
+     "explication": "La méthode simplifiée part de l'accélération maximale en surface."
+    },
+    {
+     "texte": "Quels sols sont les plus sensibles ?",
+     "type": "choix",
+     "options": [
+      "les sables lâches, jeunes, saturés, peu profonds",
+      "les roches fracturées",
+      "les argiles raides surconsolidées",
+      "les graves cimentées"
+     ],
+     "reponse": 0,
+     "explication": "Les sols fins plastiques (Ic > 2,6) relèvent d'un autre comportement."
+    },
+    {
+     "texte": "Après liquéfaction, des pieux traversant la couche subissent…",
+     "type": "choix",
+     "options": [
+      "aucun effet",
+      "un frottement positif accru",
+      "du frottement négatif quand la couche se reconsolide et tasse",
+      "une poussée verticale vers le haut permanente"
+     ],
+     "reponse": 2,
+     "explication": "La couche reconsolidée tasse et entraîne les pieux vers le bas."
+    },
+    {
+     "texte": "Le facteur MSF corrige…",
+     "type": "choix",
+     "options": [
+      "la teneur en fines",
+      "le confinement",
+      "le nombre de cycles, plus faible pour un petit séisme",
+      "la profondeur de la nappe"
+     ],
+     "reponse": 2,
+     "explication": "CRR7,5 est donnée pour M = 7,5 ; un séisme plus petit fait moins de cycles, d'où MSF > 1."
+    }
+   ]
+  }
+ ]
+}
