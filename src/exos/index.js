@@ -10,6 +10,7 @@ export const MODELES = {
   ch7: () => import("./ch07.js"),
   ch8: () => import("./ch08.js"),
   ch9: () => import("./ch09.js"),
+  ch10: () => import("./ch10.js"),
 };
 
 /** Graine stable d'un exercice de banque (FNV-1a sur l'identifiant). */

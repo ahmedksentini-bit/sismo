@@ -1350,6 +1350,132 @@
     <a class="secondary" href="labo.html#geodesie">Travaux pratiques : banc « Géodésie »</a></div>
 </section>
 
+<section id="ch10" class="card">
+  <h2>10 · Le calcul probabiliste de l'aléa</h2>
+
+  <h3>La question de l'ingénieur</h3>
+  <p>Quelle accélération un site a-t-il une chance sur dix de dépasser en cinquante ans ? Les chapitres
+     précédents ont fourni les ingrédients : où se produisent les séismes, à quel rythme et jusqu'à quelle
+     magnitude (chapitres 8 et 9), et quel mouvement chaque séisme produit au site. Le <strong>calcul
+     probabiliste de l'aléa sismique</strong> (PSHA, Cornell 1968) les combine en tenant compte de tous
+     les séismes possibles, petits et proches, grands et lointains.</p>
+
+  <h3>Les lois d'atténuation</h3>
+  <p>Une loi d'atténuation (ou « modèle de mouvement du sol ») donne, pour une magnitude M, une distance R,
+     un sol (Vs30) et un type de faille, la <strong>médiane</strong> du logarithme d'une grandeur Y (PGA,
+     Sa(T)) et son <strong>écart type</strong> σ :</p>
+  <p class="formula">ln Y = μ(M, R, Vs30, …) + ε·σ</p>
+  <p class="method-note">ε suit une loi normale : Y est log-normale. σ vaut de 0,6 à 0,75 en ln, soit un
+     facteur 2 environ : à magnitude et distance données, un séisme sur six dépasse la médiane multipliée
+     par e<sup>σ</sup>. On tronque souvent ε à ± 3. Ce cours emploie trois lois récentes, Akkar et al.
+     (2014), Bindi et al. (2014) et Boore et al. (2014), en distance de Joyner-Boore Rjb ; leurs
+     coefficients sont exportés d'OpenQuake.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Mw 6 à 10 km, rocher, décrochement : la loi de Boore et al. donne une médiane de 0,176 g et σ =
+       0,61 ; la probabilité de dépasser 0,3 g lors de ce séisme vaut 19 %. Les deux autres lois donnent 0,142
+       et 0,128 g : l'écart entre lois est une incertitude d'une autre nature que σ.</p></div>
+
+  <div class="calc" id="calcGMPE">
+    <h3>Médiane, dispersion et probabilité de dépassement</h3>
+    <div class="data-grid">
+      <div class="field"><label for="gmM">Magnitude Mw</label>
+        <div class="input-wrap"><input id="gmM" type="text" inputmode="decimal" value="6" data-curseur="4 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="gmR">Distance Rjb</label>
+        <div class="input-wrap"><input id="gmR" type="text" inputmode="decimal" value="10" data-curseur="1 200 1"><span class="unit">km</span></div></div>
+      <div class="field"><label for="gmLoi">Loi</label>
+        <div class="input-wrap"><select id="gmLoi"><option value="boore2014">Boore et al. (2014)</option><option value="akkar2014">Akkar et al. (2014)</option><option value="bindi2014">Bindi et al. (2014)</option></select></div></div>
+      <div class="field"><label for="gmY">Seuil d'accélération</label>
+        <div class="input-wrap"><input id="gmY" type="text" inputmode="decimal" value="0.3" data-curseur="0.01 1 0.01"><span class="unit">g</span></div></div>
+    </div>
+    <div class="figure" id="gmFig"></div>
+    <p class="final-result" id="gmOut"></p>
+  </div>
+
+  <h3>L'intégrale de Cornell</h3>
+  <p>Le taux annuel des séismes qui produisent au site une grandeur supérieure à y somme, sur toutes les
+     sources, magnitudes et distances, le taux de chaque scénario multiplié par la probabilité qu'il dépasse
+     y :</p>
+  <p class="formula">λ(Y &gt; y) = Σ<sub>sources</sub> Σ<sub>M</sub> Σ<sub>R</sub> λ(M) · P(R | M) · P(Y &gt; y | M, R)</p>
+  <p class="method-note">λ(M) : taux de la classe de magnitude (loi de Gutenberg-Richter tronquée de la
+     source) ; P(R | M) : répartition des distances, les séismes étant uniformément répartis dans la zone
+     source ; P(Y &gt; y | M, R) : loi d'atténuation. La courbe λ(y) est la <strong>courbe d'aléa</strong> ;
+     la probabilité de dépassement en t années en découle par Poisson, 1 − e<sup>−λt</sup>.</p>
+  <p>On lit sur la courbe le niveau de probabilité choisie : 10 % en 50 ans (475 ans) pour le dimensionnement
+     courant, 2 % en 50 ans (2 475 ans) pour les ouvrages sensibles. En répétant le calcul pour Sa(T) à
+     plusieurs périodes, on obtient le <strong>spectre à probabilité uniforme</strong> (UHS), que l'on compare
+     au spectre de l'Eurocode 8.</p>
+
+  <h3>La désagrégation</h3>
+  <p>Quels séismes font l'aléa ? La <strong>désagrégation</strong> répartit le taux de dépassement du niveau
+     retenu entre les cases (M, R) qui y contribuent. Sa moyenne (M̄, R̄) définit le scénario de contrôle, qui
+     guide le choix des accélérogrammes (chapitre 11) et le type de spectre de l'Eurocode 8 (M̄ ≤ 5,5 : type
+     2). Les petits séismes proches dominent souvent aux courtes périodes et aux faibles probabilités, les
+     grands séismes lointains aux longues périodes.</p>
+
+  <div class="calc" id="calcPSHA">
+    <h3>Aléa d'un site au centre d'une zone source</h3>
+    <p class="method-note">Zone circulaire, séismes uniformément répartis à 10 km de profondeur, loi de
+       Gutenberg-Richter de 4 à Mmax ; site au rocher (Vs30 = 800 m/s) ; moyenne des trois lois du cours
+       (arbre logique à trois branches), ε tronqué à ± 3. Calcul par le moteur du banc « aléa », vérifié
+       contre OpenQuake.</p>
+    <div class="data-grid">
+      <div class="field"><label for="psL4">Taux annuel de M ≥ 4 dans la zone</label>
+        <div class="input-wrap"><input id="psL4" type="text" inputmode="decimal" value="1" data-curseur="0.05 5 0.05"><span class="unit">/ an</span></div></div>
+      <div class="field"><label for="psB">Valeur b</label>
+        <div class="input-wrap"><input id="psB" type="text" inputmode="decimal" value="1" data-curseur="0.7 1.3 0.05"><span class="unit">—</span></div></div>
+      <div class="field"><label for="psMmax">Magnitude maximale</label>
+        <div class="input-wrap"><input id="psMmax" type="text" inputmode="decimal" value="6.5" data-curseur="5 7.5 0.1"><span class="unit">—</span></div></div>
+      <div class="field"><label for="psRayon">Rayon de la zone</label>
+        <div class="input-wrap"><input id="psRayon" type="text" inputmode="decimal" value="100" data-curseur="20 200 10"><span class="unit">km</span></div></div>
+      <div class="field"><label for="psDist">Distance du site au centre</label>
+        <div class="input-wrap"><input id="psDist" type="text" inputmode="decimal" value="0" data-curseur="0 250 10"><span class="unit">km</span></div></div>
+    </div>
+    <div class="figure" id="psFigC"></div>
+    <div class="figure" id="psFigU"></div>
+    <p class="final-result" id="psOut"></p>
+  </div>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Site au centre d'une zone de 100 km de rayon, un séisme de magnitude ≥ 4 par an, b = 1, Mmax = 6,5 :
+       PGA = <strong>0,126 g</strong> à 475 ans et 0,248 g à 2 475 ans ; Sa(0,2 s) = 0,26 g et Sa(1 s) =
+       0,04 g à 475 ans. La désagrégation donne M̄ = 5,2 et R̄ = 14 km. Avec Mmax = 7,5, le PGA à 475 ans ne
+       monte qu'à 0,133 g : les grands séismes, rares, pèsent peu sur l'accélération ; avec cinq fois moins
+       de séismes, il descend à 0,055 g.</p></div>
+
+  <h3>L'arbre logique</h3>
+  <p>Deux incertitudes se distinguent. La <strong>variabilité aléatoire</strong> — σ des lois, position et
+     magnitude des séismes — est intégrée dans le calcul. L'<strong>incertitude épistémique</strong> — quelle
+     loi d'atténuation, quelle valeur b, quelle Mmax, quel modèle de taux (catalogue ou géodésie) — se
+     traite par un <strong>arbre logique</strong> : chaque branche porte un choix et un poids, chaque chemin
+     de la racine aux feuilles est une réalisation du modèle, avec sa courbe d'aléa. On publie la courbe
+     moyenne et des fractiles (16 %, 84 %) : leur écart mesure ce que l'on ignore. Le banc « aléa » énumère
+     ainsi 108 réalisations.</p>
+
+  <div class="a-retenir"><strong>Pour l'ingénieur</strong>
+    <p>Les cartes réglementaires donnent a<sub>gR</sub>, le PGA au rocher à 475 ans d'un tel calcul, régional.
+       Pour un ouvrage important ou un site particulier, une étude spécifique refait le calcul avec les
+       sources locales, produit l'UHS et la désagrégation, et fournit le scénario des accélérogrammes. La
+       moyenne de l'arbre, non la médiane, est la référence des études d'aléa.</p></div>
+
+  <div class="piege"><strong>Piège fréquent</strong>
+    <p>Retenir « le séisme de projet » le plus fort possible et lui appliquer la médiane de la loi : c'est un
+       calcul déterministe, qui ignore à la fois la rareté du scénario et la dispersion σ. Autre piège :
+       oublier que le PGA à 475 ans ne correspond à aucun séisme réel — c'est un niveau, auquel contribuent de
+       nombreux scénarios.</p></div>
+
+  <div class="a-retenir"><strong>À retenir</strong>
+    <ul class="liste-cours">
+      <li>Loi d'atténuation : médiane et σ ≈ 0,6 à 0,75 en ln ; Y log-normale.</li>
+      <li>λ(Y &gt; y) = Σ λ(M)·P(R|M)·P(Y &gt; y|M, R) ; courbe d'aléa, puis Poisson.</li>
+      <li>475 ans (10 % en 50 ans), 2 475 ans (2 % en 50 ans) ; UHS ; désagrégation (M̄, R̄).</li>
+      <li>Variabilité aléatoire dans l'intégrale, incertitude épistémique dans l'arbre logique ; moyenne et
+        fractiles.</li>
+    </ul></div>
+
+  <div class="actions"><a class="primary" href="index.html#ch10">Exercices du chapitre</a>
+    <a class="secondary" href="exerciseur.html#ch10">Exerciseur</a>
+    <a class="secondary" href="labo.html#alea">Travaux pratiques : banc « Aléa »</a></div>
+</section>
+
 <!-- SUITE-DES-CHAPITRES -->
 
 </div>
@@ -1410,5 +1536,6 @@ marquerSectionLue();
 <script type="module" src="src/cours-ch7.js"></script>
 <script type="module" src="src/cours-ch8.js"></script>
 <script type="module" src="src/cours-ch9.js"></script>
+<script type="module" src="src/cours-ch10.js"></script>
 <script type="module" src="src/tableaux.js"></script>
 </body></html>

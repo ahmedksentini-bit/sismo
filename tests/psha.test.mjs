@@ -202,3 +202,27 @@ test('OpenQuake : carte d\'aléa, PGA moyen à 10 % en 50 ans en six sites (< 0,
   assert.deepEqual([g.nx, g.ny, g.sites.length], [19, 14, 266]);
   assert.deepEqual(g.sites[20], { x: -100, y: -100, i: 1, j: 1 });
 });
+
+test('modèle d\'enseignement : une zone ponctuelle redonne la somme directe de Cornell', async () => {
+  const Gmpe = (await import('../src/sismo/gmpe.js')).default;
+  const P = Psha, m = P.modeleSimple({ distance: 30, taux4: 2, b: 1, mmax: 6.5, imts: ['PGA'] });
+  m.zones[0].points = [{ x: 30, y: 0 }];
+  const r = P.calculer(m), sf = P.tableSurvie(3), classes = P.mfdGR({ a: Math.log10(2) + 4, b: 1, mmin: 4, mmax: 6.5 });
+  // par loi : λ(Y > y) = Σm λm · P(ε > (ln y − μ)/σ), normale tronquée à 3σ ; la moyenne de l'arbre porte sur
+  // les probabilités en 50 ans des trois réalisations
+  for (const [l, y] of m.niveaux.entries()) {
+    let poe = 0;
+    for (const id of ['akkar2014', 'bindi2014', 'boore2014']) {
+      let lam = 0;
+      for (const c of classes) {
+        const g = Gmpe.LOIS[id].calculer({ M: c.M, Rjb: 30, vs30: 800, rake: 0 }, 'PGA');
+        lam += c.taux * sf((Math.log(y) - g.ln) / g.sigma);
+      }
+      poe += (1 - Math.exp(-50 * lam)) / 3;
+    }
+    assert.ok(Math.abs(r.moyenne[0][l] - poe) <= 1e-9 + 1e-6 * poe, `niveau ${y}`);
+  }
+  // la zone circulaire complète couvre bien un disque : aire des mailles ≈ πR²
+  const pts = P.discretiser(P.modeleSimple({ rayon: 100 }).zones[0].polygone, 10);
+  assert.ok(Math.abs(pts.length * 100 / (Math.PI * 1e4) - 1) < 0.02);
+});

@@ -1,0 +1,207 @@
+{
+ "chapitre": "ch10",
+ "exercices": [
+  {
+   "id": "ch10-gmpe",
+   "titre": "Probabilité de dépasser un seuil lors d'un séisme",
+   "difficulte": 1,
+   "graine": 3275852649,
+   "enonce": "Pour un séisme de magnitude 5,4 à 21 km, au rocher, la loi de Bindi et al. (2014) donne une accélération maximale médiane de 0,0344 g, avec un écart type σ = 0,74 sur ln PGA.",
+   "donnees": [
+    {
+     "label": "Médiane",
+     "valeur": "0,0344 g"
+    },
+    {
+     "label": "σ (ln)",
+     "valeur": "0,74"
+    },
+    {
+     "label": "Seuil",
+     "valeur": "0,069 g"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Accélération dépassée une fois sur six (médiane × e^σ) ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.0721002,
+     "explication": "0,0344 × e^0,74 = 0,0721 g (84ᵉ centile).",
+     "toleranceRel": 0.02
+    },
+    {
+     "texte": "Écart normalisé ε du seuil 0,069 g ?",
+     "type": "nombre",
+     "unite": "",
+     "reponse": 0.940608,
+     "explication": "ε = (ln 0,069 − ln 0,0344) / 0,74 = 0,94.",
+     "tolerance": 0.03
+    },
+    {
+     "texte": "Probabilité que ce séisme dépasse 0,069 g (en %) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 17.3453,
+     "explication": "P = 1 − Φ(0,94) = 17,3 % (loi normale, sans troncature).",
+     "tolerance": 1
+    }
+   ]
+  },
+  {
+   "id": "ch10-cornell",
+   "titre": "L'intégrale de Cornell à la main",
+   "difficulte": 2,
+   "graine": 210071631,
+   "enonce": "Un site n'est menacé que par deux scénarios : un séisme de magnitude 5,2 à 15 km, au taux de 0,03 par an (PGA médiane 0,0585 g, σ = 0,66), et un séisme de magnitude 6,3 à 33 km, au taux de 0,004 par an (PGA médiane 0,0669 g, σ = 0,61). On cherche l'aléa pour PGA > 0,15 g.",
+   "donnees": [
+    {
+     "label": "Scénario 1",
+     "valeur": "M 5,2, 15 km, 0,03/an, médiane 0,0585 g, σ 0,66"
+    },
+    {
+     "label": "Scénario 2",
+     "valeur": "M 6,3, 33 km, 0,004/an, médiane 0,0669 g, σ 0,61"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Probabilité que le scénario 1 dépasse le seuil (en %) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 7.68361,
+     "explication": "ε = (ln 0,15 − ln 0,0585)/0,66 = 1,43 ; P = 7,7 %.",
+     "tolerance": 1
+    },
+    {
+     "texte": "Taux annuel de dépassement du seuil (somme des deux scénarios) ?",
+     "type": "nombre",
+     "unite": "/ an",
+     "reponse": 0.00267631,
+     "explication": "λ = 0,03 × 0,077 + 0,004 × 0,093 = 0,00268 / an.",
+     "toleranceRel": 0.05
+    },
+    {
+     "texte": "Période de retour du dépassement ?",
+     "type": "nombre",
+     "unite": "ans",
+     "reponse": 373.649,
+     "explication": "1/λ = 374 ans.",
+     "toleranceRel": 0.05
+    },
+    {
+     "texte": "Probabilité de dépassement en 50 ans (en %) ?",
+     "type": "nombre",
+     "unite": "%",
+     "reponse": 12.5249,
+     "explication": "1 − e^(−50λ) = 12,5 %.",
+     "toleranceRel": 0.05
+    }
+   ]
+  },
+  {
+   "id": "ch10-courbe",
+   "titre": "Lire une courbe d'aléa",
+   "difficulte": 2,
+   "graine": 3504444070,
+   "enonce": "La courbe d'aléa d'un site donne un taux annuel de dépassement de 0,00293 pour PGA = 0,0629 g et de 0,00178 pour PGA = 0,0829 g. On interpole en log-log entre ces deux points.",
+   "donnees": [
+    {
+     "label": "PGA 0,0629 g",
+     "valeur": "λ = 0,00293 / an"
+    },
+    {
+     "label": "PGA 0,0829 g",
+     "valeur": "λ = 0,00178 / an"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Taux annuel correspondant à 10 % en 50 ans ?",
+     "type": "nombre",
+     "unite": "/ an",
+     "reponse": 0.00210721,
+     "explication": "λ = −ln(0,9)/50 = 1/474,6 = 0,002107 / an.",
+     "toleranceRel": 0.01
+    },
+    {
+     "texte": "PGA à 475 ans ?",
+     "type": "nombre",
+     "unite": "g",
+     "reponse": 0.0755015,
+     "explication": "ln PGA = ln 0,0629 + (ln λ475 − ln 0,00293)·(ln 0,0829 − ln 0,0629)/(ln 0,00178 − ln 0,00293) → PGA = 0,0755 g.",
+     "toleranceRel": 0.03
+    },
+    {
+     "texte": "Le PGA à 475 ans correspond…",
+     "type": "choix",
+     "options": [
+      "au plus fort séisme possible de la région",
+      "au séisme de magnitude Mmax à la distance minimale",
+      "à un niveau auquel contribuent de nombreux scénarios, pas à un séisme particulier",
+      "à la médiane du séisme le plus probable"
+     ],
+     "reponse": 2,
+     "explication": "La courbe d'aléa intègre tous les scénarios ; la désagrégation dit lesquels pèsent le plus."
+    }
+   ]
+  },
+  {
+   "id": "ch10-notions",
+   "titre": "Incertitudes, arbre logique et désagrégation",
+   "difficulte": 1,
+   "graine": 1504756596,
+   "enonce": "Questions sur le calcul probabiliste de l'aléa.",
+   "questions": [
+    {
+     "texte": "Aux longues périodes, la désagrégation fait en général ressortir…",
+     "type": "choix",
+     "options": [
+      "les mêmes séismes qu'aux courtes périodes",
+      "uniquement des séismes de magnitude 4",
+      "uniquement la source la plus proche",
+      "des séismes plus grands et plus lointains qu'aux courtes périodes"
+     ],
+     "reponse": 3,
+     "explication": "Les grands séismes rayonnent davantage en basses fréquences et leur mouvement s'atténue moins vite avec la distance aux longues périodes."
+    },
+    {
+     "texte": "La désagrégation sert à…",
+     "type": "choix",
+     "options": [
+      "identifier les couples (M, R) qui font l'aléa, pour choisir les accélérogrammes",
+      "calculer la valeur b",
+      "retirer les répliques du catalogue",
+      "corriger le spectre de l'amortissement"
+     ],
+     "reponse": 0,
+     "explication": "Le scénario moyen (M̄, R̄) guide la sélection des accélérogrammes et le type de spectre de l'Eurocode 8."
+    },
+    {
+     "texte": "L'écart type σ d'une loi d'atténuation traduit…",
+     "type": "choix",
+     "options": [
+      "la variabilité aléatoire du mouvement d'un séisme et d'un site à l'autre",
+      "l'incertitude sur la valeur b",
+      "l'incertitude sur le choix de la loi",
+      "l'erreur de mesure des sismomètres"
+     ],
+     "reponse": 0,
+     "explication": "σ est une variabilité naturelle, intégrée dans le calcul ; le choix de la loi relève de l'incertitude épistémique, traitée par l'arbre logique."
+    },
+    {
+     "texte": "Le spectre à probabilité uniforme (UHS) est…",
+     "type": "choix",
+     "options": [
+      "le spectre du séisme le plus probable",
+      "la moyenne des spectres des accélérogrammes",
+      "le spectre de l'Eurocode 8 au rocher",
+      "l'ensemble des Sa(T) de même probabilité de dépassement, période par période"
+     ],
+     "reponse": 3,
+     "explication": "Chaque ordonnée vient d'un calcul d'aléa séparé ; aucun séisme n'a nécessairement ce spectre en entier, d'où le spectre conditionnel (chapitre 11)."
+    }
+   ]
+  }
+ ]
+}

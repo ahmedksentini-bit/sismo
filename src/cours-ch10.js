@@ -1,0 +1,93 @@
+// Calculateurs du chapitre 10 : loi d'atténuation (médiane, dispersion, probabilité de dépassement) ;
+// aléa d'un site par le moteur du banc « aléa » (Psha.modeleSimple) : courbe d'aléa, UHS face au spectre de
+// l'EN 1998-1:2004, désagrégation.
+import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { svg, texte, graphe, echantillon, COULEURS } from "./figures.js";
+import Gmpe from "./sismo/gmpe.js";
+import Psha from "./sismo/psha.js";
+import Spectre from "./sismo/spectre.js";
+
+// ── Médiane, dispersion et probabilité de dépassement ────────────────────
+const majGMPE = garde("gmOut", () => {
+  const M = num("gmM"), R = num("gmR"), id = el("gmLoi").value, y = num("gmY"), loi = Gmpe.LOIS[id];
+  if (!(M >= 3.5 && M <= 8 && R >= 0 && R <= 300 && y > 0)) { el("gmOut").textContent = "Mw de 3,5 à 8, distance de 0 à 300 km, seuil positif."; el("gmFig").innerHTML = ""; return; }
+  const calc = (r) => loi.calculer({ M, Rjb: r, vs30: 800, rake: 0 }, "PGA");
+  const pts = (k) => echantillon((lr) => { const r = 10 ** lr, c = calc(r); return [r, Math.exp(c.ln + k * c.sigma)]; }, 0, Math.log10(300), 90).map(([, p]) => p);
+  const c = calc(R), z = (Math.log(y) - c.ln) / c.sigma, P = Psha.survie(z, 3);
+  el("gmFig").innerHTML = graphe({
+    largeur: 560, hauteur: 300, xmin: 1, xmax: 300, ymin: 0.001, ymax: 3, logX: true, logY: true,
+    xlabel: "distance Rjb (km)", ylabel: "PGA (g)",
+    series: [
+      { points: pts(1), couleur: COULEURS.discret, epaisseur: 1.4, tirets: "5 4", libelle: "médiane × e^(±σ) (16 % et 84 %)" },
+      { points: pts(-1), couleur: COULEURS.discret, epaisseur: 1.4, tirets: "5 4" },
+      { points: pts(0), couleur: COULEURS.bleu, epaisseur: 2.6, libelle: `médiane, ${loi.nom}` },
+      { points: [[1, y], [300, y]], couleur: COULEURS.effort, epaisseur: 1.2, tirets: "2 3", libelle: `seuil ${f(y, 3)} g` },
+    ],
+    marques: [{ x: R, y: Math.exp(c.ln), couleur: COULEURS.bleu, libelle: `${f(Math.exp(c.ln), 3)} g` }],
+  });
+  el("gmOut").innerHTML = `Médiane <strong>${f(Math.exp(c.ln), 3)} g</strong>, σ = ${fd(c.sigma, 2)} (τ = ${fd(c.tau, 2)} entre séismes, φ = ${fd(c.phi, 2)} d'un site à l'autre) ·
+    ε = (ln ${f(y, 3)} − ln ${f(Math.exp(c.ln), 3)})/σ = ${fd(z, 2)} → <strong>P(PGA &gt; ${f(y, 3)} g) = ${fd(100 * P, 1)} %</strong>
+    <small>Loi normale tronquée à ± 3σ. À 84 %, la médiane est multipliée par e<sup>σ</sup> = ${f(Math.exp(c.sigma), 3)}.</small>`;
+});
+brancher(["gmM", "gmR", "gmLoi", "gmY"], majGMPE);
+
+// ── Aléa d'un site au centre d'une zone source ───────────────────────────
+const IMTS = ["PGA", 0.1, 0.2, 0.3, 0.5, 1, 2, 3];
+let cle = "", res = null, modele = null, desag = null;
+function grilleDesag(d) {
+  const L = 560, H = 230, g = { gauche: 52, droite: 14, haut: 12, bas: 40 }, W = L - g.gauche - g.droite, Hh = H - g.haut - g.bas;
+  const m0 = 4, m1 = 7.5, r0 = 0, r1 = 200, X = (r) => g.gauche + ((r - r0) / (r1 - r0)) * W, Y = (m) => g.haut + Hh - ((m - m0) / (m1 - m0)) * Hh;
+  const max = Math.max(...d.cases.map((c) => c.part));
+  return svg({ largeur: L, hauteur: H, titre: "Désagrégation magnitude–distance", contenu: () => {
+    let s = "";
+    for (const c of d.cases) {
+      if (c.r0 >= r1 || c.m0 >= m1) continue;
+      s += `<rect x="${X(c.r0).toFixed(1)}" y="${Y(Math.min(c.m1, m1)).toFixed(1)}" width="${(X(Math.min(c.r1, r1)) - X(c.r0) - 1).toFixed(1)}" height="${(Y(c.m0) - Y(Math.min(c.m1, m1)) - 1).toFixed(1)}" fill="${COULEURS.bleu}" opacity="${(0.08 + 0.92 * (c.part / max)).toFixed(2)}"/>`;
+      if (c.part > 0.04) s += texte((X(c.r0) + X(Math.min(c.r1, r1))) / 2, (Y(c.m0) + Y(Math.min(c.m1, m1))) / 2 + 4, `${Math.round(100 * c.part)} %`, `text-anchor="middle" style="font-size:10px;font-weight:700;fill:${c.part / max > 0.55 ? "#fff" : COULEURS.encre}"`);
+    }
+    for (let r = 0; r <= r1; r += 40) s += texte(X(r), H - g.bas + 15, `${r}`, 'text-anchor="middle" class="pt"');
+    for (let m = 4; m <= 7.5; m += 0.5) s += texte(g.gauche - 6, Y(m) + 4, fd(m, 1), 'text-anchor="end" class="pt"');
+    s += texte(g.gauche + W / 2, H - 6, "distance Rjb (km)", 'text-anchor="middle" style="font-weight:700"');
+    s += `<text transform="translate(14 ${g.haut + Hh / 2}) rotate(-90)" text-anchor="middle" style="font-weight:700">magnitude</text>`;
+    s += `<rect x="${g.gauche}" y="${g.haut}" width="${W}" height="${Hh}" fill="none" stroke="${COULEURS.trait}"/>`;
+    return s;
+  } });
+}
+const majPSHA = garde("psOut", () => {
+  const taux4 = num("psL4"), b = num("psB"), mmax = num("psMmax"), rayon = num("psRayon"), distance = num("psDist");
+  if (!(taux4 > 0 && b > 0.3 && mmax > 4.6 && mmax <= 8 && rayon >= 5 && distance >= 0 && distance <= 280)) {
+    el("psOut").textContent = "Taux et b positifs, Mmax de 4,6 à 8, rayon d'au moins 5 km, distance de 0 à 280 km."; el("psFigC").innerHTML = el("psFigU").innerHTML = ""; return;
+  }
+  const c = `${taux4}|${b}|${mmax}|${rayon}|${distance}`;
+  if (c !== cle) {
+    modele = Psha.modeleSimple({ taux4, b, mmax, rayon, distance, imts: IMTS, pasGrille: rayon > 60 ? 10 : 5 });
+    res = Psha.calculer(modele); cle = c; desag = null;
+  }
+  const N = res.niveaux, pga = res.moyenne[0], a475 = Psha.niveauPourProba(N, pga, 0.1), a2475 = Psha.niveauPourProba(N, pga, 0.02);
+  if (!(a475 > 0)) { el("psOut").textContent = "Aléa trop faible : la probabilité de 10 % en 50 ans n'est pas atteinte au premier niveau (0,001 g)."; el("psFigC").innerHTML = el("psFigU").innerHTML = ""; return; }
+  if (!desag) desag = Psha.desagregation(modele, "PGA", a475);
+  const lam = (p) => -Math.log(1 - p) / 50;
+  el("psFigC").innerHTML = graphe({
+    largeur: 560, hauteur: 300, xmin: 0.001, xmax: 3, ymin: 1e-5, ymax: 1, logX: true, logY: true,
+    xlabel: "PGA (g)", ylabel: "taux annuel de dépassement",
+    series: [
+      ...res.realisations.map((r, i) => ({ points: N.map((x, l) => [x, lam(r.poe[0][l])]), couleur: "#94a3b8", epaisseur: 1.2, tirets: "4 3", libelle: i === 0 ? "chaque loi (réalisation)" : undefined })),
+      { points: N.map((x, l) => [x, lam(pga[l])]), couleur: COULEURS.bleu, epaisseur: 2.6, libelle: "moyenne de l'arbre" },
+    ],
+    marques: [{ x: a475, y: 1 / 475, couleur: COULEURS.effort, guides: true, libelle: `475 ans : ${f(a475, 3)} g` }, { x: a2475, y: 1 / 2475, couleur: COULEURS.violet, guides: true, libelle: `2 475 ans : ${f(a2475, 3)} g` }],
+  });
+  const uhs = IMTS.map((imt, k) => [imt === "PGA" ? 0 : imt, Psha.niveauPourProba(N, res.moyenne[k], 0.1)]);
+  const type = desag.mMoy <= 5.5 ? 2 : 1, Tg = Array.from({ length: 301 }, (_, i) => i * 0.01);
+  el("psFigU").innerHTML = graphe({
+    largeur: 560, hauteur: 280, xmin: 0, xmax: 3, ymin: 0, ymax: Math.ceil(Math.max(...uhs.map((u) => u[1]), 2.5 * a475) * 11) / 10,
+    xlabel: "période T (s)", ylabel: "Sa à 475 ans (g)",
+    series: [
+      { points: Tg.map((t) => [t, Spectre.ec8(t, { type, sol: "A", ag: a475 })]), couleur: COULEURS.reaction, epaisseur: 1.8, tirets: "6 4", libelle: `EC8 sol A, type ${type}, ag = PGA 475 ans` },
+      { points: uhs, couleur: COULEURS.bleu, epaisseur: 2.6, marqueurs: true, libelle: "UHS à 475 ans" },
+    ],
+  }) + grilleDesag(desag);
+  el("psOut").innerHTML = `<strong>PGA à 475 ans : ${f(a475, 3)} g</strong> · à 2 475 ans : ${f(a2475, 3)} g · Sa(0,2 s) = ${f(uhs[2][1], 3)} g, Sa(1 s) = ${f(uhs[5][1], 3)} g à 475 ans ·
+    désagrégation : <strong>M̄ = ${fd(desag.mMoy, 1)}, R̄ = ${fd(desag.rMoy, 0)} km</strong>
+    <small>Le rapport 2 475 / 475 ans vaut ${f(a2475 / a475, 3)} pour le PGA. Type de spectre suggéré par M̄ : ${type}.</small>`;
+});
+brancher(["psL4", "psB", "psMmax", "psRayon", "psDist"], majPSHA);
