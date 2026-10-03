@@ -145,3 +145,10 @@ la virgule décimale.
     (`src/exos/chNN.js`) tirent leurs lectures du générateur et appliquent les règles du cours aux valeurs arrondies ;
     les banques `data/exercices-chN.json` se régénèrent par `npm run exercices` (test de reproductibilité). Les
     exemples chiffrés du texte sont testés. Les anciennes ancres de bancs sur `index.html` redirigent vers `labo.html`.
+30. **Globe** (`src/sismo/globe.js`) : Terre à symétrie sphérique ak135, dont le modèle (`coefficients/ak135.js`)
+    est exporté d'ObsPy par `tools/obspy/globe.py`, jamais recopié à la main. Sous-couches ≤ 10 km, vitesses
+    linéaires en profondeur entre nœuds, loi de Bullen v = A·r^B par sous-couche (Δ et T en forme close), nœud
+    inséré à la profondeur du foyer. Une phase est une suite de segments (P, S, K, I) ; un segment non final ne
+    tourne pas, un rai qui ne pénètre pas la région suivante n'appartient pas à la phase (réflexion totale). Toutes
+    les arrivées de TauP (8 phases, 4 profondeurs, 28 distances, `tests/references/phases.json`) sont retrouvées,
+    aucune de plus : temps à 0,02 s, angles à 0,05°. L'onde P diffractée n'est pas calculée.

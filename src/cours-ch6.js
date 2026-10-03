@@ -1,9 +1,12 @@
-// Calculateurs du chapitre 6 : hodochrones Pg et Pn d'une croûte sur manteau (temps vrais ou réduits),
-// inversion d'un profil de premières arrivées (vitesses, intercept, épaisseur), sismique réfraction de site.
-import { el, num, f, fd, brancher, garde, lireTableau } from "./ui.js";
+// Calculateurs du chapitre 6 : couches du globe et phases à travers lui (Globe, vérifié contre TauP) ; hodochrones
+// Pg et Pn d'une croûte sur manteau (temps vrais ou réduits), inversion d'un profil de premières arrivées (vitesses,
+// intercept, épaisseur), sismique réfraction de site.
+import { el, num, f, fd, brancher, garde, lireTableau, esc } from "./ui.js";
 import { graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Refraction from "./sismo/refraction.js";
+import Globe from "./sismo/globe.js";
+import { globe, eventail, raisVers, COULEURS_PHASES } from "./globe-figure.js";
 
 // Moindres carrés t = ti + Δ/V sur des points [Δ, t].
 function droiteMC(pts) {
@@ -91,3 +94,49 @@ const majRefra = garde("rfOut", () => {
     <small>Inversement, H = t<sub>i</sub>·V<sub>1</sub>/(2 cos i<sub>c</sub>) = ${fd((ti * V1) / (2 * Math.sqrt(1 - (V1 / V2) ** 2)), 2)} m. La ligne de géophones doit dépasser 2 à 3 fois la distance de croisement pour bien lire la pente du substratum.</small>`;
 });
 brancher(["rfV1", "rfV2", "rfH"], majRefra);
+
+// ── Le globe en couches et les phases ─────────────────────────────────────
+
+{
+  const t = el("tabCouches");
+  if (t) {
+    const M = Globe.modele, R = Globe.R, { moho, d410, d660, noyau, graine } = Globe.RAYONS;
+    const regions = [["croûte", 0, R - moho], ["manteau supérieur", R - moho, R - d410], ["zone de transition", R - d410, R - d660],
+      ["manteau inférieur", R - d660, R - noyau], ["noyau externe (liquide)", R - noyau, R - graine], ["graine (solide)", R - graine, R]];
+    // vitesses au sommet et à la base de chaque région, du côté intérieur des discontinuités (lignes doublées)
+    const sommet = (z) => M.filter((x) => x[0] === z).pop(), base = (z) => M.filter((x) => x[0] === z)[0];
+    t.innerHTML = `<thead><tr><th>Couche</th><th class="num">profondeur</th><th class="num">Vp</th><th class="num">Vs</th><th class="num">masse volumique</th></tr></thead><tbody>${
+      regions.map(([nom, z1, z2]) => { const a = sommet(z1), b = base(z2); return `<tr><td>${esc(nom)}</td><td class="n">${fd(z1, 0)} à ${fd(z2, 0)} km</td><td class="n">${fd(a[1], 1)} → ${fd(b[1], 1)} km/s</td><td class="n">${fd(a[2], 1)} → ${fd(b[2], 1)} km/s</td><td class="n">${fd(a[3], 1)} → ${fd(b[3], 1)} t/m³</td></tr>`; }).join("")
+    }</tbody>`;
+  }
+}
+
+const PH = Object.keys(Globe.PHASES), mmss = (s) => `${Math.floor(s / 60)} min ${fd(s % 60, 1)} s`;
+const majGlobe = garde("glOut", () => {
+  const h = Number(el("glH").value), d = num("glD"), vue = el("glVue").value;
+  if (!(d > 0 && d <= 180)) { el("glOut").textContent = "Distance de 0 à 180°."; el("glFig").innerHTML = el("glTab").innerHTML = el("glHodo").innerHTML = ""; return; }
+  const arr = PH.flatMap((ph) => Globe.arrivees(ph, h, d)).sort((x, y) => x.temps - y.temps);
+  const lin = (a, b, n) => Array.from({ length: n }, (_, i) => a + (i * (b - a)) / (n - 1));
+  const rais = vue === "eventail"
+    ? [...eventail("P", h, lin(10, 98, 12)), ...eventail("PKP", h, lin(146, 178, 6)), ...eventail("PKIKP", h, lin(116, 140, 3)), ...eventail("S", h, lin(10, 98, 12), { sens: -1 }), ...eventail("SKS", h, lin(70, 170, 6), { sens: -1 })]
+    : PH.flatMap((ph) => raisVers(ph, h, d, { epaisseur: 2.2 }));
+  const pMax = Math.max(...Globe.branche("P", h).filter(Boolean).map((x) => x.dist)) * 180 / Math.PI, pkp = Math.min(...Globe.branche("PKP", h).filter(Boolean).map((x) => x.dist)) * 180 / Math.PI;
+  el("glFig").innerHTML = `<div style="max-width:520px;margin:0 auto">${globe({ rais, h, ombre: [pMax, pkp], stations: vue === "station" ? [{ distance: d, nom: `${fd(d, 0)}°` }] : [], titre: "Rais sismiques à travers le globe" })}</div>`;
+  el("glTab").innerHTML = arr.length ? `<div class="table-large"><table class="resultats"><thead><tr><th>Phase</th><th class="num">temps de trajet</th><th class="num">après P</th><th class="num">p (s/°)</th><th class="num">départ</th><th class="num">incidence</th></tr></thead><tbody>${
+    arr.map((a) => `<tr><td><strong style="color:${COULEURS_PHASES[a.phase]}">${a.phase}</strong></td><td class="n">${mmss(a.temps)}</td><td class="n">${fd(a.temps - arr[0].temps, 1)} s</td><td class="n">${fd(a.p * Math.PI / 180, 2)}</td><td class="n">${fd(a.depart, 1)}°</td><td class="n">${fd(a.incidence, 1)}°</td></tr>`).join("")
+  }</tbody></table></div>` : "";
+  el("glHodo").innerHTML = graphe({
+    largeur: 560, hauteur: 320, xmin: 0, xmax: 180, ymin: 0, ymax: 40, pasX: 30, pasY: 5,
+    xlabel: "distance épicentrale Δ (°)", ylabel: "temps de trajet (min)",
+    series: [
+      ...PH.map((ph) => ({ points: Globe.branche(ph, h).filter(Boolean).map((x) => [x.dist * 180 / Math.PI, x.temps / 60]).filter((q) => q[0] <= 180), couleur: COULEURS_PHASES[ph], epaisseur: 1.8, libelle: ph })),
+      { points: [[d, 0], [d, 40]], couleur: COULEURS.discret, epaisseur: 1, tirets: "4 3" },
+    ],
+    marques: arr.map((a) => ({ x: d, y: a.temps / 60, couleur: COULEURS_PHASES[a.phase], rayon: 4 })),
+  });
+  el("glOut").innerHTML = arr.length
+    ? `À ${fd(d, 0)}° (${f(d * Globe.R * Math.PI / 180, 4)} km), foyer à ${h} km : <strong>première arrivée ${arr[0].phase} après ${mmss(arr[0].temps)}</strong>${arr.find((a) => a.phase === "S") ? ` ; S − P = ${mmss(arr.find((a) => a.phase === "S").temps - (arr.find((a) => a.phase === "P") || arr[0]).temps)}` : ""}
+      <small>${d > pMax && d < pkp ? "La station est dans la zone d'ombre de P : n'y arrivent que des ondes passées par la graine ou réfléchies sur elle (et l'onde P diffractée par le noyau, non calculée ici)." : d > 100 ? "Plus d'onde S directe au-delà de 100° : le noyau liquide l'arrête." : "Les temps croissent moins vite que la distance : les rais plongent dans un manteau plus rapide."}</small>`
+    : "Aucune des phases calculées n'atteint cette distance.";
+});
+brancher(["glH", "glD", "glVue"], majGlobe);

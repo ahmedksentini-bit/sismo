@@ -1,10 +1,12 @@
 // Calculateurs du chapitre 1 : un séisme vu par une station (sismogramme trois composantes du
 // générateur des bancs), distance et heure d'origine à partir des lectures, magnitude locale,
-// accélération médiane en fonction de la distance (moyenne des trois lois d'atténuation du cours).
+// accélération médiane en fonction de la distance (moyenne des trois lois d'atténuation du cours) ; coupe du globe
+// avec ses couches et les rais des principales phases (src/globe-figure.js).
 import { el, num, f, fd, brancher, garde } from "./ui.js";
 import { svg, texte, ligne, graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Accelero from "./sismo/accelerogramme.js";
+import { globe, eventail, COULEURS_PHASES } from "./globe-figure.js";
 
 const VP = Sismo.MODELE.vp1, VS = Sismo.MODELE.vs1, K = Sismo.kmS;
 
@@ -106,3 +108,17 @@ const majPGA = garde("pgOut", () => {
     <small>à 2 × ${fd(R, 0)} km : ${f(pga(M, 2 * R), 2)} g · une magnitude de plus à la même distance : ${f(pga(M + 1, R), 2)} g.</small>`;
 });
 brancher(["pgM", "pgR"], majPGA);
+
+// ── Le globe et ses phases (figure) ──────────────────────────────────────
+{
+  const zone = el("globeCh1");
+  if (zone) {
+    const d = (a, b, n) => Array.from({ length: n }, (_, i) => a + (i * (b - a)) / (n - 1));
+    const rais = [...eventail("P", 10, d(10, 98, 12)), ...eventail("PKP", 10, d(146, 178, 6)), ...eventail("PKIKP", 10, d(116, 140, 3)),
+      ...eventail("S", 10, d(10, 98, 12), { sens: -1 }), ...eventail("SKS", 10, d(70, 170, 6), { sens: -1 })];
+    zone.innerHTML = `<div style="max-width:520px;margin:0 auto">${globe({ rais, ombre: [99.6, 145], titre: "Coupe du globe : couches et phases", etiquettes: [
+      { r: 5200, angle: 45, texte: "P", couleur: COULEURS_PHASES.P }, { r: 5200, angle: 45, sens: -1, texte: "S", couleur: COULEURS_PHASES.S },
+      { r: 2400, angle: 150, texte: "PKP", couleur: COULEURS_PHASES.PKP }, { r: 2500, angle: 120, sens: -1, texte: "SKS", couleur: COULEURS_PHASES.SKS },
+    ] })}</div>`;
+  }
+}

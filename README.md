@@ -103,7 +103,9 @@ src/sismo/mecanisme.js    mécanisme au foyer : double couple, plans, axes, rayo
 src/sismo/inelastique.js  oscillateur bilinéaire (Newmark, Newton), ductilité, facteur Rμ, méthode N2
 src/sismo/liquefaction.js déclenchement de la liquéfaction (CPT, SPT), LPI, tassement, sondage d'école
 src/sismo/site.js         effets de site 1D : ondes SH, linéaire équivalent, Darendeli, Vs30 et classe EC8
-src/sismo/coefficients/   coefficients exportés de hazardlib et calage des accélérogrammes (fichiers produits)
+src/sismo/globe.js        rais sismiques dans le globe ak135 : phases P, S, PcP, ScS, PKP, PKiKP, PKIKP, SKS, zone d'ombre
+src/sismo/coefficients/   coefficients exportés de hazardlib, modèle ak135 d'ObsPy et calage des accélérogrammes (fichiers produits)
+src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide, graine) et rais des phases, en SVG
 src/lecteur-station.js  banc « une station »
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
@@ -124,15 +126,15 @@ src/banc-source.js      banc « source »
 src/parcours.js         plan des travaux pratiques : quatre parties, ordre des bancs, ancres, chapitre du cours de chaque banc
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, parcours,
-                        cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références (142 tests)
+                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références (147 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
 tools/pystrata/         référence des effets de site (Python, pystrata)
 tools/liquepy/          référence de la liquéfaction (Python, liquepy)
 tools/opensees/         références de l'oscillateur inélastique, du bâtiment, de la poussée et de l'isolation (Python, OpenSeesPy)
-tools/obspy/            référence du mécanisme au foyer (Python, ObsPy)
+tools/obspy/            références du mécanisme au foyer et des temps de trajet dans le globe, modèle ak135 (Python, ObsPy)
 tools/eqsig/            référence des indicateurs d'accélérogramme (Python, eqsig)
 tools/generer-exercices.mjs  banques d'exercices (npm run exercices)
 tools/polycopie.py      polycopié PDF (npm run polycopie) ; couverture tools/polycopie-couverture.html
@@ -223,6 +225,10 @@ des tenseurs des moments du site (convertis de NED en USE), les plans nodaux (`m
 (`mt2axes`), le plan auxiliaire (`aux_plane`) et le rayonnement P en champ lointain (`farfield`) : 10⁻⁸° et 10⁻¹²
 près. Pour un plan auxiliaire vertical, `aux_plane` d'ObsPy rend un glissement de signe opposé dont le tenseur n'est
 plus le même : le test compare alors les tenseurs.
+
+Les rais dans le globe sont comparés à TauP (ObsPy) : `tools/obspy/globe.py` exporte le modèle ak135 et calcule les
+arrivées de P, S, PcP, ScS, PKP, PKiKP, PKIKP et SKS pour quatre profondeurs et 28 distances (432 arrivées). Le site
+les retrouve toutes, sans arrivée de plus : temps à 0,006 s, angles de départ et d'incidence à 0,01° près.
 
 Les indicateurs d'accélérogramme sont comparés à eqsig (eng-tools, licence MIT, non embarqué) : `tools/eqsig/intensite.py`
 calcule PGA, PGV, intensité d'Arias (g = 9,81 m/s²), durées significatives 5–95 % et 5–75 % et CAV sur les
