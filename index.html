@@ -554,6 +554,8 @@
         <h2>Modèle de sources<small>Zones discrétisées en points tous les 10 km ; un clic déplace le site</small></h2>
         <canvas id="al-carte" aria-label="Zones sources et site"></canvas>
         <p class="legende"><span><i style="background:var(--pick-s)"></i>zone A</span><span><i style="background:var(--amp)"></i>zone B</span><span><i style="background:var(--teal)"></i>faille F</span><span><i class="tirets" style="border-color:var(--muted)"></i>50, 100 et 200 km du site</span><span class="curseur-lecture" id="al-curseur" style="margin-left:0">—</span></p>
+        <div class="actions"><button type="button" class="bouton secondaire" id="al-carte-alea">Carte d'aléa</button>
+          <span class="aide" style="margin:0">niveau moyen de la grandeur choisie à la probabilité visée, tous les 20 km (266 sites, une dizaine de secondes)</span></div>
       </section>
       <section class="carte" aria-label="Courbe d'aléa">
         <h2>Courbe d'aléa<small>Probabilité de dépasser chaque niveau en 50 ans : une courbe fine par réalisation de l'arbre logique, la moyenne et les fractiles</small></h2>

@@ -459,6 +459,19 @@ const Psha = (() => {
     };
   }
 
+  // Carte d'aléa : niveau moyen (moyenne de l'arbre logique) atteint avec la probabilité P en `dureeVie`
+  // ans, site par site (même moteur que la courbe d'aléa, une seule grandeur, sans fractiles).
+  function niveauSite(modele, site, imt, P) {
+    const res = calculer({ ...modele, site: { ...modele.site, x: site.x, y: site.y }, imts: [imt] }, { fractiles: [] });
+    return niveauPourProba(res.niveaux, res.moyenne[0], P);
+  }
+  // Grille régulière de sites (km), rangée par lignes : sites[j·nx + i] = (x0 + i·pas, y0 + j·pas).
+  function grilleCarte({ x0, x1, y0, y1, pas }) {
+    const nx = Math.floor((x1 - x0) / pas + 1e-9) + 1, ny = Math.floor((y1 - y0) / pas + 1e-9) + 1, sites = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) sites.push({ x: x0 + i * pas, y: y0 + j * pas, i, j });
+    return { nx, ny, pas, x0, y0, sites };
+  }
+
   // Modèle d'école (aucune donnée régionale) : un site au rocher, une zone proche peu active et une
   // zone lointaine plus active, en km autour du site ; foyers à 10 km de profondeur (sans effet sur les
   // lois en Rjb, seulement sur la distance hypocentrale), et la faille F dans la zone A, qui porte les
@@ -495,6 +508,6 @@ const Psha = (() => {
     return m;
   }
 
-  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite, correlationBJ2008, spectreConditionnel };
+  return { erfc, Phi, survie, tableSurvie, mfdGR, niveauxDefaut, modeleDefaut, COUPLAGE, distanceHypocentrale, dansPolygone, discretiser, branchesAB, variantes, loiZone, loiFaille, momentFaille, realisations, calculer, quantile, niveauPourProba, periodeRetour, desagregation, sensibilite, correlationBJ2008, spectreConditionnel, niveauSite, grilleCarte };
 })();
 export default Psha;

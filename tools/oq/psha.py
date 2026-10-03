@@ -222,7 +222,17 @@ poes = {' '.join(repr(p) for p in cs['poes'])}
 [output]
 mean = true
 ''', encoding='utf-8')
-    return dossier / 'job_classique.ini', dossier / 'job_desag.ini', dossier / 'job_cs.ini'
+    carte = modele['carte']
+    sites = ', '.join(f"{s['lon']!r} {s['lat']!r}" for s in carte['sites'])
+    (dossier / 'job_carte.ini').write_text(commun.replace('sites = 0.0 0.0', f'sites = {sites}') + f'''calculation_mode = classical
+intensity_measure_types_and_levels = {json.dumps({nom_imt(carte['imt']): niveaux})}
+
+[output]
+mean = true
+hazard_maps = true
+poes = {carte['poe']!r}
+''', encoding='utf-8')
+    return dossier / 'job_classique.ini', dossier / 'job_desag.ini', dossier / 'job_cs.ini', dossier / 'job_carte.ini'
 
 
 def lancer(job):
@@ -234,7 +244,7 @@ def lancer(job):
 
 
 def calculer(modele):
-    """Fait tourner les trois jobs ; renvoie leurs numéros (datastores ~/oqdata/calc_N.hdf5)."""
+    """Fait tourner les quatre jobs ; renvoie leurs numéros (datastores ~/oqdata/calc_N.hdf5)."""
     with tempfile.TemporaryDirectory() as tmp:
         return tuple(lancer(job) for job in ecrire_jobs(modele, pathlib.Path(tmp)))
 
@@ -353,17 +363,38 @@ def extraire_cs(calc_id, modele):
     }
 
 
+def extraire_carte(calc_id, modele):
+    """Carte d'aléa : pour chaque site de contrôle, courbe moyenne et niveau moyen à la probabilité visée
+    (hmaps-stats, interpolation log-log de compute_hazard_maps). Les sites sont repérés par leurs
+    coordonnées, OpenQuake pouvant les réordonner."""
+    ds = datastore.read(calc_id)
+    sc = ds['sitecol']
+    courbes = ds['hcurves-stats'][:, 0, 0, :]  # (N, L) moyenne, PGA
+    cartes = ds['hmaps-stats'][:, 0, 0, 0]     # (N,) moyenne, PGA, première probabilité
+    sites = []
+    for s in modele['carte']['sites']:
+        n = min(range(len(sc)), key=lambda k: (sc.lons[k] - s['lon']) ** 2 + (sc.lats[k] - s['lat']) ** 2)
+        sites.append({'x': s['x'], 'y': s['y'], 'poe': f7s(courbes[n]), 'niveau': float(cartes[n])})
+    return {'imt': modele['carte']['imt'], 'poe': modele['carte']['poe'], 'sites': sites}
+
+
 def main():
     modele = json.loads((REF / 'modele_psha.json').read_text(encoding='utf-8'))
-    # --calc N M K : relire trois calculs déjà faits (classique, désagrégation, spectre conditionnel)
+    # --calc N M K L : relire quatre calculs déjà faits (classique, désagrégation, spectre conditionnel, carte) ;
+    # --carte : ne lancer que le calcul de la carte et afficher son numéro
+    if '--carte' in sys.argv:
+        with tempfile.TemporaryDirectory() as tmp:
+            print('calcul de la carte :', lancer(ecrire_jobs(modele, pathlib.Path(tmp))[3]))
+        return
     if '--calc' in sys.argv:
         i = sys.argv.index('--calc')
-        ids = tuple(int(x) for x in sys.argv[i + 1:i + 4])
+        ids = tuple(int(x) for x in sys.argv[i + 1:i + 5])
     else:
         ids = calculer(modele)
     sortie = extraire(ids[0], modele)
     sortie['desagregation'] = extraire_desag(ids[1], modele)
     sortie['spectreConditionnel'] = extraire_cs(ids[2], modele)
+    sortie['carte'] = extraire_carte(ids[3], modele)
     (REF / 'psha.json').write_text(json.dumps(sortie, ensure_ascii=False), encoding='utf-8')
     print(f'écrit tests/references/psha.json (calculs {", ".join(map(str, ids))}, {len(sortie["realisations"])} réalisations, {len(sortie["imts"])} grandeurs)')
 

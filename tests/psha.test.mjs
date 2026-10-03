@@ -187,3 +187,18 @@ test('OpenQuake : spectre conditionnel moyen, et CMS(T*) = x', () => {
     for (const k of [0, 2, 12]) assert.ok(js.moyenne[k] < Psha.niveauPourProba(res.niveaux, res.moyenne[k], p));
   });
 });
+
+// Carte d'aléa : même moteur site par site ; OpenQuake calcule la moyenne de l'arbre en six sites de la grille.
+test('OpenQuake : carte d\'aléa, PGA moyen à 10 % en 50 ans en six sites (< 0,1 %, courbes < 0,5 %)', () => {
+  const C = oq.carte;
+  assert.equal(C.sites.length, 6);
+  for (const s of C.sites) {
+    const x = Psha.niveauSite(modele, s, 'PGA', C.poe);
+    assert.ok(Math.abs(x / s.niveau - 1) < 0.001, `(${s.x}, ${s.y}) : ${x} contre ${s.niveau}`);
+    const r = Psha.calculer({ ...modele, site: { ...modele.site, x: s.x, y: s.y }, imts: ['PGA'] }, { fractiles: [] });
+    assert.ok(ecartMax(r.moyenne[0], s.poe) < 0.005, `courbe (${s.x}, ${s.y})`);
+  }
+  const g = Psha.grilleCarte({ x0: -120, x1: 240, y0: -120, y1: 150, pas: 20 });
+  assert.deepEqual([g.nx, g.ny, g.sites.length], [19, 14, 266]);
+  assert.deepEqual(g.sites[20], { x: -100, y: -100, i: 1, j: 1 });
+});

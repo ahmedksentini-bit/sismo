@@ -25,5 +25,7 @@ sortie.desagregation = { largeurM: 0.5, largeurR: 20, niveaux: ['PGA', 1].map(im
 }) };
 // Spectre conditionnel : conditionné à Sa(1 s), aux probabilités de 10 % et 2 % en 50 ans.
 sortie.spectreConditionnel = { imtRef: 1, poes: [0.1, 0.02] };
+// Carte d'aléa : PGA moyen à 10 % en 50 ans en six sites de la grille du banc (pas de 20 km), dans et hors des zones.
+sortie.carte = { imt: 'PGA', poe: 0.1, sites: [[-40, 0], [0, 60], [60, -40], [140, 0], [180, 80], [-80, 110]].map(([x, y]) => ({ x, y, lon: x / KM_DEG, lat: y / KM_DEG })) };
 writeFileSync(new URL('../../tests/references/modele_psha.json', import.meta.url), JSON.stringify(sortie, null, 1) + '\n');
 console.log(`écrit tests/references/modele_psha.json (${sortie.zones.map(z => `${z.id} : ${z.points.length} points`).join(', ')})`);
