@@ -20,6 +20,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | **Site** | colonne de sol stratifiée sur rocher (profils types ou couches réglables : épaisseur, Vs, IP), ondes SH verticales (Kramer 1996) en linéaire ou en linéaire équivalent (courbes de Darendeli 2001, γeff = 0,65·γmax) ; fonction de transfert et f0 du quart d'onde, spectres au rocher et en surface face aux spectres de l'EN 1998-1:2004 (sol A et classe du site), profils de Vs compatible, de déformation, de G/G0 et ξ ; Vs30 et classe de sol (tableau 3.1) ; calcul vérifié contre pystrata ; mode exercice noté |
 | **Liquéfaction** | sondage CPT d'école (profils types, nappe réglable), séisme (amax, M) ; méthode simplifiée de Boulanger et Idriss (2014) : CSR, CRR(qc1Ncs)·MSF·Kσ, Ic et teneur en fines, coefficient de sécurité ; indice LPI d'Iwasaki et tassement de Zhang et al. (2002) ; variante SPT dans le moteur ; vérifié contre liquepy ; mode exercice noté |
 | **Ductilité** | oscillateur élastoplastique (écrouissage cinématique) de période T et de résistance Se(T)/R sous sept accélérogrammes calés sur le spectre de l'EN 1998-1:2004 à T ; boucle d'hystérésis, déplacement au cours du temps et résiduel ; spectres de ductilité à résistance constante face aux règles des égaux déplacements et de la méthode N2 ; déplacement cible N2 (annexe B) en format accélération–déplacement face à la moyenne des calculs temporels ; vérifié contre OpenSeesPy ; mode exercice noté |
+| **Bâtiment** | bâtiment à étages en console de cisaillement (régulier, rigidité dégressive, étage souple, toiture lourde ; nombre d'étages, masses, rigidités) ; modes propres, facteurs de participation et masses effectives ; spectre de calcul de l'EN 1998-1:2004 (q, β·ag) ; périodes approchées Ct·H^¾ et 2·√d ; méthode des forces latérales (domaine d'emploi, λ, répartition en z ou selon le mode 1) et analyse modale spectrale (modes retenus, SRSS ou CQC) ; limitation des dommages (dr·ν/h) et coefficient θ ; combinaisons modales face à sept calculs temporels ; vérifié contre OpenSeesPy ; mode exercice noté |
 | **Mécanisme** | séisme d'école de type choisi et réseau de 6 à 30 stations ; premières arrivées P sur les verticales (Pg montante ou Pn descendante), polarités lues ; sphère focale en projection de Schmidt (hémisphère inférieur), plans nodaux et quadrants du modèle réglé, désaccords, axes P et T, type de faille ; inversion par recherche exhaustive et famille de solutions ; vérifié contre ObsPy ; mode exercice noté |
 | **Source** | séisme de Mw et de chute de contrainte choisies, quatre stations de 30 à 140 km ; fenêtre S, spectre de déplacement brut et corrigé (expansion géométrique, Q(f), κ, site), modèle de Brune ajusté à la main ou par moindres carrés en ln ; M0, Mw, fc et Δσ par station, face à ML ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
@@ -66,6 +67,8 @@ src/sismo/selection.js    sélection et mise à l'échelle sur une cible, échan
 src/sismo/isolignes.js    isolignes d'une grille (carrés marchants), niveaux ronds
 src/sismo/source.js       spectre des ondes S corrigé du trajet, modèle de Brune, M0, Mw, Δσ
 src/sismo/intensite.js    PGA, PGV, intensité d'Arias, durées significatives, CAV, courbe de Husid
+src/sismo/batiment.js     console de cisaillement : modes, forces latérales, analyse modale (SRSS, CQC),
+                          limitation des dommages, θ, calcul temporel par superposition modale
 src/sismo/mecanisme.js    mécanisme au foyer : double couple, plans, axes, rayonnement P, Schmidt, inversion
 src/sismo/inelastique.js  oscillateur bilinéaire (Newmark, Newton), ductilité, facteur Rμ, méthode N2
 src/sismo/liquefaction.js déclenchement de la liquéfaction (CPT, SPT), LPI, tassement, sondage d'école
@@ -83,17 +86,18 @@ src/banc-selection.js   banc « accélérogrammes »
 src/banc-site.js        banc « site »
 src/banc-liquefaction.js banc « liquéfaction »
 src/banc-ductilite.js   banc « ductilité »
+src/banc-batiment.js    banc « bâtiment »
 src/banc-mecanisme.js   banc « mécanisme »
 src/banc-source.js      banc « source »
 src/onglets.js          onglets ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
-                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, références (98 tests)
+                        site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, références (106 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
 tools/pystrata/         référence des effets de site (Python, pystrata)
 tools/liquepy/          référence de la liquéfaction (Python, liquepy)
-tools/opensees/         référence de l'oscillateur inélastique (Python, OpenSeesPy)
+tools/opensees/         références de l'oscillateur inélastique et du bâtiment (Python, OpenSeesPy)
 tools/obspy/            référence du mécanisme au foyer (Python, ObsPy)
 tools/eqsig/            référence des indicateurs d'accélérogramme (Python, eqsig)
 ```
@@ -169,7 +173,10 @@ CRR7,5 et Kσ du SPT aussi.
 L'oscillateur inélastique est comparé à OpenSeesPy, non embarqué : `tools/opensees/sdof.py` calcule huit
 oscillateurs (Steel01 sans écrouissage isotrope, amortissement proportionnel à la masse, série Path, Newmark et
 Newton, mêmes sous-pas ≤ T/20) sous un accélérogramme d'école ; déplacement maximal à 10⁻¹³ près, déplacement et
-force à 10⁻⁸ près sur tout l'historique.
+force à 10⁻⁸ près sur tout l'historique. `tools/opensees/batiment.py` reprend quatre bâtiments en console de cisaillement
+(éléments zeroLength) : périodes et masses effectives (`modalProperties`) et réponses de l'analyse modale spectrale
+(`responseSpectrumAnalysis`, combinées par SRSS et CQC) à 10⁻¹² près ; calcul temporel du système couplé avec
+amortissement modal (`modalDamping`) à 10⁻¹⁰ près, la superposition modale du site étant menée sur la même grille fine.
 
 Le mécanisme au foyer est comparé à ObsPy (licence LGPL, non embarqué) : `tools/obspy/mecanisme.py` retrouve, à partir
 des tenseurs des moments du site (convertis de NED en USE), les plans nodaux (`mt2plane`), les axes P, T, N
