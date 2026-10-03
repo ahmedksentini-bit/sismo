@@ -1,8 +1,10 @@
 import Akkar2014 from './coefficients/akkar2014.js';
 import Bindi2014 from './coefficients/bindi2014.js';
+import Boore2014 from './coefficients/boore2014.js';
 
 // src/sismo/gmpe.js — lois d'atténuation (GMPE). Chaque loi renvoie la médiane en ln (g pour PGA et SA,
 // cm/s pour PGV) et ses écarts types en ln : σ total, τ (inter-événement), φ (intra-événement).
+// Akkar et al. (2014), Bindi et al. (2014), Boore et al. (2014).
 // Vérifiées contre openquake.hazardlib par tests/references.test.mjs. Solveurs purs.
 const Gmpe = (() => {
   'use strict';
@@ -76,7 +78,42 @@ const Gmpe = (() => {
     },
   };
 
-  const LOIS = { akkar2014, bindi2014 };
+  // ── Boore, Stewart, Seyhan et Atkinson (2014), NGA-West2, sans terme de bassin ──
+  // ln Y = FE(M, style) + FP(Rjb, M) + FS(Vs30, PGAr) ; FS = c·ln(min(Vs30, Vc)/760) + f2·ln((PGAr + 0,1)/0,1),
+  // PGAr : PGA médian au rocher de référence (760 m/s). σ = √(τ² + φ²), τ et φ fonction de M, Rjb et Vs30.
+  function booreMagnitude(C, M, rake) {
+    const style = Math.abs(rake) <= 30 || 180 - Math.abs(rake) <= 30 ? C.e1 : rake > 30 && rake < 150 ? C.e3 : C.e2;
+    const dm = M - C.Mh;
+    return style + (M <= C.Mh ? C.e4 * dm + C.e5 * dm * dm : C.e6 * dm);
+  }
+  function boorePropagation(C, M, Rjb, t) {
+    const R = Math.sqrt(Rjb * Rjb + C.h * C.h);
+    return (C.c1 + C.c2 * (M - t.Mref)) * Math.log(R / t.Rref) + (C.c3 + C.Dc3) * (R - t.Rref);
+  }
+  function booreEcarts(C, M, Rjb, vs30, t) {
+    const tau = M <= 4.5 ? C.tau1 : M >= 5.5 ? C.tau2 : C.tau1 + (C.tau2 - C.tau1) * (M - 4.5);
+    let phi = M <= 4.5 ? C.f1 : M >= 5.5 ? C.f2 : C.f1 + (C.f2 - C.f1) * (M - 4.5);
+    if (Rjb > C.R2) phi += C.DfR;
+    else if (Rjb > C.R1) phi += C.DfR * (Math.log(Rjb / C.R1) / Math.log(C.R2 / C.R1));
+    if (vs30 <= t.v1) phi -= C.DfV;
+    else if (vs30 <= t.v2) phi -= C.DfV * (Math.log(t.v2 / vs30) / Math.log(t.v2 / t.v1));
+    return { sigma: Math.hypot(tau, phi), tau, phi };
+  }
+  const boore2014 = {
+    id: 'boore2014', nom: 'Boore et al. (2014)', distance: 'Rjb', domaine: { M: [3, 8.5], R: [0, 400], vs30: [150, 1500] },
+    periodes: Boore2014.SA.map(c => c.T),
+    calculer({ M, Rjb, vs30, rake = 0 }, imt) {
+      const t = Boore2014, C = coefficients(t, imt), Cp = t.PGA;
+      const pgaRocher = Math.exp(booreMagnitude(Cp, M, rake) + boorePropagation(Cp, M, Rjb, t));
+      const lin = C.c * Math.log(Math.min(vs30, C.Vc) / t.Vref);
+      const f2 = C.f4 * (Math.exp(C.f5 * (Math.min(vs30, 760) - 360)) - Math.exp(C.f5 * 400));
+      const nonLin = t.f1 + f2 * Math.log((pgaRocher + t.f3) / t.f3);
+      const ln = booreMagnitude(C, M, rake) + boorePropagation(C, M, Rjb, t) + lin + nonLin;
+      return { ln, ...booreEcarts(C, M, Rjb, vs30, t) };
+    },
+  };
+
+  const LOIS = { akkar2014, bindi2014, boore2014 };
   return { LOIS, coefficientsSA };
 })();
 export default Gmpe;

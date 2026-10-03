@@ -46,7 +46,7 @@
         retirer les répliques, ajuster la loi de Gutenberg-Richter, puis en tirer des taux annuels et des probabilités sur la durée de vie d'un ouvrage.</p>
       <p class="chapeau" id="chapeau-geodesie" hidden>Un réseau GNSS mesure la déformation lente de la croûte. Taux de déformation par zone,
         taux de moment de Kostrov, part sismique : on en tire des taux de séismes indépendants du catalogue, et on confronte les deux.</p>
-      <p class="chapeau" id="chapeau-alea" hidden>Deux zones sources, deux lois d'atténuation et un arbre logique : le calcul probabiliste (PSHA) somme tous
+      <p class="chapeau" id="chapeau-alea" hidden>Deux zones sources, une faille, trois lois d'atténuation et un arbre logique : le calcul probabiliste (PSHA) somme tous
         les séismes possibles pour donner la courbe d'aléa du site, le spectre à probabilité uniforme et le scénario qui domine. Moteur vérifié contre OpenQuake.</p>
     </div>
     <span class="live-badge" id="etat-calcul"><i></i><span>Signal prêt</span></span>
@@ -601,7 +601,11 @@
         <label class="case" style="margin-top:6px"><input type="checkbox" id="al-inc-geo"> Modèle géodésique : couplage χ 0,3 / 0,6 / 0,9 (poids 0,25 / 0,5 / 0,25)</label>
         <div class="champ" style="margin-top:12px"><label for="al-poids-geo">Poids de la géodésie face au catalogue <output id="al-poids-geo-v"></output></label><input type="range" id="al-poids-geo" min="0" max="1" step="0.05"></div>
         <p class="aide" id="al-geo-source" style="margin-top:0"></p>
-        <div class="champ" style="margin-top:12px"><label for="al-poids">Poids d'Akkar et al. (2014) face à Bindi et al. (2014) <output id="al-poids-v"></output></label><input type="range" id="al-poids" min="0" max="1" step="0.05"></div>
+        <div class="champ" style="margin-top:12px"><span class="etiquette">Lois d'atténuation (poids égaux)</span>
+          <label class="case"><input type="checkbox" data-al-loi="akkar2014"> Akkar, Sandıkkaya et Bommer (2014)</label>
+          <label class="case"><input type="checkbox" data-al-loi="bindi2014"> Bindi et al. (2014)</label>
+          <label class="case"><input type="checkbox" data-al-loi="boore2014"> Boore, Stewart, Seyhan et Atkinson (2014)</label>
+          <p class="aide" id="al-lois-v" style="margin-top:2px"></p></div>
         <p class="aide" id="al-arbre"></p>
         <div class="actions" style="margin-top:10px"><button type="button" class="bouton secondaire" id="al-defaut">Revenir au modèle d'école</button></div>
       </section>

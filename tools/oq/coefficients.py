@@ -1,7 +1,8 @@
 """tools/oq/coefficients.py — exporte les coefficients des lois d'atténuation depuis openquake.hazardlib.
 
 Les coefficients sont ceux publiés par les auteurs (Akkar, Sandıkkaya et Bommer, 2014, tableau 4a ;
-Bindi et al., 2014, supplément électronique, non affecté par l'erratum) ;
+Bindi et al., 2014, supplément électronique, non affecté par l'erratum ; Boore, Stewart, Seyhan et
+Atkinson, 2014, NGA-West2, sans terme de bassin) ;
 on les lit dans hazardlib pour éviter toute erreur de recopie. Le fichier produit est un module ES
 (le site est statique : pas d'import JSON). À relancer par `npm run references`.
 """
@@ -9,11 +10,15 @@ import json
 import pathlib
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014, CONSTS as CONSTS_BOORE
 from openquake.hazardlib.imt import PGA, PGV
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 CLES = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9', 'b1', 'b2', 'c', 'n', 'sigma', 'tau']
 CLES_BINDI = ['e1', 'c1', 'c2', 'h', 'c3', 'b1', 'b2', 'b3', 'gamma', 'sofN', 'sofR', 'sofS', 'tau', 'phi', 'sigma']
+# Boore : dans la table d'hazardlib, f1 et f2 sont les φ1 et φ2 de l'écart type intra-événement
+CLES_BOORE = ['e0', 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'Mh', 'c1', 'c2', 'c3', 'h', 'Dc3', 'c', 'Vc', 'f4', 'f5',
+              'R1', 'R2', 'DfR', 'DfV', 'f1', 'f2', 'tau1', 'tau2']
 
 
 def ligne(c, cles=CLES):
@@ -41,8 +46,20 @@ def bindi():
     })
 
 
+def boore():
+    t = BooreEtAl2014.COEFFS
+    sa = sorted(t.sa_coeffs.items(), key=lambda kv: kv[0].period)
+    ecrire('boore2014.js', 'Boore2014', {
+        'reference': 'Boore, Stewart, Seyhan et Atkinson (2014), Earthquake Spectra 30(3):1057–1085, NGA-West2, sans terme de bassin',
+        **{k: float(v) for k, v in CONSTS_BOORE.items()},
+        'PGA': ligne(t.non_sa_coeffs[PGA()], CLES_BOORE), 'PGV': ligne(t.non_sa_coeffs[PGV()], CLES_BOORE),
+        'SA': [dict(T=float(imt.period), **ligne(c, CLES_BOORE)) for imt, c in sa],
+    })
+
+
 def main():
     bindi()
+    boore()
     t = AkkarEtAlRjb2014.COEFFS
     sa = sorted(t.sa_coeffs.items(), key=lambda kv: kv[0].period)
     donnees = {

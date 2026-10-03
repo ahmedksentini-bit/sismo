@@ -52,8 +52,8 @@ test('fractiles pondérés comme hazardlib.stats.quantile_curve', () => {
 
 test('arbre logique : énumération complète, catalogue et géodésie', () => {
   const m = Psha.modeleDefaut(), rlz = Psha.realisations(m);
-  // (3 × 3 branches (a, b) du catalogue + 3 couplages χ) × 3 ΔMmax × 2 lois
-  assert.equal(rlz.length, (3 * 3 + 3) * 3 * 2);
+  // (3 × 3 branches (a, b) du catalogue + 3 couplages χ) × 3 ΔMmax × 3 lois
+  assert.equal(rlz.length, (3 * 3 + 3) * 3 * 3);
   assert.ok(Math.abs(rlz.reduce((s, r) => s + r.poids, 0) - 1) < 1e-12);
   assert.equal(new Set(rlz.map(r => r.cle)).size, rlz.length);
   // Variante géodésique : le moment χ·Ṁ0 est conservé quand Mmax change, pas le taux
