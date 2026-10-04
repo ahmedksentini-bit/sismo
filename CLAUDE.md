@@ -69,7 +69,14 @@ la virgule décimale.
     (`rrupSphere` : nœuds, Terre sphérique) ne sert qu'à comparer la désagrégation.
 16. **Onglets** : `src/onglets.js` émet `banc:ouvert` ; un banc caché ne dessine pas
     (ses canvas ont une largeur nulle) et se construit à sa première ouverture. Le plan du cours (chapitres,
-    ordre, ancres) vit dans `src/parcours.js` ; un nouveau banc s'y ajoute, dans l'ordre de la barre (testé).
+    ordre, ancres) vit dans `src/parcours.js` ; un nouveau banc s'y ajoute, dans l'ordre de la barre (testé). Chaque banc
+    s'ouvre sur sa **consigne** (`src/consignes.js`, carte `#consigne-<banc>` en tête du poste : objectif, étapes en mode
+    Explorer puis Exercice, à rendre ; tout libellé cité « entre guillemets » existe dans la page, testé). Les réglages
+    viennent avant les résultats qui en découlent ; sous 1100 px, les deux colonnes se fondent (`display: contents`) et
+    l'ordre de lecture vient de `--o` (mode 10, réglages 20, lectures 25, graphes 40 et plus, à retenir 90). En mode
+    Exercice, rien n'affiche la réponse demandée avant « Vérifier » : ni le générateur (source), ni qu (ductilité), ni les
+    modes retenus ou le domaine des forces latérales (bâtiment), ni le type de faille (mécanisme), ni la moyenne de
+    l'arbre (aléa).
 17. **Spectre conditionnel** (`Psha.spectreConditionnel`) : Lin et al. (2013) comme le post-traitement
     `conditional_spectrum` d'OpenQuake, corrélation de Baker et Jayaram (2008), poids
     ws = λu·P(Sa(T*) > x | u)/λ(P) avec λ(P) = −ln(1 − P)/T ; la moyenne de l'arbre pondère les taux, comme

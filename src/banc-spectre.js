@@ -228,7 +228,7 @@ import Spectre from './sismo/spectre.js';
     const conseil = etat.Mw <= 5.5 ? 2 : 1;
     $('#sp-conseil').innerHTML = `Avec Mw ${virg(etat.Mw, 1)}, l'EC8 recommande le <b>type ${conseil}</b> (type 2 si Ms ≤ 5,5 ; ici Ms ≈ Mw).`
       + (conseil !== etat.type ? ' Le type choisi n\'est pas celui-là : comparez les deux formes.' : '');
-    $('#sp-T1-calc').textContent = `T₁ = ${virg(Sp.CT[etat.systeme], 3)} × ${etat.H}^¾ = ${virg(Sp.periodeApprochee(etat.H, etat.systeme), 2)} s`;
+    $('#sp-T1-calc').innerHTML = `T₁ = ${virg(Sp.CT[etat.systeme], 3)} × ${etat.H}<sup>3/4</sup> = ${virg(Sp.periodeApprochee(etat.H, etat.systeme), 2)} s`;
   }
   function majControles() {
     $('#sp-mw').value = etat.Mw; $('#sp-mw-v').textContent = virg(etat.Mw, 1);

@@ -1,9 +1,11 @@
 import Parcours from './parcours.js';
+import { carteConsigne } from './consignes.js';
 
 // src/onglets.js — onglets des bancs et fil du parcours. Chaque banc écoute l'événement « banc:ouvert » et se
 // construit à sa première ouverture ; l'ancre de l'adresse (Parcours.ANCRES : #localisation, #accelerogrammes,
 // #effets-de-site, #poussee-progressive…) ouvre le banc voulu. Le bandeau rappelle la partie du cours et propose
 // les bancs précédent et suivant dans l'ordre du cours, et le chapitre du cours (cours.html#chN) quand il est rédigé.
+// Chaque banc commence par sa consigne (src/consignes.js) ; le titre de la page suit le banc ouvert.
 const ANCRES = Parcours.ANCRES;
 const nomBanc = b => document.querySelector(`[data-onglet="${b}"]`).textContent.trim();
 
@@ -21,6 +23,9 @@ function majParcours(banc) {
   }
 }
 
+// bancs qui annoncent un calcul de signal dans le badge de la bannière
+const AVEC_SIGNAL = ['station', 'reseau', 'profil', 'spectre'];
+
 function ouvrir(banc) {
   for (const b of Parcours.ordre) {
     document.getElementById('banc-' + b).hidden = b !== banc;
@@ -28,9 +33,19 @@ function ouvrir(banc) {
     document.querySelector(`[data-onglet="${b}"]`).setAttribute('aria-pressed', String(b === banc));
   }
   document.getElementById('reperes').hidden = banc !== 'station' && banc !== 'reseau';
+  document.getElementById('etat-calcul').hidden = !AVEC_SIGNAL.includes(banc);
+  const titre = Parcours.LECONS[banc].titre;
+  document.getElementById('titre-banc').textContent = titre;
+  document.title = `${titre} — Travaux pratiques — Sismologie`;
   majParcours(banc);
   try { history.replaceState(null, '', '#' + ANCRES[banc]); } catch (e) { /* adresse figée : sans conséquence */ }
   window.dispatchEvent(new CustomEvent('banc:ouvert', { detail: banc }));
+}
+
+// consigne en tête de chaque banc : objectif, étapes, ce qu'il faut rendre, durée et chapitre du cours
+for (const b of Parcours.ordre) {
+  const c = document.getElementById('consigne-' + b);
+  if (c) c.innerHTML = carteConsigne(b, Parcours.LECONS[b]);
 }
 
 // séparation visuelle des chapitres dans la barre des bancs : un écart, et un retour à la ligne sur téléphone
@@ -49,4 +64,4 @@ for (const id of ['parcours-prec', 'parcours-suiv']) {
 }
 const depart = Parcours.depuisAncre(location.hash);
 if (depart && depart !== 'station') ouvrir(depart);
-else majParcours('station');
+else { majParcours('station'); document.getElementById('titre-banc').textContent = Parcours.LECONS.station.titre; }

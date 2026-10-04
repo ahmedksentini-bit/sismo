@@ -279,8 +279,8 @@ import Psha from './sismo/psha.js';
       afficheur('Stations dans la zone', String(an.n), `aire ${milliers(z.aire)} km²`),
       afficheur('Raccourcissement ε̇1h', ok ? `${virg(an.p.e1h, 1)}` : '—', ok ? `± ${virg(an.sp.e1h, 1)} ns/an, axe N${milliers(an.p.azimutRaccourcissement)}°E` : an.aj ? 'ns/an' : 'moins de 3 stations'),
       afficheur('Allongement ε̇2h', ok ? `${signe(an.p.e2h, 1)}` : '—', ok ? `± ${virg(an.sp.e2h, 1)} ns/an` : 'ns/an'),
-      afficheur('Ṁ0 géodésique', ok ? sci(an.moment) : '—', ok ? `tirages 16–84 % : ${sci(an.tirs.q16)} – ${sci(an.tirs.q84)}` : 'N·m/an'),
-      afficheur('Ṁ0 du catalogue', sci(an.momentCat), ok ? `couplage apparent ${virg(an.momentCat / an.moment, 2)}${an.momentFailles > 0 ? ` ; avec la faille F (${sci(an.momentFailles)}) : ${virg((an.momentCat + an.momentFailles) / an.moment, 2)}` : ''}` : 'N·m/an'),
+      afficheur('Ṁ0 géodésique (N·m/an)', ok ? sci(an.moment) : '—', ok ? `tirages 16–84 % : ${sci(an.tirs.q16)} – ${sci(an.tirs.q84)}` : '&nbsp;'),
+      afficheur('Ṁ0 du catalogue (N·m/an)', sci(an.momentCat), ok ? `couplage apparent ${virg(an.momentCat / an.moment, 2)}${an.momentFailles > 0 ? ` ; avec la faille F (${sci(an.momentFailles)}) : ${virg((an.momentCat + an.momentFailles) / an.moment, 2)}` : ''}` : 'N·m/an'),
       afficheur(`M ≥ 6 (χ = ${virg(etat.chi, 2)})`, ok ? `${milliers(1 / t6g)} ans` : '—', `catalogue : ${milliers(1 / t6c)} ans`),
     ].join('');
   }

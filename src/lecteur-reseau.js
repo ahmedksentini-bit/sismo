@@ -19,7 +19,7 @@ import Sismo from './sismo/signal.js';
   const etat = {
     pret: false, mode: 'explorer',
     explo: { x: 16, y: -8, h: 10, Mw: 3.6, bruit: 'standard', graine: 41 },
-    exo: null, auto: true, phases: true,
+    exo: null, auto: false, phases: true, // pointés automatiques décochés : l'étudiant pointe lui-même
     filtre: 'aucun', outil: 'P', vue: [0, 1], pointes: STATIONS.map(() => ({ P: null, S: null })), evs: [], recs: [], series: [],
     t0: 0, n: 0, dt: 0.01, debutUTC: 0, loc: null, wad: null, verifie: false, curseurX: null,
   };

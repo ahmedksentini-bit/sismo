@@ -43,8 +43,10 @@ d'exercices et ses exemples chiffrés testés (`tests/cours.test.mjs`). Les anci
 | **Source** | séisme de Mw et de chute de contrainte choisies, quatre stations de 30 à 140 km ; fenêtre S, spectre de déplacement brut et corrigé (expansion géométrique, Q(f), κ, site), modèle de Brune ajusté à la main ou par moindres carrés en ln ; M0, Mw, fc et Δσ par station, face à ML ; mode exercice noté |
 | **Profil par distance** | douze stations de 15 à 345 km ; traces en surface variable, réduction à 6 ou 8 km/s ; droites Pg et Pn tracées à la souris ; V₁, V₂, temps d'intercept, épaisseur de la croûte, distance de croisement ; mode exercice noté |
 
-Les bancs de lecture ont un mode **Explorer** (vérité terrain affichée) et un mode
-**Exercice** (séisme tiré au hasard, numéroté, corrigé avec tolérances). Les ancres
+Chaque banc s'ouvre sur sa consigne « Ce que vous allez faire » (objectif, étapes en mode Explorer puis
+Exercice, ce qu'il faut rendre, durée et chapitre du cours). Les bancs de lecture ont un mode **Explorer** (vérité
+terrain affichée) et un mode **Exercice** (séisme tiré au hasard, numéroté, corrigé avec tolérances ; rien n'y
+affiche la réponse demandée avant la vérification). Les ancres
 `labo.html#localisation`, `#sismometre`, `#profil`, `#spectre`, `#sismicite`, `#geodesie`, `#alea`… ouvrent directement le banc voulu.
 
 ## Lancer
@@ -139,9 +141,10 @@ src/banc-mecanisme.js   banc « mécanisme »
 src/banc-source.js      banc « source »
 src/parcours.js         plan des travaux pratiques : quatre parties, ordre des bancs, ancres, chapitre du cours de chaque banc
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
+src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet (165 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP (168 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)

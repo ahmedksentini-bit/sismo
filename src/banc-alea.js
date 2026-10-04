@@ -411,6 +411,8 @@ import Isolignes from './sismo/isolignes.js';
     const pas = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2].find(p => (hi - lo) / p <= 6) || 0.5;
     for (let v = Math.ceil(lo / pas) * pas; v <= hi; v += pas) { const x = Math.round(X(v)) + 0.5; ctx.beginPath(); ctx.moveTo(x, m.h); ctx.lineTo(x, H - m.b); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(virg(v, pas < 0.01 ? 3 : 2), x, H - m.b + 5); }
     ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(`${nomImt(etat.k)} (g) à Tr = ${milliers(periodeRetour())} ans`, W - m.d, H - 5);
+    // trait de la moyenne de l'arbre, sous les libellés ; en exercice, il donnerait le niveau demandé
+    if (!enExercice()) { ctx.strokeStyle = COUL['pick-p']; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(xMoy), m.h - 6); ctx.lineTo(X(xMoy), H - m.b); ctx.stroke(); }
     lignes.forEach((l, i) => {
       const y = m.h + hL * (i + 0.5);
       texte(ctx, l.nom, m.g - 10, y, COUL.ink, `700 12px ${POLICE}`, 'right');
@@ -419,11 +421,26 @@ import Isolignes from './sismo/isolignes.js';
       l.branches.forEach(b => { ctx.fillStyle = COUL.blue; ctx.beginPath(); ctx.arc(X(b.niveau), y, 3.5, 0, 2 * Math.PI); ctx.fill(); });
       const bmin = l.branches.find(b => b.niveau === l.min), bmax = l.branches.find(b => b.niveau === l.max);
       if (hL > 30) {
-        texte(ctx, bmin.libelle, X(l.min), y - hL * 0.28 - 7, COUL.muted, `10.5px ${POLICE}`, 'center');
-        texte(ctx, bmax.libelle, X(l.max), y + hL * 0.28 + 8, COUL.muted, `10.5px ${POLICE}`, 'center');
+        // libellés des branches extrêmes au-dessus de la barre (aucun ne descend sur la ligne suivante) ;
+        // barre trop courte : de part et d'autre, sur la ligne
+        const police = `10.5px ${POLICE}`;
+        ctx.font = police;
+        const wa = ctx.measureText(bmin.libelle).width, wb = ctx.measureText(bmax.libelle).width;
+        const yh = y - hL * 0.28 - 7;
+        if (X(l.max) - X(l.min) >= wa + wb + 12) {
+          texte(ctx, bmin.libelle, X(l.min), yh, COUL.muted, police, 'left');
+          texte(ctx, bmax.libelle, X(l.max), yh, COUL.muted, police, 'right');
+        } else if (X(l.min) - 8 - wa >= m.g + 4 && X(l.max) + 8 + wb <= W - m.d) {
+          texte(ctx, bmin.libelle, X(l.min) - 8, y, COUL.muted, police, 'right');
+          texte(ctx, bmax.libelle, X(l.max) + 8, y, COUL.muted, police, 'left');
+        } else {
+          // place insuffisante (téléphone) : un seul libellé au-dessus, la branche basse à gauche
+          const t = `${bmin.libelle} · ${bmax.libelle}`, w = ctx.measureText(t).width;
+          const xc = Math.min(Math.max((X(l.min) + X(l.max)) / 2, m.g + 4 + w / 2), W - m.d - w / 2);
+          texte(ctx, t, xc, yh, COUL.muted, police, 'center');
+        }
       }
     });
-    ctx.strokeStyle = COUL['pick-p']; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(xMoy), m.h - 6); ctx.lineTo(X(xMoy), H - m.b); ctx.stroke();
   }
 
   // ── Panneaux ────────────────────────────────────────────────────────────
@@ -515,7 +532,7 @@ import Isolignes from './sismo/isolignes.js';
       </tbody></table></div>
       <p class="score">${lignes.filter(l => l[3]).length} / 3 justes</p>
       <p class="verite">Aux courtes périodes, les petits séismes proches suffisent ; à 1 s, seuls les grands séismes rayonnent assez d'énergie en
-      longue période, et ils sont plus fréquents dans la zone la plus active même si elle est plus loin. Choisissez Sa(1 s) au-dessus de la courbe pour le voir.</p>`;
+      longue période, et ils sont plus fréquents dans la zone la plus active même si elle est plus loin. Choisissez la grandeur Sa(1 s), sous la probabilité visée, pour le voir.</p>`;
     tout();
   }
 

@@ -117,7 +117,7 @@ import Inelastique from './sismo/inelastique.js';
   function dessinerDuctilite() {
     const cv = $('#du-mu');
     if (cv.clientWidth < 50 || !etat.mu) return;
-    const { ctx, W, H } = preparer(cv), m = { g: 44, d: 14, h: 30, b: 30 }, R = etat.r.R, tc = TC();
+    const { ctx, W, H } = preparer(cv), m = { g: 44, d: 14, h: 30, b: 30 }, R = etat.r.R, tc = TC(), cache = enExercice();
     const moy = TS.map((_, k) => etat.mu.reduce((a, v) => a + v[k], 0) / etat.mu.length);
     const ymax = Math.min(30, Math.max(R * 2, ...moy) * 1.1), Tmax = 3;
     const X = T => m.g + (T / Tmax) * (W - m.g - m.d), Y = v => H - m.b - (Math.min(v, ymax) / ymax) * (H - m.h - m.b);
@@ -126,12 +126,15 @@ import Inelastique from './sismo/inelastique.js';
     const courbe = (vals, coul, w, tirets, Tv = TS) => { ctx.strokeStyle = coul; ctx.lineWidth = w; ctx.setLineDash(tirets || []); ctx.beginPath(); Tv.forEach((T, k) => (k ? ctx.lineTo : ctx.moveTo).call(ctx, X(T), Y(vals[k]))); ctx.stroke(); ctx.setLineDash([]); };
     ctx.globalAlpha = 0.45; etat.mu.forEach(v => courbe(v, COUL.muted, 1)); ctx.globalAlpha = 1;
     const fin = Array.from({ length: 121 }, (_, i) => 0.05 + (i * (Tmax - 0.05)) / 120);
-    courbe(fin.map(() => R), COUL.teal, 1.8, [6, 4], fin);
-    courbe(fin.map(T => I.regles.n2(R, T, tc)), COUL['pick-p'], 2, [8, 4], fin);
+    // en exercice, R = qu est la réponse demandée : ni la droite μ = R ni la règle N2 ne sont tracées
+    if (!cache) {
+      courbe(fin.map(() => R), COUL.teal, 1.8, [6, 4], fin);
+      courbe(fin.map(T => I.regles.n2(R, T, tc)), COUL['pick-p'], 2, [8, 4], fin);
+    }
     courbe(moy, COUL.blue, 2.6);
     ctx.strokeStyle = COUL.ink; ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(etat.r.T), m.h + 16); ctx.lineTo(X(etat.r.T), H - m.b); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
-    texte(ctx, `ductilité demandée μ pour R = ${virg(R, 1)} (résistance Sa,él/R) · TC = ${virg(tc, 2)} s`, m.g, 14, COUL.ink, `800 12px ${POLICE}`);
+    texte(ctx, cache ? `ductilité demandée μ (résistance Sa,él/qu) · TC = ${virg(tc, 2)} s` : `ductilité demandée μ pour R = ${virg(R, 1)} (résistance Sa,él/R) · TC = ${virg(tc, 2)} s`, m.g, 14, COUL.ink, `800 12px ${POLICE}`);
     texte(ctx, 'période T (s)', W - m.d - 4, m.h + 9, COUL.muted, `10.5px ${MONO}`, 'right');
   }
 
@@ -175,7 +178,7 @@ import Inelastique from './sismo/inelastique.js';
     const res = etat.res, n2 = res.n2, c = enExercice();
     $('#du-afficheurs').innerHTML = [
       afficheur('Se(T)', `${virg(res.seT / G, 3)} g`, `sol ${etat.r.sol}, type 1, ag ${virg(etat.r.ag, 2)} g`),
-      afficheur('Résistance', `${virg(res.saY / G, 3)} g`, `Se(T)/R, R = ${virg(etat.r.R, 1)}`),
+      afficheur('Résistance', `${virg(res.saY / G, 3)} g`, c ? 'Se(T)/qu, qu à calculer' : `Se(T)/R, R = ${virg(etat.r.R, 1)}`),
       afficheur('N2 : d*t', c ? '—' : `${cm(n2.dt)} cm`, c ? 'à calculer' : `${n2.regle}, μ = ${virg(n2.mu, 2)}`),
       afficheur('Calculs temporels', `${cm(res.moyenne)} cm`, `moyenne de ${N}, μ moyen ${virg(res.muMoy, 2)}`),
       afficheur('d*e élastique', c ? '—' : `${cm(n2.de)} cm`, `T = ${virg(etat.r.T, 2)} s, TC = ${virg(TC(), 2)} s`),

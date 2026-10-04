@@ -42,7 +42,7 @@
   <section class="banniere">
     <div>
       <p class="eyebrow" id="parcours-chapitre">Chapitre 1 sur 4 · Lire les sismogrammes · banc 1 sur 6</p>
-      <h1>Lecteur de sismogramme</h1>
+      <h1 id="titre-banc">Lire un sismogramme</h1>
       <p class="chapeau" id="chapeau-station">Une station trois composantes enregistre un séisme. Pointez les ondes P et S, mesurez l'amplitude
         sur le Wood-Anderson simulé : le lecteur en déduit la distance, l'heure d'origine, la magnitude locale et la direction de la source.</p>
       <p class="chapeau" id="chapeau-reseau" hidden>Quatre stations enregistrent le même séisme. Pointez P et S sur chacune : les cercles de distance,
@@ -83,6 +83,7 @@
   </section>
 
   <div class="poste" id="banc-station">
+    <section class="carte consigne" id="consigne-station" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sismogramme">
         <div class="outils">
@@ -106,13 +107,11 @@
         <canvas id="apercu" aria-label="Vue d'ensemble de l'enregistrement : cliquer pour déplacer la fenêtre"></canvas>
         <p class="aide" id="aide"></p>
       </section>
-
       <section class="carte" aria-label="Lectures">
         <h2>Lectures<small>Calculées à partir de vos pointés et de votre mesure</small></h2>
         <div class="afficheurs" id="afficheurs"></div>
         <div class="etapes" id="etapes"></div>
       </section>
-
       <section class="carte" aria-label="Hodogramme">
         <h2>Mouvement du sol pendant la P<small>Composantes N et E filtrées 1–10 Hz, 0,6 s après votre pointé P</small></h2>
         <div class="hodo-cadre">
@@ -121,7 +120,6 @@
         </div>
       </section>
     </div>
-
     <aside class="colonne">
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
         <button type="button" id="mode-explorer" aria-pressed="true">Explorer</button>
@@ -138,7 +136,6 @@
         <div class="actions"><button type="button" class="bouton secondaire" id="tirage">Nouveau tirage du signal</button></div>
         <p class="verite" id="verite-explo"></p>
       </section>
-
       <section class="carte" id="panneau-exercice" aria-label="Exercice" hidden>
         <p class="sous-titre">Exercice</p>
         <span class="numero" id="exo-num"></span>
@@ -153,7 +150,6 @@
         <div class="actions"><button type="button" class="bouton primaire" id="verifier">Vérifier</button><button type="button" class="bouton secondaire" id="nouvel-exo">Nouvel exercice</button></div>
         <div id="corrige"></div>
       </section>
-
       <section class="carte" aria-label="Affichage">
         <p class="sous-titre">Affichage</p>
         <div class="champ"><span class="etiquette">Capteur</span>
@@ -185,6 +181,7 @@
   </div>
 
   <div class="poste" id="banc-reseau" hidden>
+    <section class="carte consigne" id="consigne-reseau" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sismogrammes du réseau">
         <div class="outils">
@@ -206,7 +203,6 @@
         <div id="r-traces" class="r-traces"></div>
         <p class="aide" id="r-aide"></p>
       </section>
-
       <section class="carte" aria-label="Localisation">
         <h2>Localisation<small>Recherche sur grille (x, y, h) ; t₀ ajusté ; P pondérée 1, S pondérée 0,5</small></h2>
         <div class="afficheurs" id="r-afficheurs"></div>
@@ -218,7 +214,6 @@
         </ul>
       </section>
     </div>
-
     <aside class="colonne">
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
         <button type="button" id="r-mode-explorer" aria-pressed="true">Explorer</button>
@@ -230,7 +225,8 @@
         <div class="champ"><label for="r-prof">Profondeur h <output id="r-prof-v"></output></label><input type="range" id="r-prof" min="2" max="30" step="1"></div>
         <div class="champ"><label for="r-bruit">Bruit des sites</label>
           <select id="r-bruit"><option value="calme">Sites calmes</option><option value="standard">Sites courants</option><option value="urbain">Sites urbains</option></select></div>
-        <label class="case"><input type="checkbox" id="r-auto" checked> Pointés automatiques (erreur de lecture ±0,05 s en P, ±0,15 s en S)</label>
+        <p class="aide" style="margin:0 0 10px">Pour déplacer l'épicentre, glissez l'étoile verte sur la carte.</p>
+        <label class="case"><input type="checkbox" id="r-auto"> Pointés automatiques (erreur de lecture ±0,05 s en P, ±0,15 s en S)</label>
         <label class="case" style="margin-top:8px"><input type="checkbox" id="r-phases" checked> Phases théoriques sur les traces</label>
         <div class="actions" style="margin-top:12px"><button type="button" class="bouton secondaire" id="r-tirage">Nouveau tirage du signal</button></div>
         <p class="verite" id="r-verite"></p>
@@ -243,11 +239,11 @@
         <div class="actions"><button type="button" class="bouton primaire" id="r-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="r-nouvel-exo">Nouvel exercice</button></div>
         <div id="r-corrige"></div>
       </section>
-      <section class="carte" aria-label="Carte">
+      <section class="carte" aria-label="Carte" style="--o:22">
         <h2>Carte du réseau<small id="r-carte-legende">Cercles : distance hypocentrale tirée de S − P</small></h2>
         <canvas id="r-carte" aria-label="Carte des stations, des cercles de distance et de l'épicentre"></canvas>
       </section>
-      <section class="carte" aria-label="Diagramme de Wadati">
+      <section class="carte" aria-label="Diagramme de Wadati" style="--o:60">
         <h2>Diagramme de Wadati<small>tS − tP en fonction de tP : la droite coupe l'axe à t₀ ; sa pente vaut Vp/Vs − 1</small></h2>
         <canvas id="r-wadati" aria-label="Diagramme de Wadati"></canvas>
         <p class="aide" id="r-wadati-texte"></p>
@@ -256,6 +252,7 @@
   </div>
 
   <div class="poste" id="banc-sismometre" hidden>
+    <section class="carte consigne" id="consigne-sismometre" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sismomètre">
         <div class="outils">
@@ -297,21 +294,11 @@
         <div class="champ" id="s-champ-f"><label for="s-f">Fréquence du sol f <output id="s-f-v"></output></label><input type="range" id="s-f" min="0" max="1000" step="1"></div>
         <div class="afficheurs deux" id="s-afficheurs"></div>
       </section>
-      <section class="carte" aria-label="Expériences guidées">
-        <p class="sous-titre">Expériences guidées</p>
-        <ol class="experiences">
-          <li>« Courte période », sol à 5 Hz : la masse reste presque immobile dans le repère fixe ; le stylet recopie −ug.</li>
-          <li>Même instrument, sol à 0,2 Hz : le stylet suit les tirets ambre, −üg/ω₀². L'instrument est devenu un accéléromètre.</li>
-          <li>« Peu amorti », puis f = f₀ : résonance, l'amplitude est multipliée par 1/(2ξ) = 10. Remontez ξ à 0,7 : plus de pic.</li>
-          <li>« Lâcher de la masse » : comptez les oscillations ; leur décroissance d'un cycle à l'autre mesure ξ.</li>
-          <li>« Wood-Anderson » (T₀ = 0,8 s, ξ = 0,8) : au-dessus de 1,25 Hz il donne le déplacement du sol. C'est l'instrument de référence de ML.</li>
-          <li>La même équation régit un bâtiment sur le sol : en balayant f₀, on construit son spectre de réponse.</li>
-        </ol>
-      </section>
     </aside>
   </div>
 
   <div class="poste" id="banc-profil" hidden>
+    <section class="carte consigne" id="consigne-profil" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Profil par distance">
         <div class="outils">
@@ -361,6 +348,7 @@
   </div>
 
   <div class="poste" id="banc-spectre" hidden>
+    <section class="carte consigne" id="consigne-spectre" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Table vibrante">
         <div class="outils">
@@ -374,7 +362,7 @@
         <p class="aide">Chaque bâtiment est un oscillateur à un degré de liberté (le sismomètre de l'onglet précédent, retourné).
           Sous chacun, sa pseudo-accélération maximale Sa = ω²·max|x| : ce sont six points du spectre de réponse.</p>
       </section>
-      <section class="carte" aria-label="Spectre de réponse">
+      <section class="carte" aria-label="Spectre de réponse" style="--o:44">
         <div class="outils">
           <div class="segments compact" role="group" aria-label="Grandeur">
             <button type="button" data-sp-grandeur="Sa" aria-pressed="true">Sa (g)</button>
@@ -394,7 +382,7 @@
         <div class="actions" style="margin-bottom:12px"><button type="button" class="bouton secondaire" id="sp-tirage">Nouveau tirage du signal</button></div>
         <div class="afficheurs deux" id="sp-afficheurs-seisme"></div>
       </section>
-      <section class="carte" aria-label="Eurocode 8">
+      <section class="carte" aria-label="Eurocode 8" style="--o:42">
         <p class="sous-titre">Eurocode 8 · EN 1998-1:2004, § 3.2.2.2</p>
         <div class="champ"><span class="etiquette">Type de spectre</span>
           <div class="segments" role="group" aria-label="Type"><button type="button" data-sp-type="1">Type 1 (Ms &gt; 5,5)</button><button type="button" data-sp-type="2">Type 2</button></div></div>
@@ -406,16 +394,16 @@
         <div class="afficheurs deux" id="sp-afficheurs-ec8"></div>
         <p class="aide" id="sp-conseil"></p>
       </section>
-      <section class="carte" aria-label="Votre ouvrage">
+      <section class="carte" aria-label="Votre ouvrage" style="--o:43">
         <p class="sous-titre">Votre ouvrage</p>
         <div class="champ"><label for="sp-t1">Période fondamentale T₁ <output id="sp-t1-v"></output></label><input type="range" id="sp-t1" min="0.05" max="4" step="0.01"></div>
         <div class="champ"><label for="sp-h">Hauteur du bâtiment H <output id="sp-h-v"></output></label><input type="range" id="sp-h" min="3" max="40" step="1"></div>
         <div class="champ"><label for="sp-systeme">Système de contreventement</label><select id="sp-systeme"><option value="beton">Portiques en béton (Ct = 0,075)</option><option value="acier">Portiques en acier (Ct = 0,085)</option><option value="autres">Autres structures (Ct = 0,050)</option></select></div>
         <p class="aide" id="sp-T1-calc"></p>
-        <div class="actions" style="margin-bottom:12px"><button type="button" class="bouton secondaire" id="sp-appliquer">Prendre T₁ = Ct·H^¾ (§ 4.3.3.2.2)</button></div>
+        <div class="actions" style="margin-bottom:12px"><button type="button" class="bouton secondaire" id="sp-appliquer">Prendre T₁ = Ct·H<sup>3/4</sup> (§ 4.3.3.2.2)</button></div>
         <div class="afficheurs deux" id="sp-afficheurs-ouvrage"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Un enregistrement est dentelé</b> ; le spectre réglementaire est une enveloppe lissée de nombreux enregistrements.</li>
@@ -428,19 +416,20 @@
   </div>
 
   <div class="poste" id="banc-sismicite" hidden>
+    <section class="carte consigne" id="consigne-sismicite" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Catalogue">
         <h2>Catalogue 1900 – 2025<small>Magnitude en fonction du temps ; un clic fixe le début de l'analyse et Mc</small></h2>
         <canvas id="sc-catalogue" aria-label="Magnitudes du catalogue en fonction du temps"></canvas>
         <p class="legende"><span><i style="background:var(--ink)"></i>retenus</span><span><i style="background:var(--amp)"></i>répliques retirées</span><span><i style="background:var(--muted)"></i>hors analyse</span><span><i class="tirets" style="border-color:var(--teal)"></i>complétude vraie</span><span class="curseur-lecture" id="sc-curseur" style="margin-left:0">—</span></p>
       </section>
-      <section class="carte" aria-label="Loi de Gutenberg-Richter">
-        <h2>Loi de Gutenberg-Richter<small>Disques : nombre annuel cumulé N(≥ M) ; carrés : par classe de 0,1 ; droite : ajustement au maximum de vraisemblance</small></h2>
-        <canvas id="sc-fmd" aria-label="Distribution fréquence-magnitude"></canvas>
-      </section>
       <section class="carte" aria-label="Graphique de Stepp">
         <h2>Graphique de Stepp (1971)<small>σλ = √(λ/T) sur les T dernières années, par classe de magnitude : la classe est complète tant que la courbe suit sa pente −1/2 (tirets)</small></h2>
         <canvas id="sc-stepp" aria-label="Graphique de Stepp"></canvas>
+      </section>
+      <section class="carte" aria-label="Loi de Gutenberg-Richter" style="--o:43">
+        <h2>Loi de Gutenberg-Richter<small>Disques : nombre annuel cumulé N(≥ M) ; carrés : par classe de 0,1 ; droite : ajustement au maximum de vraisemblance</small></h2>
+        <canvas id="sc-fmd" aria-label="Distribution fréquence-magnitude"></canvas>
       </section>
     </div>
     <aside class="colonne">
@@ -465,7 +454,7 @@
         <div class="actions"><button type="button" class="bouton primaire" id="sc-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="sc-nouvel-exo">Nouvel exercice</button></div>
         <div id="sc-corrige"></div>
       </section>
-      <section class="carte" aria-label="Analyse">
+      <section class="carte" aria-label="Analyse" style="--o:42">
         <p class="sous-titre">Analyse</p>
         <div class="champ"><span class="etiquette">Méthode</span>
           <div class="segments" role="group" aria-label="Méthode"><button type="button" data-sc-methode="aki">Aki : une période</button><button type="button" data-sc-methode="weichert">Weichert : table</button></div></div>
@@ -486,7 +475,7 @@
         <label class="case" style="margin-bottom:12px"><input type="checkbox" id="sc-declus"> Déclusterage de Gardner et Knopoff (1974)</label>
         <div class="afficheurs deux" id="sc-afficheurs"></div>
       </section>
-      <section class="carte" aria-label="Probabilité de Poisson">
+      <section class="carte" aria-label="Probabilité de Poisson" style="--o:60">
         <p class="sous-titre">Probabilité sur une durée</p>
         <div class="champ"><label for="sc-m">Magnitude <output id="sc-m-v"></output></label><input type="range" id="sc-m" min="4" max="7.5" step="0.1"></div>
         <div class="champ"><label for="sc-t">Durée (durée de vie de l'ouvrage) <output id="sc-t-v"></output></label><input type="range" id="sc-t" min="1" max="100" step="1"></div>
@@ -498,6 +487,7 @@
   </div>
 
   <div class="poste" id="banc-geodesie" hidden>
+    <section class="carte consigne" id="consigne-geodesie" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Réseau GNSS">
         <h2>Réseau GNSS et vitesses<small>Flèches : vitesse de chaque station (cercles : 95 %) ; croix : axes principaux du taux de déformation estimé dans chaque zone</small></h2>
@@ -525,10 +515,6 @@
         <button type="button" id="ge-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="ge-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Zone">
-        <div class="segments" role="group" aria-label="Zone" style="margin-bottom:12px"><button type="button" data-ge-zone="0">Zone A (proche)</button><button type="button" data-ge-zone="1">Zone B (lointaine)</button></div>
-        <div class="afficheurs deux" id="ge-afficheurs"></div>
-      </section>
       <section class="carte" id="ge-panneau-explorer" aria-label="Modèle">
         <p class="sous-titre">Réseau GNSS</p>
         <div class="champ"><label for="ge-n">Nombre de stations <output id="ge-n-v"></output></label><input type="range" id="ge-n" min="30" max="400" step="10"></div>
@@ -559,7 +545,11 @@
         <div class="actions"><button type="button" class="bouton primaire" id="ge-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="ge-nouvel-exo">Nouvel exercice</button></div>
         <div id="ge-corrige"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte lectures" aria-label="Zone">
+        <div class="segments" role="group" aria-label="Zone" style="margin-bottom:12px"><button type="button" data-ge-zone="0">Zone A (proche)</button><button type="button" data-ge-zone="1">Zone B (lointaine)</button></div>
+        <div class="afficheurs deux" id="ge-afficheurs"></div>
+      </section>
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Kostrov</b> : un tenseur de déformation moyen sur une zone d'aire A et d'épaisseur H équivaut à un taux de moment Ṁ0 = 2μHA·max(|ε̇1|, |ε̇2|, |ε̇1 + ε̇2|) (Savage et Simpson, 1997).</li>
@@ -573,6 +563,7 @@
   </div>
 
   <div class="poste" id="banc-alea" hidden>
+    <section class="carte consigne" id="consigne-alea" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Modèle de sources">
         <h2>Modèle de sources<small>Zones discrétisées en points tous les 10 km ; un clic déplace le site</small></h2>
@@ -581,28 +572,27 @@
         <div class="actions"><button type="button" class="bouton secondaire" id="al-carte-alea">Carte d'aléa</button>
           <span class="aide" style="margin:0">niveau moyen de la grandeur choisie à la probabilité visée, tous les 20 km (266 sites, une dizaine de secondes)</span></div>
       </section>
-      <section class="carte" aria-label="Courbe d'aléa">
-        <h2>Courbe d'aléa<small>Probabilité de dépasser chaque niveau en 50 ans : une courbe fine par réalisation de l'arbre logique, la moyenne et les fractiles</small></h2>
-        <div class="outils"><div class="segments compact" role="group" aria-label="Grandeur" id="al-imts"></div></div>
+      <section class="carte" aria-label="Courbe d'aléa" style="--o:42">
+        <h2>Courbe d'aléa<small>Probabilité de dépasser chaque niveau en 50 ans pour la grandeur choisie : une courbe fine par réalisation de l'arbre logique, la moyenne et les fractiles</small></h2>
         <canvas id="al-courbe" aria-label="Courbes d'aléa du site"></canvas>
         <p class="legende"><span><i style="background:var(--pick-p)"></i>moyenne</span><span><i class="tirets" style="border-color:var(--blue)"></i>fractiles 16 % et 84 %</span><span><i style="background:var(--grid-strong)"></i>réalisations</span><span><i class="tirets" style="border-color:var(--teal)"></i>probabilité visée</span></p>
       </section>
-      <section class="carte" aria-label="Spectre à probabilité uniforme">
+      <section class="carte" aria-label="Spectre à probabilité uniforme" style="--o:43">
         <h2>Spectre à probabilité uniforme (UHS)<small>Chaque ordonnée a la même probabilité d'être dépassée ; en regard, les spectres élastiques de l'EN 1998-1:2004 calés sur le PGA</small></h2>
         <canvas id="al-uhs" aria-label="Spectre à probabilité uniforme et spectres de l'Eurocode 8"></canvas>
         <p class="legende"><span><i style="background:var(--pick-p)"></i>UHS moyen</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>fractiles 16 – 84 %</span><span><i class="tirets" style="border-color:var(--teal)"></i>EC8 type 1</span><span><i class="tirets" style="border-color:var(--amp)"></i>EC8 type 2</span><span id="al-legende-ec8"></span></p>
       </section>
-      <section class="carte" aria-label="Spectre moyen conditionnel">
+      <section class="carte" aria-label="Spectre moyen conditionnel" style="--o:44">
         <h2>Spectre moyen conditionnel (CMS)<small>Spectre moyen des séismes qui produisent le niveau de l'UHS à la période choisie (T*), avec sa dispersion ; Lin et al. (2013), corrélation de Baker et Jayaram (2008)</small></h2>
         <canvas id="al-cms" aria-label="Spectre moyen conditionnel et spectre à probabilité uniforme"></canvas>
-        <p class="legende"><span><i style="background:var(--blue)"></i>CMS</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>CMS · e<sup>±σ</sup></span><span><i class="tirets" style="border-color:var(--pick-p)"></i>UHS moyen</span><span><i class="tirets" style="border-color:var(--ink)"></i>T*, grandeur choisie au-dessus de la courbe d'aléa</span></p>
+        <p class="legende"><span><i style="background:var(--blue)"></i>CMS</span><span><i style="background:var(--blue);opacity:.3;height:9px"></i>CMS · e<sup>±σ</sup></span><span><i class="tirets" style="border-color:var(--pick-p)"></i>UHS moyen</span><span><i class="tirets" style="border-color:var(--ink)"></i>T*, grandeur choisie avec la probabilité visée</span></p>
         <p class="aide">L'UHS enveloppe des séismes différents : aucun ne le produit à toutes les périodes. Pour choisir et caler des accélérogrammes autour de la période de l'ouvrage, le CMS est la cible réaliste.</p>
       </section>
-      <section class="carte" aria-label="Désagrégation">
+      <section class="carte" aria-label="Désagrégation" style="--o:45">
         <h2>Désagrégation magnitude – distance<small>Part de chaque couple (M, R) dans le taux de dépassement du niveau de l'UHS moyen, pour la grandeur choisie ; R est la distance de Joyner-Boore à la rupture</small></h2>
         <canvas id="al-desag" aria-label="Désagrégation en magnitude et distance"></canvas>
       </section>
-      <section class="carte" aria-label="Sensibilité à l'arbre logique">
+      <section class="carte" aria-label="Sensibilité à l'arbre logique" style="--o:46">
         <h2>Ce qui pèse dans l'arbre logique<small>Niveau moyen quand on impose une branche, les autres gardant leurs poids ; trait vertical : moyenne de l'arbre</small></h2>
         <canvas id="al-tornade" aria-label="Sensibilité aux branches de l'arbre logique"></canvas>
       </section>
@@ -617,9 +607,11 @@
         <div class="segments" role="group" aria-label="Probabilité" style="margin-bottom:12px">
           <button type="button" data-al-proba="0.1|50">10 % en 50 ans</button><button type="button" data-al-proba="0.02|50">2 % en 50 ans</button><button type="button" data-al-proba="0.1|10">10 % en 10 ans</button>
         </div>
+        <p class="sous-titre">Grandeur</p>
+        <div class="segments en-grille" role="group" aria-label="Grandeur" id="al-imts" style="margin-bottom:12px"></div>
         <div class="afficheurs deux" id="al-afficheurs"></div>
       </section>
-      <section class="carte" id="al-panneau-explorer" aria-label="Modèle">
+      <section class="carte" id="al-panneau-explorer" aria-label="Modèle" style="--o:41">
         <p class="sous-titre">Site</p>
         <div class="champ"><label for="al-vs30">Vs30 <output id="al-vs30-v"></output></label><input type="range" id="al-vs30" min="200" max="1100" step="10"></div>
         <div class="separateur"></div>
@@ -659,7 +651,7 @@
         <div class="actions"><button type="button" class="bouton primaire" id="al-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="al-nouvel-exo">Nouvel exercice</button></div>
         <div id="al-corrige"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Incertitude aléatoire</b> : magnitudes, positions et dispersion σ des lois sont intégrées dans chaque courbe. Tronquer à 3σ coupe les queues.</li>
@@ -674,6 +666,7 @@
   </div>
 
   <div class="poste" id="banc-selection" hidden>
+    <section class="carte consigne" id="consigne-selection" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Jeu d'accélérogrammes et cible">
         <h2>Jeu d'accélérogrammes et cible<small>Spectres de réponse (ξ = 5 %) des enregistrements choisis, mis à l'échelle ; zone teintée : de 0,2·T1 à 2·T1, où la cible est ajustée et où l'EN 1998-1:2004 contrôle la moyenne</small></h2>
@@ -684,7 +677,7 @@
         <h2>Banque : magnitude et distance<small>160 accélérogrammes synthétiques ; numérotés, ceux du jeu ; croix : scénario moyen des séismes qui produisent l'UHS à T1</small></h2>
         <canvas id="ac-mr" aria-label="Magnitude et distance des enregistrements de la banque"></canvas>
       </section>
-      <section class="carte" aria-label="Accélérogramme">
+      <section class="carte" aria-label="Accélérogramme" style="--o:43">
         <h2>Accélérogramme<small>Enregistrement choisi dans le tableau, mis à l'échelle (composante horizontale) ; zone teintée : durée significative D5–95</small></h2>
         <canvas id="ac-acc" aria-label="Accélérogramme mis à l'échelle, courbe de Husid et durée significative"></canvas>
         <p class="legende"><span><i style="background:var(--trace)"></i>accélération</span><span><i style="background:var(--pick-s)"></i>courbe de Husid : Ia cumulée / Ia (de 0 à 1)</span><span><i class="tirets" style="border-color:var(--pick-s)"></i>5 % et 95 %</span></p>
@@ -731,17 +724,18 @@
         <div class="actions"><button type="button" class="bouton primaire" id="ac-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="ac-nouvel-exo">Nouvel exercice</button></div>
         <div id="ac-corrige"></div>
       </section>
-      <section class="carte" aria-label="Enregistrements choisis">
+      <section class="carte" aria-label="Enregistrements choisis" style="--o:42">
         <p class="sous-titre">Enregistrements choisis</p>
+        <p class="aide indice-ligne">Cliquez une ligne pour afficher son accélérogramme et son spectre.</p>
         <div class="table-defile"><table class="resultats" id="ac-table"></table></div>
         <p class="aide" id="ac-table-info"></p>
       </section>
-      <section class="carte" id="ac-ec8" aria-label="Contrôle EN 1998-1:2004">
+      <section class="carte" id="ac-ec8" aria-label="Contrôle EN 1998-1:2004" style="--o:60">
         <p class="sous-titre">EN 1998-1:2004, § 3.2.3.1.2 (4)</p>
         <div id="ac-regles"></div>
         <label class="case" style="margin-top:10px"><input type="checkbox" id="ac-conformer"> Appliquer le facteur commun minimal à tout le jeu</label>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>L'UHS n'est pas un séisme</b> : il enveloppe des scénarios différents selon la période. Le spectre moyen conditionnel (CMS) est celui des séismes qui produisent l'UHS à T1 : la cible réaliste autour de la période de l'ouvrage.</li>
@@ -755,6 +749,7 @@
   </div>
 
   <div class="poste" id="banc-site" hidden>
+    <section class="carte consigne" id="consigne-site" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Profils en profondeur">
         <h2>Colonne de sol<small>Par sous-couche de 2,5 m au plus : Vs initial (tirets) et compatible avec la déformation, déformation effective γeff = 0,65·γmax, rigidité G/G0 et amortissement ξ (courbes de Darendeli 2001)</small></h2>
@@ -782,9 +777,6 @@
         <button type="button" id="si-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="si-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures">
-        <div class="afficheurs deux" id="si-afficheurs"></div>
-      </section>
       <section class="carte" id="si-panneau-explorer" aria-label="Réglages">
         <p class="sous-titre">Profil</p>
         <div class="segments compact" role="group" aria-label="Profils types" id="si-profils-choix" style="margin-bottom:12px"></div>
@@ -820,7 +812,10 @@
         <div class="actions"><button type="button" class="bouton primaire" id="si-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="si-nouvel-exo">Nouvel exercice</button></div>
         <div id="si-corrige"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte lectures" aria-label="Lectures">
+        <div class="afficheurs deux" id="si-afficheurs"></div>
+      </section>
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Résonance</b> : une couche molle sur un rocher raide piège les ondes ; le premier pic tombe près de f0 = Vs/4H, et son amplitude croît avec le contraste d'impédance ρr·Vr / ρs·Vs.</li>
@@ -833,6 +828,7 @@
   </div>
 
   <div class="poste" id="banc-liquefaction" hidden>
+    <section class="carte consigne" id="consigne-liquefaction" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sondage CPT">
         <h2>Sondage au pénétromètre statique<small>Résistance de pointe qc, rapport de frottement Rf = fs/qc, indice de comportement Ic (Robertson) : au-delà de 2,6, sol argileux, non liquéfiable au sens de la méthode</small></h2>
@@ -851,7 +847,6 @@
         <button type="button" id="lq-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="lq-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="lq-afficheurs"></div></section>
       <section class="carte" id="lq-panneau-explorer" aria-label="Réglages">
         <p class="sous-titre">Terrain</p>
         <div class="segments compact" role="group" aria-label="Profils" id="lq-profils" style="margin-bottom:12px"></div>
@@ -875,7 +870,8 @@
         <div class="actions"><button type="button" class="bouton primaire" id="lq-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="lq-nouvel-exo">Nouvel exercice</button></div>
         <div id="lq-corrige"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte lectures" aria-label="Lectures"><div class="afficheurs deux" id="lq-afficheurs"></div></section>
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Trois conditions</b> : un sol granulaire lâche, saturé (sous la nappe), et un séisme assez fort et assez long. Remonter la nappe ou densifier le sol réduit le risque.</li>
@@ -888,17 +884,18 @@
   </div>
 
   <div class="poste" id="banc-ductilite" hidden>
+    <section class="carte consigne" id="consigne-ductilite" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Oscillateur élastoplastique">
         <h2>Oscillateur élastoplastique<small>Boucle force–déplacement et déplacement au cours du temps de l'enregistrement choisi ; tirets : déplacement de plastification uy</small></h2>
         <canvas id="du-hyst" aria-label="Boucle d'hystérésis et déplacement au cours du temps"></canvas>
       </section>
-      <section class="carte" aria-label="Spectres de ductilité">
+      <section class="carte" aria-label="Spectres de ductilité" style="--o:42">
         <h2>Spectres de ductilité à résistance constante<small>Ductilité demandée μ quand la résistance vaut la demande élastique divisée par R, pour les sept enregistrements ; règles : égaux déplacements (μ = R) et celle de la méthode N2 sous TC</small></h2>
         <canvas id="du-mu" aria-label="Ductilité demandée en fonction de la période"></canvas>
         <p class="legende"><span><i style="background:var(--muted);opacity:.5"></i>enregistrements</span><span><i style="background:var(--blue)"></i>moyenne</span><span><i class="tirets" style="border-color:var(--teal)"></i>μ = R</span><span><i class="tirets" style="border-color:var(--pick-p)"></i>règle N2 : μ = 1 + (R − 1)·TC/T</span></p>
       </section>
-      <section class="carte" aria-label="Méthode N2">
+      <section class="carte" aria-label="Méthode N2" style="--o:43">
         <h2>Méthode N2 (EN 1998-1:2004, annexe B)<small>Format accélération–déplacement : spectre élastique, spectre inélastique de la ductilité N2, capacité élastique parfaitement plastique ; triangle : déplacement cible ; points et trait : calculs temporels et leur moyenne</small></h2>
         <canvas id="du-n2" aria-label="Méthode N2 en format accélération-déplacement"></canvas>
         <p class="aide">Oscillateur bilinéaire à écrouissage cinématique, ξ = 5 %, Newmark à accélération moyenne avec itérations de Newton ; vérifié contre OpenSeesPy (Steel01)
@@ -910,7 +907,6 @@
         <button type="button" id="du-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="du-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="du-afficheurs"></div></section>
       <section class="carte" id="du-panneau-explorer" aria-label="Réglages">
         <p class="sous-titre">Ouvrage</p>
         <div class="champ"><label for="du-t">Période T <output id="du-t-v"></output></label><input type="range" id="du-t" min="-1.3" max="0.477" step="0.005"></div>
@@ -937,11 +933,13 @@
         <div class="actions"><button type="button" class="bouton primaire" id="du-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="du-nouvel-exo">Nouvel exercice</button></div>
         <div id="du-corrige"></div>
       </section>
-      <section class="carte" aria-label="Enregistrements">
+      <section class="carte lectures" aria-label="Lectures"><div class="afficheurs deux" id="du-afficheurs"></div></section>
+      <section class="carte" aria-label="Enregistrements" style="--o:41">
         <p class="sous-titre">Calculs temporels</p>
+        <p class="aide indice-ligne">Cliquez une ligne pour afficher sa boucle dans « Oscillateur élastoplastique ».</p>
         <div class="table-defile"><table class="resultats" id="du-table"></table></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Égaux déplacements</b> : au-delà de TC, l'ouvrage plastifié se déplace à peu près comme l'ouvrage élastique ; la ductilité demandée vaut R.</li>
@@ -954,22 +952,23 @@
   </div>
 
   <div class="poste" id="banc-batiment" hidden>
+    <section class="carte consigne" id="consigne-batiment" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Modes propres">
-        <h2>Modes propres<small>Console de cisaillement : planchers rigides, masses concentrées aux niveaux ; déformées normées au sommet, période et part de la masse totale ; en bleu, les modes retenus</small></h2>
+        <h2>Modes propres<small>Console de cisaillement : planchers rigides, masses concentrées aux niveaux ; déformées normées au sommet, période et part de la masse totale ; en bleu, les modes retenus (mode Explorer)</small></h2>
         <canvas id="bt-modes" aria-label="Déformées des premiers modes propres"></canvas>
       </section>
-      <section class="carte" aria-label="Spectre de calcul">
-        <h2>Spectre de calcul (EN 1998-1:2004, § 3.2.2.5)<small>Sd(T) pour le coefficient de comportement q, borne β·ag (β = 0,2) ; disques : modes (aire ∝ masse effective) ; triangles : périodes approchées du § 4.3.3.2.2 ; zone teintée : domaine de la méthode des forces latérales</small></h2>
+      <section class="carte" aria-label="Spectre de calcul" style="--o:42">
+        <h2>Spectre de calcul (EN 1998-1:2004, § 3.2.2.5)<small>Sd(T) pour le coefficient de comportement q, borne β·ag (β = 0,2) ; disques : modes (aire ∝ masse effective) ; triangles : périodes approchées du § 4.3.3.2.2 ; zone teintée : domaine de la méthode des forces latérales (mode Explorer)</small></h2>
         <canvas id="bt-spectre" aria-label="Spectre de calcul et périodes des modes"></canvas>
-        <p class="legende"><span><i style="background:var(--blue)"></i>Sd (calcul)</span><span><i class="tirets" style="border-color:var(--teal)"></i>Se (élastique)</span><span><i class="tirets" style="border-color:var(--muted)"></i>β·ag</span><span><i style="background:var(--pick-p)"></i>Ct·H^¾, béton (4.6)</span><span><i style="background:var(--amp)"></i>2·√d (4.9)</span></p>
+        <p class="legende"><span><i style="background:var(--blue)"></i>Sd (calcul)</span><span><i class="tirets" style="border-color:var(--teal)"></i>Se (élastique)</span><span><i class="tirets" style="border-color:var(--muted)"></i>β·ag</span><span><i style="background:var(--pick-p)"></i>Ct·H<sup>3/4</sup>, béton (4.6)</span><span><i style="background:var(--amp)"></i>2·√d (4.9)</span></p>
       </section>
-      <section class="carte" aria-label="Efforts et déplacements">
+      <section class="carte" aria-label="Efforts et déplacements" style="--o:43">
         <h2>Efforts et déplacements entre étages<small>Effort tranchant de calcul dans chaque étage ; déplacement relatif de calcul dr = q·de, pondéré par ν et rapporté à la hauteur d'étage, face à la limite du § 4.4.3.2</small></h2>
         <canvas id="bt-efforts" aria-label="Efforts tranchants d'étage et déplacements relatifs"></canvas>
         <p class="legende"><span><i style="background:var(--pick-p)"></i>forces latérales (tirets : hors domaine)</span><span><i style="background:var(--blue)"></i>modal SRSS</span><span><i class="tirets" style="border-color:var(--cyan)"></i>modal CQC</span></p>
       </section>
-      <section class="carte" aria-label="Calcul temporel">
+      <section class="carte" aria-label="Calcul temporel" style="--o:45">
         <h2>Combinaison modale contre calcul temporel<small>Effort à la base au cours du temps (calcul élastique, q = 1, accélérogramme calé sur Se(T1)) ; tirets : SRSS et CQC des maxima de chaque mode pour le même accélérogramme</small></h2>
         <canvas id="bt-temps" aria-label="Effort à la base au cours du temps"></canvas>
         <p class="aide">Superposition de tous les modes, chacun intégré par Newmark à accélération moyenne avec 5 % d'amortissement : le calcul couplé d'OpenSeesPy
@@ -981,7 +980,6 @@
         <button type="button" id="bt-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="bt-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="bt-afficheurs"></div></section>
       <section class="carte" id="bt-panneau-explorer" aria-label="Réglages">
         <p class="sous-titre">Bâtiment</p>
         <div class="segments compact" role="group" aria-label="Profil" id="bt-profils" style="margin-bottom:10px">
@@ -1017,21 +1015,23 @@
         <div class="actions"><button type="button" class="bouton primaire" id="bt-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="bt-nouvel-exo">Nouvel exercice</button></div>
         <div id="bt-corrige"></div>
       </section>
-      <section class="carte" aria-label="Tableau des modes">
+      <section class="carte lectures" aria-label="Lectures"><div class="afficheurs deux" id="bt-afficheurs"></div></section>
+      <section class="carte" aria-label="Tableau des modes" style="--o:41">
         <p class="sous-titre">Modes propres</p>
         <div class="table-defile"><table class="resultats" id="bt-modes-table"></table></div>
         <p class="aide" id="bt-modes-info"></p>
       </section>
-      <section class="carte" id="bt-ec8" aria-label="Contrôles EN 1998-1:2004">
+      <section class="carte" id="bt-ec8" aria-label="Contrôles EN 1998-1:2004" style="--o:44">
         <p class="sous-titre">EN 1998-1:2004</p>
         <div id="bt-regles"></div>
       </section>
-      <section class="carte" aria-label="Calculs temporels">
+      <section class="carte" aria-label="Calculs temporels" style="--o:46">
         <p class="sous-titre">Combinaisons contre calculs temporels</p>
+        <p class="aide indice-ligne">Cliquez une ligne pour afficher son calcul temporel.</p>
         <div class="table-defile"><table class="resultats" id="bt-temps-table"></table></div>
         <p class="aide" id="bt-temps-info"></p>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Masse effective</b> : l'effort à la base d'un mode vaut sa masse effective fois Sd(Tj). Le mode 1 en porte souvent 80 à 90 % ; un étage souple concentre presque tout sur lui.</li>
@@ -1044,22 +1044,23 @@
   </div>
 
   <div class="poste" id="banc-poussee" hidden>
+    <section class="carte consigne" id="consigne-poussee" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Courbes de capacité">
         <h2>Courbes de capacité<small>Effort à la base en fonction du déplacement en tête, sous les deux profils de charge du § 4.3.3.4.2.2 ; triangles : déplacements cibles de la méthode N2, tirets : 150 % de la cible (§ 4.3.3.4.2.3) ; points : calculs temporels non linéaires (déplacement et effort maximaux), croix : leur moyenne</small></h2>
         <canvas id="pp-capacite" aria-label="Courbes de capacité, déplacements cibles et calculs temporels"></canvas>
         <p class="legende"><span><i style="background:var(--blue)"></i>profil modal</span><span><i class="tirets" style="border-color:var(--teal)"></i>profil uniforme</span><span><i style="background:var(--muted)"></i>calculs temporels</span><span><i style="background:var(--pick-p)"></i>moyenne</span><span id="pp-etat"></span></p>
       </section>
-      <section class="carte" aria-label="Méthode N2">
+      <section class="carte" aria-label="Méthode N2" style="--o:41">
         <h2>Méthode N2 (EN 1998-1:2004, annexe B)<small>Format accélération–déplacement : spectre élastique, droite de période T*, capacité élasto-plastique du système équivalent (F*/m*, d* = d/Γ) ; disque : demande élastique, triangle : déplacement cible d*t</small></h2>
         <canvas id="pp-adrs" aria-label="Méthode N2 en format accélération-déplacement"></canvas>
       </section>
-      <section class="carte" aria-label="Glissements d'étage">
+      <section class="carte" aria-label="Glissements d'étage" style="--o:43">
         <h2>Glissements d'étage<small>Déplacement relatif de chaque étage rapporté à sa hauteur : poussée au déplacement cible (modal, uniforme) face aux calculs temporels ; pointillés : glissement de plastification de chaque étage</small></h2>
         <canvas id="pp-derives" aria-label="Glissements d'étage au déplacement cible et calculs temporels"></canvas>
         <p class="legende"><span><i style="background:var(--blue)"></i>poussée modale</span><span><i class="tirets" style="border-color:var(--teal)"></i>poussée uniforme</span><span><i style="background:var(--muted);opacity:.6"></i>calculs temporels</span><span><i style="background:var(--cyan)"></i>affiché</span><span><i style="background:var(--pick-p)"></i>moyenne</span></p>
       </section>
-      <section class="carte" aria-label="Déplacement en tête">
+      <section class="carte" aria-label="Déplacement en tête" style="--o:44">
         <h2>Déplacement en tête au cours du temps<small>Calcul temporel non linéaire de l'accélérogramme choisi ; tirets : déplacement cible N2 du profil modal</small></h2>
         <canvas id="pp-temps" aria-label="Déplacement en tête au cours du temps"></canvas>
         <p class="aide">Étages élastiques parfaitement plastiques (résistance = ω fois l'effort de l'analyse modale de calcul), amortissement de Rayleigh de 5 % aux deux
@@ -1071,7 +1072,6 @@
         <button type="button" id="pp-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="pp-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="pp-afficheurs"></div></section>
       <section class="carte" id="pp-panneau-explorer" aria-label="Réglages">
         <p class="sous-titre">Bâtiment</p>
         <div class="segments compact" role="group" aria-label="Profil" id="pp-profils" style="margin-bottom:10px">
@@ -1103,17 +1103,19 @@
         <div class="actions"><button type="button" class="bouton primaire" id="pp-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="pp-nouvel-exo">Nouvel exercice</button></div>
         <div id="pp-corrige"></div>
       </section>
-      <section class="carte" aria-label="Méthode N2 pas à pas">
+      <section class="carte lectures" aria-label="Lectures"><div class="afficheurs deux" id="pp-afficheurs"></div></section>
+      <section class="carte" aria-label="Méthode N2 pas à pas" style="--o:42">
         <p class="sous-titre">Méthode N2 pas à pas</p>
         <div class="segments" role="group" aria-label="Profil affiché en accélération–déplacement" style="margin-bottom:10px"><button type="button" data-pp-vue="modal">Profil modal</button><button type="button" data-pp-vue="uniforme">Profil uniforme</button></div>
         <div class="table-defile"><table class="resultats" id="pp-n2-table"></table></div>
       </section>
-      <section class="carte" aria-label="Calculs temporels">
+      <section class="carte" aria-label="Calculs temporels" style="--o:45">
         <p class="sous-titre">Calculs temporels non linéaires</p>
+        <p class="aide indice-ligne">Cliquez une ligne pour afficher son calcul (capacité, glissements, déplacement en tête).</p>
         <div class="table-defile"><table class="resultats" id="pp-temps-table"></table></div>
         <p class="aide" id="pp-temps-info"></p>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Deux profils</b> : l'EN 1998-1:2004 demande au moins un profil « uniforme » (forces proportionnelles aux masses) et un profil « modal » ; le premier charge la base, le second le haut, et l'étage qui plastifie peut changer.</li>
@@ -1126,23 +1128,24 @@
   </div>
 
   <div class="poste" id="banc-isolation" hidden>
+    <section class="carte consigne" id="consigne-isolation" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Décalage de période">
         <h2>Décalage de période et amortissement<small>Spectre élastique de l'EN 1998-1:2004 à 5 % et à l'amortissement équivalent de l'isolation (η, § 3.2.2.2 (3)) ; points : superstructure sur base fixe et bâtiment isolé à la période effective</small></h2>
         <canvas id="is-spectre" aria-label="Spectres à 5 % et à l'amortissement équivalent, périodes base fixe et isolée"></canvas>
         <p class="legende"><span><i style="background:var(--teal)"></i>Se, ξ = 5 %</span><span><i class="tirets" style="border-color:var(--blue)"></i>Se, ξeff</span><span><i style="background:var(--pick-p)"></i>base fixe</span><span><i style="background:var(--blue)"></i>isolé</span></p>
       </section>
-      <section class="carte" aria-label="Linéarisation équivalente">
+      <section class="carte" aria-label="Linéarisation équivalente" style="--o:41">
         <h2>Linéarisation équivalente<small>Pour un déplacement supposé d : raideur sécante, période et amortissement équivalents, puis la demande spectrale ; la solution est le point où la demande égale le déplacement supposé (escalier : itérations)</small></h2>
         <canvas id="is-pointfixe" aria-label="Demande spectrale en fonction du déplacement supposé et itérations"></canvas>
         <p class="legende"><span><i style="background:var(--teal)"></i>demande</span><span><i class="tirets" style="border-color:var(--grid-strong)"></i>demande = d</span><span><i style="background:var(--blue)"></i>itérations</span><span><i style="background:var(--pick-p)"></i>déplacement de calcul</span></p>
       </section>
-      <section class="carte" aria-label="Boucle de l'isolateur">
+      <section class="carte" aria-label="Boucle de l'isolateur" style="--o:43">
         <h2>Boucle de l'isolateur<small>Effort–déplacement de l'isolateur sous l'accélérogramme choisi ; tirets : enveloppe bilinéaire ; trait rouge : raideur sécante Keff au déplacement de calcul</small></h2>
         <canvas id="is-boucle" aria-label="Boucle effort-déplacement de l'isolateur"></canvas>
         <p class="legende"><span><i style="background:var(--blue)"></i>calcul temporel</span><span><i class="tirets" style="border-color:var(--grid-strong)"></i>enveloppe</span><span><i style="background:var(--pick-p)"></i>Keff</span><span id="is-etat"></span></p>
       </section>
-      <section class="carte" aria-label="Calcul temporel">
+      <section class="carte" aria-label="Calcul temporel" style="--o:44">
         <h2>Déplacement et accélérations au cours du temps<small>En haut, déplacement de l'isolateur (tirets : déplacement de calcul) ; en bas, accélération absolue de la superstructure, isolée ou sur base fixe</small></h2>
         <canvas id="is-temps" aria-label="Déplacement de l'isolateur et accélérations de la superstructure"></canvas>
         <p class="legende"><span><i style="background:var(--blue)"></i>isolé</span><span><i style="background:var(--pick-p)"></i>base fixe</span></p>
@@ -1155,7 +1158,6 @@
         <button type="button" id="is-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="is-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="is-afficheurs"></div></section>
       <section class="carte" id="is-panneau-explorer" aria-label="Réglages">
         <p class="sous-titre">Superstructure</p>
         <div class="champ"><label for="is-ts">Période sur base fixe Ts <output id="is-ts-v"></output></label><input type="range" id="is-ts" min="0.1" max="1" step="0.05"></div>
@@ -1186,16 +1188,18 @@
         <div class="actions"><button type="button" class="bouton primaire" id="is-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="is-nouvel-exo">Nouvel exercice</button></div>
         <div id="is-corrige"></div>
       </section>
-      <section class="carte" aria-label="Itérations">
+      <section class="carte lectures" aria-label="Lectures"><div class="afficheurs deux" id="is-afficheurs"></div></section>
+      <section class="carte" aria-label="Itérations" style="--o:42">
         <p class="sous-titre">Itérations</p>
         <div class="table-defile"><table class="resultats" id="is-iter-table"></table></div>
       </section>
-      <section class="carte" aria-label="Calculs temporels">
+      <section class="carte" aria-label="Calculs temporels" style="--o:45">
         <p class="sous-titre">Calculs temporels non linéaires</p>
+        <p class="aide indice-ligne">Cliquez une ligne pour afficher sa boucle et son calcul temporel.</p>
         <div class="table-defile"><table class="resultats" id="is-temps-table"></table></div>
         <p class="aide" id="is-temps-info"></p>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Décalage de période</b> : l'isolation porte la période au-delà du palier du spectre ; l'accélération transmise à la superstructure chute, le déplacement se concentre dans les isolateurs.</li>
@@ -1208,13 +1212,14 @@
   </div>
 
   <div class="poste" id="banc-mecanisme" hidden>
+    <section class="carte consigne" id="consigne-mecanisme" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sphère focale">
         <h2>Sphère focale<small>Projection de Schmidt, hémisphère inférieur : ● compression (le sol monte), ○ dilatation ; en bleu, les plans nodaux et les quadrants en compression du modèle réglé ; cerclées de rouge, les polarités qu'il contredit</small></h2>
         <canvas id="me-sphere" aria-label="Sphère focale avec polarités et plans nodaux"></canvas>
         <p class="legende"><span><i style="background:var(--blue)"></i>modèle</span><span><i style="background:var(--amp)"></i>solutions de l'inversion</span><span><i class="tirets" style="border-color:var(--teal)"></i>solution vraie</span><span><i style="background:var(--pick-p)"></i>désaccord</span></p>
       </section>
-      <section class="carte" aria-label="Premières arrivées">
+      <section class="carte" aria-label="Premières arrivées" style="--o:43">
         <h2>Premières arrivées P sur les verticales<small>Vitesse verticale, 0,2 s avant et 0,4 s après l'arrivée (tirets), stations rangées par azimut ; C : compression, D : dilatation, lues sur le premier extrême ; un clic repère la station sur la sphère</small></h2>
         <canvas id="me-traces" aria-label="Premières arrivées P des stations"></canvas>
       </section>
@@ -1224,14 +1229,6 @@
         <button type="button" id="me-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="me-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="me-afficheurs"></div></section>
-      <section class="carte" aria-label="Modèle">
-        <p class="sous-titre">Plan nodal du modèle</p>
-        <div class="champ"><label for="me-az">Azimut (direction) <output id="me-az-v"></output></label><input type="range" id="me-az" min="0" max="359" step="1"></div>
-        <div class="champ"><label for="me-pd">Pendage <output id="me-pd-v"></output></label><input type="range" id="me-pd" min="5" max="90" step="1"></div>
-        <div class="champ"><label for="me-gl">Glissement (rake) <output id="me-gl-v"></output></label><input type="range" id="me-gl" min="-180" max="180" step="1"></div>
-        <div class="actions"><button type="button" class="bouton secondaire" id="me-inverser">Inverser (recherche exhaustive)</button></div>
-      </section>
       <section class="carte" id="me-reglages-seisme" aria-label="Séisme">
         <p class="sous-titre">Séisme</p>
         <div class="segments compact" role="group" aria-label="Type" id="me-types" style="margin-bottom:10px">
@@ -1251,7 +1248,15 @@
         <div class="actions"><button type="button" class="bouton primaire" id="me-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="me-nouvel-exo">Nouvel exercice</button></div>
         <div id="me-corrige"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte" aria-label="Modèle" style="--o:41">
+        <p class="sous-titre">Plan nodal du modèle</p>
+        <div class="champ"><label for="me-az">Azimut (direction) <output id="me-az-v"></output></label><input type="range" id="me-az" min="0" max="359" step="1"></div>
+        <div class="champ"><label for="me-pd">Pendage <output id="me-pd-v"></output></label><input type="range" id="me-pd" min="5" max="90" step="1"></div>
+        <div class="champ"><label for="me-gl">Glissement (rake) <output id="me-gl-v"></output></label><input type="range" id="me-gl" min="-180" max="180" step="1"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="me-inverser">Inverser (recherche exhaustive)</button></div>
+      </section>
+      <section class="carte lectures" aria-label="Lectures" style="--o:42"><div class="afficheurs deux" id="me-afficheurs"></div></section>
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Double couple</b> : quatre quadrants, deux en compression, deux en dilatation, séparés par le plan de faille et le plan auxiliaire ; les polarités seules ne disent pas lequel a joué.</li>
@@ -1265,12 +1270,13 @@
   </div>
 
   <div class="poste" id="banc-source" hidden>
+    <section class="carte consigne" id="consigne-source" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sismogramme">
         <h2>Enregistrement et fenêtre S<small>Vitesse horizontale de la station choisie dans le tableau ; zone teintée : fenêtre des ondes S analysée (de 0,5 s avant Sg à 1/fc + 0,05·R, 5 s au moins)</small></h2>
         <canvas id="so-sismo" aria-label="Sismogramme et fenêtre S"></canvas>
       </section>
-      <section class="carte" aria-label="Spectre de déplacement">
+      <section class="carte" aria-label="Spectre de déplacement" style="--o:41">
         <h2>Spectre de déplacement à la source<small>Moyenne des deux horizontales, lissée en bandes de 1/6 d'octave : brut (tirets), puis corrigé de l'expansion géométrique, de Q(f), de κ et du site ; en bleu, le modèle de Brune Ω0/(1 + (f/fc)²)</small></h2>
         <canvas id="so-spectre" aria-label="Spectre de déplacement et modèle de Brune"></canvas>
         <p class="aide" id="so-lecture"></p>
@@ -1281,15 +1287,7 @@
         <button type="button" id="so-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="so-mode-exercice" aria-pressed="false">Exercice</button>
       </div>
-      <section class="carte" aria-label="Lectures"><div class="afficheurs deux" id="so-afficheurs"></div></section>
-      <section class="carte" aria-label="Modèle de Brune">
-        <p class="sous-titre">Modèle de Brune (station choisie)</p>
-        <div class="champ"><label for="so-o0">Plateau Ω0 <output id="so-o0-v"></output></label><input type="range" id="so-o0" min="-4.5" max="0.5" step="0.01"></div>
-        <div class="champ"><label for="so-fc">Fréquence coin fc <output id="so-fc-v"></output></label><input type="range" id="so-fc" min="-1.3" max="1.3" step="0.005"></div>
-        <div class="actions"><button type="button" class="bouton secondaire" id="so-ajuster">Ajuster (moindres carrés en ln)</button></div>
-        <div class="table-defile" style="margin-top:12px"><table class="resultats" id="so-table"></table></div>
-      </section>
-      <section class="carte" aria-label="Séisme">
+      <section class="carte" id="so-reglages-seisme" aria-label="Séisme">
         <p class="sous-titre">Séisme (générateur)</p>
         <div class="champ"><label for="so-mw">Mw <output id="so-mw-v"></output></label><input type="range" id="so-mw" min="3.5" max="6" step="0.1"></div>
         <div class="champ"><label for="so-ds">Chute de contrainte Δσ <output id="so-ds-v"></output></label><input type="range" id="so-ds" min="0" max="1.5" step="0.01"></div>
@@ -1304,7 +1302,16 @@
         <div class="actions"><button type="button" class="bouton primaire" id="so-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="so-nouvel-exo">Nouvel exercice</button></div>
         <div id="so-corrige"></div>
       </section>
-      <section class="carte" aria-label="À retenir">
+      <section class="carte" aria-label="Modèle de Brune" style="--o:42">
+        <p class="sous-titre">Modèle de Brune (station choisie)</p>
+        <div class="champ"><label for="so-o0">Plateau Ω0 <output id="so-o0-v"></output></label><input type="range" id="so-o0" min="-4.5" max="0.5" step="0.01"></div>
+        <div class="champ"><label for="so-fc">Fréquence coin fc <output id="so-fc-v"></output></label><input type="range" id="so-fc" min="-1.3" max="1.3" step="0.005"></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="so-ajuster">Ajuster (moindres carrés en ln)</button></div>
+        <p class="aide indice-ligne">Cliquez une ligne pour afficher le spectre de cette station et son modèle de Brune.</p>
+        <div class="table-defile" style="margin-top:12px"><table class="resultats" id="so-table"></table></div>
+      </section>
+      <section class="carte lectures" aria-label="Lectures" style="--o:43"><div class="afficheurs deux" id="so-afficheurs"></div></section>
+      <section class="carte retenir" aria-label="À retenir">
         <p class="sous-titre">À retenir</p>
         <ul class="notes-loc">
           <li><b>Plateau</b> : aux basses fréquences, le spectre de déplacement est proportionnel au moment sismique M0 = μ·A·D ; Mw en découle et ne sature pas.</li>
