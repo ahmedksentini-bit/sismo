@@ -40,15 +40,27 @@ const Gmpe = (() => {
     }
     return C.b1 * Math.log(Math.min(vs30, t.Vcon) / t.Vref);
   }
+  // Décomposition terme à terme (notes de calcul) : la somme des termes est ln Y.
+  function akkarDetail({ M, Rjb, vs30, rake = 0 }, imt) {
+    const t = Akkar2014, C = coefficients(t, imt), c1 = t.c1;
+    const FN = rake > -135 && rake < -45 ? 1 : 0, FR = rake > 45 && rake < 135 ? 1 : 0, aM = M <= c1 ? C.a2 : C.a7;
+    const Reff = Math.sqrt(Rjb * Rjb + C.a6 * C.a6), pgaRef = Math.exp(akkarReference(t.PGA, M, Rjb, rake, c1));
+    const termes = {
+      a1: C.a1, magnitude: aM * (M - c1), courbure: C.a3 * (8.5 - M) ** 2,
+      distance: (C.a4 + C.a5 * (M - c1)) * Math.log(Reff), style: C.a8 * FN + C.a9 * FR, site: akkarSite(C, vs30, pgaRef, t),
+    };
+    const ln = Object.values(termes).reduce((a, b) => a + b, 0);
+    return { C, constantes: { c1, Vref: t.Vref, Vcon: t.Vcon }, FN, FR, aM, Reff, pgaRef, nonLineaire: vs30 < t.Vref, termes, ln,
+      sigma: Math.hypot(C.sigma, C.tau), tau: C.tau, phi: C.sigma };
+  }
   const akkar2014 = {
     id: 'akkar2014', nom: 'Akkar, Sandıkkaya et Bommer (2014)', distance: 'Rjb',
     domaine: { M: [4, 8], R: [0, 200], vs30: [150, 1200] },
     periodes: Akkar2014.SA.map(c => c.T),
-    calculer({ M, Rjb, vs30, rake = 0 }, imt) {
-      const t = Akkar2014, C = coefficients(t, imt);
-      const pgaRef = Math.exp(akkarReference(t.PGA, M, Rjb, rake, t.c1));
-      const ln = akkarReference(C, M, Rjb, rake, t.c1) + akkarSite(C, vs30, pgaRef, t);
-      return { ln, sigma: Math.hypot(C.sigma, C.tau), tau: C.tau, phi: C.sigma };
+    detailler: akkarDetail,
+    calculer(p, imt) {
+      const d = akkarDetail(p, imt);
+      return { ln: d.ln, sigma: d.sigma, tau: d.tau, phi: d.phi };
     },
   };
 
@@ -67,14 +79,23 @@ const Gmpe = (() => {
     id: 'bindi2014', nom: 'Bindi et al. (2014)', distance: 'Rjb',
     domaine: { M: [4, 7.6], R: [0, 300], vs30: [150, 1500] },
     periodes: Bindi2014.SA.map(c => c.T),
-    calculer({ M, Rjb, vs30, rake = 0 }, imt) {
+    // Décomposition : log10 Y = e1 + FM + FD + FS + style (cm/s² pour PGA et SA, cm/s pour PGV), puis ln Y en g.
+    detailler({ M, Rjb, vs30, rake = 0 }, imt) {
       const t = Bindi2014, C = coefficients(t, imt), dm = M - t.Mh;
-      const FM = M < t.Mh ? C.e1 + C.b1 * dm + C.b2 * dm * dm : C.e1 + C.b3 * dm;
       const r = Math.sqrt(Rjb * Rjb + C.h * C.h);
-      const FD = (C.c1 + C.c2 * (M - t.Mref)) * Math.log10(r / t.Rref) - C.c3 * (r - t.Rref);
-      const log10Y = FM + FD + C.gamma * Math.log10(vs30 / t.Vref) + styleBindi(C, rake);
+      const termes = {
+        e1: C.e1, magnitude: M < t.Mh ? C.b1 * dm + C.b2 * dm * dm : C.b3 * dm,
+        distance: (C.c1 + C.c2 * (M - t.Mref)) * Math.log10(r / t.Rref) - C.c3 * (r - t.Rref),
+        site: C.gamma * Math.log10(vs30 / t.Vref), style: styleBindi(C, rake),
+      };
+      const log10Y = Object.values(termes).reduce((a, b) => a + b, 0);
       const ln = imt === 'PGV' ? log10Y * Math.LN10 : Math.log(Math.pow(10, log10Y - 2) / G);
-      return { ln, sigma: C.sigma * Math.LN10, tau: C.tau * Math.LN10, phi: C.phi * Math.LN10 };
+      return { C, constantes: { Mref: t.Mref, Mh: t.Mh, Rref: t.Rref, Vref: t.Vref }, dm, r, termes, log10Y, ln,
+        sigma: C.sigma * Math.LN10, tau: C.tau * Math.LN10, phi: C.phi * Math.LN10 };
+    },
+    calculer(p, imt) {
+      const d = this.detailler(p, imt);
+      return { ln: d.ln, sigma: d.sigma, tau: d.tau, phi: d.phi };
     },
   };
 
@@ -102,14 +123,23 @@ const Gmpe = (() => {
   const boore2014 = {
     id: 'boore2014', nom: 'Boore et al. (2014)', distance: 'Rjb', domaine: { M: [3, 8.5], R: [0, 400], vs30: [150, 1500] },
     periodes: Boore2014.SA.map(c => c.T),
-    calculer({ M, Rjb, vs30, rake = 0 }, imt) {
+    // Décomposition : ln Y = style + magnitude (FE) + trajet (FP) + site linéaire + site non linéaire (FS).
+    detailler({ M, Rjb, vs30, rake = 0 }, imt) {
       const t = Boore2014, C = coefficients(t, imt), Cp = t.PGA;
       const pgaRocher = Math.exp(booreMagnitude(Cp, M, rake) + boorePropagation(Cp, M, Rjb, t));
-      const lin = C.c * Math.log(Math.min(vs30, C.Vc) / t.Vref);
+      const style = Math.abs(rake) <= 30 || 180 - Math.abs(rake) <= 30 ? 'e1' : rake > 30 && rake < 150 ? 'e3' : 'e2';
       const f2 = C.f4 * (Math.exp(C.f5 * (Math.min(vs30, 760) - 360)) - Math.exp(C.f5 * 400));
-      const nonLin = t.f1 + f2 * Math.log((pgaRocher + t.f3) / t.f3);
-      const ln = booreMagnitude(C, M, rake) + boorePropagation(C, M, Rjb, t) + lin + nonLin;
-      return { ln, ...booreEcarts(C, M, Rjb, vs30, t) };
+      const termes = {
+        style: C[style], magnitude: booreMagnitude(C, M, rake) - C[style], distance: boorePropagation(C, M, Rjb, t),
+        siteLineaire: C.c * Math.log(Math.min(vs30, C.Vc) / t.Vref), siteNonLineaire: t.f1 + f2 * Math.log((pgaRocher + t.f3) / t.f3),
+      };
+      const ln = Object.values(termes).reduce((a, b) => a + b, 0);
+      return { C, constantes: { Mref: t.Mref, Rref: t.Rref, Vref: t.Vref, f1: t.f1, f3: t.f3, v1: t.v1, v2: t.v2 }, style, f2, pgaRocher,
+        R: Math.sqrt(Rjb * Rjb + C.h * C.h), termes, ln, ...booreEcarts(C, M, Rjb, vs30, t) };
+    },
+    calculer(p, imt) {
+      const d = this.detailler(p, imt);
+      return { ln: d.ln, sigma: d.sigma, tau: d.tau, phi: d.phi };
     },
   };
 

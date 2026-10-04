@@ -1,23 +1,37 @@
 // Calculateurs du chapitre 10 : loi d'atténuation (médiane, dispersion, probabilité de dépassement) ;
 // aléa d'un site par le moteur du banc « aléa » (Psha.modeleSimple) : courbe d'aléa, UHS face au spectre de
 // l'EN 1998-1:2004, désagrégation.
-import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter, noteCalcul } from "./ui.js";
 import { svg, texte, graphe, echantillon, COULEURS } from "./figures.js";
 import Gmpe from "./sismo/gmpe.js";
 import Psha from "./sismo/psha.js";
 import Spectre from "./sismo/spectre.js";
+import { tableCoefficients, constantes, etapesLoi } from "./gmpe-notes.js";
 import { gaussienne, zonePSHA } from "./schemas-notes.js";
+
+// ── Équations et coefficients des trois lois, exemple terme à terme ──────
+for (const [id, cle] of [["akkar2014", "Akkar"], ["bindi2014", "Bindi"], ["boore2014", "Boore"]]) {
+  const t = el(`tab${cle}`), c = el(`gmpeConst${cle}`);
+  if (t) t.innerHTML = tableCoefficients(id);
+  if (c) c.innerHTML = constantes(id);
+}
+{
+  const ex = el("exGmpe"), p = { M: 6, Rjb: 10, vs30: 800, rake: 0 };
+  if (ex) ex.innerHTML = [["boore2014", "Boore et al. (2014)"], ["akkar2014", "Akkar et al. (2014)"], ["bindi2014", "Bindi et al. (2014)"]]
+    .map(([id, nom]) => noteCalcul({ titre: `${nom} : Mw 6, R<sub>jb</sub> = 10 km, V<sub>s30</sub> = 800 m/s, décrochement`, etapes: etapesLoi(id, p, "PGA") })).join("");
+}
 
 // ── Médiane, dispersion et probabilité de dépassement ────────────────────
 const majGMPE = garde("gmOut", () => {
-  const M = num("gmM"), R = num("gmR"), id = el("gmLoi").value, y = num("gmY"), loi = Gmpe.LOIS[id];
+  const M = num("gmM"), R = num("gmR"), id = el("gmLoi").value, y = num("gmY"), loi = Gmpe.LOIS[id], imtV = el("gmImt")?.value ?? "PGA";
+  const imt = imtV === "PGA" ? "PGA" : Number(imtV), Y = imt === "PGA" ? "PGA" : `Sa(${f(imt, 2)} s)`;
   if (!(M >= 3.5 && M <= 8 && R >= 0 && R <= 300 && y > 0)) { el("gmOut").textContent = "Mw de 3,5 à 8, distance de 0 à 300 km, seuil positif."; el("gmFig").innerHTML = ""; return; }
-  const calc = (r) => loi.calculer({ M, Rjb: r, vs30: 800, rake: 0 }, "PGA");
+  const calc = (r) => loi.calculer({ M, Rjb: r, vs30: 800, rake: 0 }, imt);
   const pts = (k) => echantillon((lr) => { const r = 10 ** lr, c = calc(r); return [r, Math.exp(c.ln + k * c.sigma)]; }, 0, Math.log10(300), 90).map(([, p]) => p);
   const c = calc(R), z = (Math.log(y) - c.ln) / c.sigma, P = Psha.survie(z, 3);
   el("gmFig").innerHTML = graphe({
     largeur: 560, hauteur: 300, xmin: 1, xmax: 300, ymin: 0.001, ymax: 3, logX: true, logY: true,
-    xlabel: "distance Rjb (km)", ylabel: "PGA (g)",
+    xlabel: "distance Rjb (km)", ylabel: `${Y} (g)`,
     series: [
       { points: pts(1), couleur: COULEURS.discret, epaisseur: 1.4, tirets: "5 4", libelle: "médiane × e^(±σ) (16 % et 84 %)" },
       { points: pts(-1), couleur: COULEURS.discret, epaisseur: 1.4, tirets: "5 4" },
@@ -26,25 +40,24 @@ const majGMPE = garde("gmOut", () => {
     ],
     marques: [{ x: R, y: Math.exp(c.ln), couleur: COULEURS.bleu, libelle: `${f(Math.exp(c.ln), 3)} g` }],
   });
-  const Phi = Psha.Phi;
+  const Phi = Psha.Phi, termes = etapesLoi(id, { M, Rjb: R, vs30: 800, rake: 0 }, imt);
   noter("calcGMPENote", {
-    donnees: [["loi", loi.nom], ["Mw", fd(M, 1)], ["R<sub>jb</sub>", `${fd(R, 0)} km`], ["V<sub>s30</sub>", "800 m/s"], ["seuil y", `${f(y, 3)} g`]],
+    donnees: [["loi", loi.nom], ["grandeur", Y], ["Mw", fd(M, 1)], ["R<sub>jb</sub>", `${fd(R, 0)} km`], ["V<sub>s30</sub>", "800 m/s"], ["mécanisme", "décrochement"], ["seuil y", `${f(y, 3)} g`]],
     etapes: [
-      { titre: "Médiane de la loi", formule: "ln PGA<sub>méd</sub> = f(Mw, R<sub>jb</sub>, V<sub>s30</sub>) (coefficients publiés)", calcul: `ln PGA<sub>méd</sub> = ${fd(c.ln, 3)} → PGA<sub>méd</sub> = <b>${f(Math.exp(c.ln), 3)} g</b>` },
-      { titre: "Dispersion totale", formule: "σ = √(τ² + φ²)", calcul: `σ = √(${fd(c.tau, 3)}² + ${fd(c.phi, 3)}²) = <b>${fd(c.sigma, 3)}</b>` },
-      { titre: "Écart réduit du seuil", formule: "ε = (ln y − ln PGA<sub>méd</sub>) / σ", calcul: `ε = (${fd(Math.log(y), 3)} − ${fd(c.ln, 3)}) / ${fd(c.sigma, 3)} = <b>${fd(z, 3)}</b>` },
+      ...termes.map((e, i) => (i === 0 ? { ...e, note: `Coefficients de la colonne ${Y} du tableau de la loi${e.note ? ` ; ${e.note}` : ""}.` } : e)),
+      { titre: "Écart réduit du seuil", formule: `ε = (ln y − ln ${Y}<sub>méd</sub>) / σ`, calcul: `ε = (${fd(Math.log(y), 3)} − ${c.ln < 0 ? `(${fd(c.ln, 3)})` : fd(c.ln, 3)}) / ${fd(c.sigma, 3)} = <b>${fd(z, 3)}</b>` },
       { titre: "Probabilité de dépassement (loi normale tronquée à ± 3σ)", formule: "P = (Φ(3) − Φ(ε)) / (Φ(3) − Φ(−3))",
         calcul: z >= 3 ? "ε ≥ 3 : P = 0" : z <= -3 ? "ε ≤ −3 : P = 1" : `Φ(ε) = ${fd(Phi(z), 4)} ; P = (${fd(Phi(3), 5)} − ${fd(Phi(z), 4)}) / ${fd(Phi(3) - Phi(-3), 5)} = <b>${fd(100 * P, 2)} %</b>`,
         schema: gaussienne({ eps: z, P, med: Math.exp(c.ln), sigma: c.sigma, y }),
-        legende: "ln PGA suit une loi normale autour de la médiane de la loi ; le seuil y se place à ε écarts types. La probabilité de dépassement est l'aire rouge, sous la courbe tronquée à ± 3σ et renormalisée." },
-      { titre: "Fractile à 84 %", formule: "PGA<sub>84</sub> = PGA<sub>méd</sub>·e<sup>σ</sup>", calcul: `${f(Math.exp(c.ln), 3)} × ${f(Math.exp(c.sigma), 3)} = <b>${f(Math.exp(c.ln + c.sigma), 3)} g</b>` },
+        legende: `ln ${Y} suit une loi normale autour de la médiane de la loi ; le seuil y se place à ε écarts types. La probabilité de dépassement est l'aire rouge, sous la courbe tronquée à ± 3σ et renormalisée.` },
+      { titre: "Fractile à 84 %", formule: `${Y}<sub>84</sub> = ${Y}<sub>méd</sub>·e<sup>σ</sup>`, calcul: `${f(Math.exp(c.ln), 3)} × ${f(Math.exp(c.sigma), 3)} = <b>${f(Math.exp(c.ln + c.sigma), 3)} g</b>` },
     ],
   });
   el("gmOut").innerHTML = `Médiane <strong>${f(Math.exp(c.ln), 3)} g</strong>, σ = ${fd(c.sigma, 2)} (τ = ${fd(c.tau, 2)} entre séismes, φ = ${fd(c.phi, 2)} d'un site à l'autre) ·
-    ε = (ln ${f(y, 3)} − ln ${f(Math.exp(c.ln), 3)})/σ = ${fd(z, 2)} → <strong>P(PGA &gt; ${f(y, 3)} g) = ${fd(100 * P, 1)} %</strong>
+    ε = (ln ${f(y, 3)} − ln ${f(Math.exp(c.ln), 3)})/σ = ${fd(z, 2)} → <strong>P(${Y} &gt; ${f(y, 3)} g) = ${fd(100 * P, 1)} %</strong>
     <small>Loi normale tronquée à ± 3σ. À 84 %, la médiane est multipliée par e<sup>σ</sup> = ${f(Math.exp(c.sigma), 3)}.</small>`;
 });
-brancher(["gmM", "gmR", "gmLoi", "gmY"], majGMPE);
+brancher(["gmM", "gmR", "gmLoi", "gmImt", "gmY"], majGMPE);
 
 // ── Aléa d'un site au centre d'une zone source ───────────────────────────
 const IMTS = ["PGA", 0.1, 0.2, 0.3, 0.5, 1, 2, 3];

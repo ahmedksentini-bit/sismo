@@ -9,6 +9,7 @@ import Sismo from "./sismo/signal.js";
 import Accelero from "./sismo/accelerogramme.js";
 import { globe, eventail, COULEURS_PHASES } from "./globe-figure.js";
 import { raisCroute, heureOrigine } from "./schemas-notes.js";
+import { sommeEnLigne } from "./gmpe-notes.js";
 
 const VP = Sismo.MODELE.vp1, VS = Sismo.MODELE.vs1, K = Sismo.kmS;
 
@@ -151,8 +152,9 @@ const majPGA = garde("pgOut", () => {
   noter("calcPGANote", {
     donnees: [["Mw", fd(M, 1)], ["R<sub>jb</sub>", `${fd(R, 0)} km`], ["V<sub>s30</sub>", "800 m/s (rocher)"], ["mécanisme", "décrochement"]],
     etapes: [
-      ...lois.map(([nom, l]) => ({ titre: `Médiane : ${nom}`, formule: "ln PGA = f(Mw, R<sub>jb</sub>, V<sub>s30</sub>) (coefficients de la loi)", calcul: `ln PGA = ${fd(l, 3)} → PGA = e<sup>${fd(l, 3)}</sup> = <b>${f(Math.exp(l), 3)} g</b>` })),
-      { titre: "Médiane des trois lois, à poids égaux", formule: "ln PGA = (ln PGA₁ + ln PGA₂ + ln PGA₃) / 3", calcul: `ln PGA = (${lois.map(([, l]) => fd(l, 3)).join(" + ")}) / 3 = ${fd(lnm, 3)} → PGA = e<sup>${fd(lnm, 3)}</sup> = <b>${f(ici, 3)} g</b>`,
+      ...lois.map(([nom, l], k) => ({ titre: `Médiane : ${nom}`, formule: "somme des termes de source, de trajet, de site et de style (équations et coefficients au chapitre 10)",
+        calcul: `${sommeEnLigne(["akkar2014", "bindi2014", "boore2014"][k], { M, Rjb: R, vs30: 800, rake: 0 })} → PGA = e<sup>${fd(l, 3)}</sup> = <b>${f(Math.exp(l), 3)} g</b>` })),
+      { titre: "Médiane des trois lois, à poids égaux", formule: "ln PGA = (ln PGA₁ + ln PGA₂ + ln PGA₃) / 3", calcul: `ln PGA = (${lois.map(([, l], k) => (k ? (l < 0 ? `− ${fd(-l, 3)}` : `+ ${fd(l, 3)}`) : fd(l, 3))).join(" ")}) / 3 = ${fd(lnm, 3)} → PGA = e<sup>${fd(lnm, 3)}</sup> = <b>${f(ici, 3)} g</b>`,
         note: "On moyenne les logarithmes (médiane géométrique) : les lois sont log-normales." },
     ],
   });

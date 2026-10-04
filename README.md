@@ -113,6 +113,8 @@ src/cours-schemas.js    remplit les schémas de cours.html
 src/schemas-notes.js    schémas des notes de calcul, dessinés avec les valeurs du calcul (rais Pg et Pn, profondeur,
                         lacune, faille et vecteurs, pP, branches du spectre, fenêtres de déclusterage, cercle de Mohr,
                         loi normale, zone source, Vs30, contraintes, R–μ, console, N2, boucle d'isolateur…)
+src/gmpe-notes.js       équations des lois d'atténuation mises en texte : tableaux de coefficients, constantes,
+                        termes de la note de calcul (Gmpe.LOIS[id].detailler)
 src/traits.js           traits communs des schémas (étiquettes, flèches, projection oblique, petit cadre de graphique)
 src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide, graine) et rais des phases, voisinage
                         du foyer (P, pP, sP), coupe d'une zone de subduction, en SVG
@@ -137,7 +139,7 @@ src/parcours.js         plan des travaux pratiques : quatre parties, ordre des b
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes (159 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois (162 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
