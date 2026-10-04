@@ -5,6 +5,7 @@ import { graphe, COULEURS } from "./figures.js";
 import Inelastique from "./sismo/inelastique.js";
 import Accelero from "./sismo/accelerogramme.js";
 import Spectre from "./sismo/spectre.js";
+import { forceDeplacement, reglesRmu, branchesEC8 } from "./schemas-notes.js";
 
 const G = Spectre.G;
 let rec = null;
@@ -37,7 +38,9 @@ const majBoucle = garde("boOut", () => {
       { titre: "Réponse élastique de l'oscillateur", formule: "Sa = ω²·max|x| (Newmark, oscillateur élastique)", calcul: `ω = 2π/${f(T, 3)} = ${f(w, 4)} rad/s ; Sa = <b>${f(sae / G, 3)} g</b> ; Sd = Sa/ω² = <b>${f(sdEl * 1000, 4)} mm</b>` },
       { titre: "Résistance de l'oscillateur ductile", formule: "f<sub>y</sub>/m = Sa / R ; u<sub>y</sub> = (f<sub>y</sub>/m)/ω²", calcul: `f<sub>y</sub>/m = ${f(sae / G, 3)} / ${fd(R, 2)} = <b>${f(sae / G / R, 3)} g</b> ; u<sub>y</sub> = ${f(sae / R, 4)} / ${f(w * w, 4)} = <b>${f(res.uy * 1000, 4)} mm</b>` },
       { titre: "Calcul temporel non linéaire", formule: "ü + 2ξωu̇ + f(u)/m = −a<sub>g</sub>(t), ressort bilinéaire, Newmark et Newton", calcul: `u<sub>max</sub> = <b>${f(res.umax * 1000, 4)} mm</b> ; déplacement résiduel ${f(res.residuel * 1000, 3)} mm` },
-      { titre: "Ductilité demandée", formule: "μ = u<sub>max</sub> / u<sub>y</sub>", calcul: `μ = ${f(res.umax * 1000, 4)} / ${f(res.uy * 1000, 4)} = <b>${fd(res.mu, 2)}</b>` },
+      { titre: "Ductilité demandée", formule: "μ = u<sub>max</sub> / u<sub>y</sub>", calcul: `μ = ${f(res.umax * 1000, 4)} / ${f(res.uy * 1000, 4)} = <b>${fd(res.mu, 2)}</b>`,
+        schema: forceDeplacement({ Sa: sae / G, R, uy: res.uy * 1000, umax: res.umax * 1000, sdEl: sdEl * 1000, alpha }),
+        legende: "Les deux oscillateurs ont la même raideur initiale. Le ductile ne résiste qu'à Sa/R : il plastifie à u<sub>y</sub> et va jusqu'à u<sub>max</sub>, ici " + (res.umax > sdEl ? "au-delà" : "en deçà") + " du déplacement élastique." },
       { titre: "Comparaison aux règles", formule: "égaux déplacements : μ = R ; N2 : μ = 1 + (R − 1)·T<sub>C</sub>/T si T &lt; T<sub>C</sub>, sinon R", calcul: `μ = ${fd(R, 2)} (égaux déplacements) ; N2 avec T<sub>C</sub> = 0,4 s : ${T < 0.4 ? `1 + (${fd(R, 2)} − 1) × 0,4/${f(T, 3)} = ` : ""}<b>${fd(n2, 2)}</b> ; rapport u<sub>max</sub>/Sd élastique = ${f(res.umax / sdEl, 3)}` },
     ],
   });
@@ -72,7 +75,9 @@ const majRegles = garde("rgOut", () => {
   noter("calcReglesNote", {
     donnees: [["R", fd(R, 2)], ["T<sub>C</sub>", `${fd(TC, 2)} s`], ["séismes", "5 accélérogrammes Mw 6,5 à 10 km"], ["ξ", "5 %"]],
     etapes: [
-      { titre: "Les trois règles", formule: "égaux déplacements : μ = R ; égales énergies : μ = (R² + 1)/2 ; N2 : μ = 1 + (R − 1)·T<sub>C</sub>/T si T &lt; T<sub>C</sub>, sinon μ = R" },
+      { titre: "Les trois règles", formule: "égaux déplacements : μ = R ; égales énergies : μ = (R² + 1)/2 ; N2 : μ = 1 + (R − 1)·T<sub>C</sub>/T si T &lt; T<sub>C</sub>, sinon μ = R",
+        schema: reglesRmu({ R }),
+        legende: "Mêmes axes pour les deux règles : à gauche, l'oscillateur ductile atteint le déplacement de l'élastique ; à droite, il dissipe la même énergie (aires égales), d'où une ductilité plus forte." },
       { titre: "Calculs temporels", formule: "pour chaque période : f<sub>y</sub> = Sa élastique / R, puis μ = u<sub>max</sub>/u<sub>y</sub> ; moyenne des 5 accélérogrammes" },
       { titre: "Courte période", calcul: lig(TS[0], 0) },
       { titre: "Période moyenne", calcul: lig(TS[5], 5) },
@@ -110,7 +115,9 @@ const majCalcul = garde("sdOut", () => {
     etapes: [
       { titre: "Paramètres du sol", calcul: `S = ${fd(p.S, 2)} ; T<sub>B</sub> = ${fd(p.TB, 2)} s ; T<sub>C</sub> = ${fd(p.TC, 2)} s ; T<sub>D</sub> = ${fd(p.TD, 1)} s` },
       { titre: "Spectre élastique (ξ = 5 %)", calcul: `S<sub>e</sub>(${f(T, 3)} s) = <b>${f(se, 3)} g</b>` },
-      { titre: "Spectre de calcul (EN 1998-1:2004, expressions 3.13 à 3.16)", formule: fo[0], calcul: `S<sub>d</sub> = ${fo[1]} = <b>${f(sd, 3)} g</b>` },
+      { titre: "Spectre de calcul (EN 1998-1:2004, expressions 3.13 à 3.16)", formule: fo[0], calcul: `S<sub>d</sub> = ${fo[1]} = <b>${f(sd, 3)} g</b>`,
+        schema: branchesEC8({ courbe: (t) => Spectre.ec8Calcul(t, { ...o, q }), elastique: (t) => Spectre.ec8(t, o), TB: p.TB, TC: p.TC, TD: p.TD, T, plancher: 0.2 * ag, nom: "Sd" }),
+        legende: `Le spectre de calcul suit le spectre élastique divisé par q, sauf aux très courtes périodes (2/3·a<sub>g</sub>S à T = 0) et sous le plancher β·a<sub>g</sub> = ${f(0.2 * ag, 3)} g.` },
       { titre: "Rapport élastique / calcul", formule: "S<sub>e</sub>/S<sub>d</sub> (vaut q sur le plateau)", calcul: `${f(se, 3)} / ${f(sd, 3)} = <b>${f(se / sd, 3)}</b>` },
     ],
   });

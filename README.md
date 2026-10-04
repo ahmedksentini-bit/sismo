@@ -10,7 +10,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | Page | Rôle |
 |---|---|
 | `index.html` | accueil : ressources du cours, puis les dix-sept chapitres rangés en quatre parties (A Lire les sismogrammes, B Mouvement du sol et aléa, C Du site au mouvement de projet, D Réponse des ouvrages) ; page de chapitre (`index.html#ch1`) avec notions, exercices corrigés et liens |
-| `cours.html` | le cours au fil du texte, un chapitre par section (`#chN`), avec ses calculateurs (champs à curseur) et leur note de calcul (formule, application numérique, résultat), encadrés « à retenir » et « piège fréquent », sommaire latéral |
+| `cours.html` | le cours au fil du texte, un chapitre par section (`#chN`), avec ses calculateurs (champs à curseur) et leur note de calcul (formule, application numérique, résultat, schéma explicatif quand il le faut), encadrés « à retenir » et « piège fréquent », sommaire latéral |
 | `exerciseur.html` | exercices à données tirées au hasard (`#chN/modèle/graine`), modes apprentissage, entraînement et examen |
 | `labo.html` | travaux pratiques : les dix-sept bancs ; le banc de rang n est le TP du chapitre n |
 | `polycopie/sismologie-polycopie.pdf` | le polycopié : couverture, sommaire paginé, `cours.html` imprimé (les calculateurs deviennent des exemples chiffrés) |
@@ -110,6 +110,10 @@ src/schemas.js          schémas de principe, au moins un par chapitre (ondes, f
                         Gutenberg-Richter, rebond élastique, étapes de Cornell, effets de site, liquéfaction, ductilité,
                         modes, poussée, isolation…), en SVG
 src/cours-schemas.js    remplit les schémas de cours.html
+src/schemas-notes.js    schémas des notes de calcul, dessinés avec les valeurs du calcul (rais Pg et Pn, profondeur,
+                        lacune, faille et vecteurs, pP, branches du spectre, fenêtres de déclusterage, cercle de Mohr,
+                        loi normale, zone source, Vs30, contraintes, R–μ, console, N2, boucle d'isolateur…)
+src/traits.js           traits communs des schémas (étiquettes, flèches, projection oblique, petit cadre de graphique)
 src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide, graine) et rais des phases, voisinage
                         du foyer (P, pP, sP), coupe d'une zone de subduction, en SVG
 src/lecteur-station.js  banc « une station »
@@ -133,7 +137,7 @@ src/parcours.js         plan des travaux pratiques : quatre parties, ordre des b
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références (154 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes (159 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)

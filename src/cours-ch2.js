@@ -3,6 +3,7 @@
 import { el, num, fd, brancher, garde, lireTableau, noter } from "./ui.js";
 import { svg, texte, ligne, graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
+import { rosaceAzimuts, triangleProfondeur } from "./schemas-notes.js";
 
 const K = Sismo.kmS;
 // Les stations du banc « réseau » (km ; x vers l'est, y vers le nord).
@@ -88,7 +89,9 @@ const majLoc = garde("locOut", () => {
       { titre: `Vérification à la station la plus proche (${sp0.nom})`, formule: "d = √((x − x<sub>s</sub>)² + (y − y<sub>s</sub>)²) ; t<sub>P</sub> prédit = t<sub>0</sub> + T<sub>P</sub>(d, h)",
         calcul: `d = √((${fd(L.x, 1)} − ${fd(sp0.x, 0)})² + (${fd(L.y, 1)} − ${fd(sp0.y, 0)})²) = ${fd(dp, 1)} km ; R = √(${fd(dp, 1)}² + ${fd(L.h, 1)}²) = ${fd(ttp.R, 1)} km ; t<sub>P</sub> = ${fd(L.t0, 2)} + ${fd(ttp.tP, 2)} = ${fd(L.t0 + ttp.tP, 2)} s ; lu ${fd(lect[iProche].tP, 2)} s → résidu <b>${fd(lect[iProche].tP - L.t0 - ttp.tP, 2)} s</b>` },
       { titre: "Lacune azimutale", formule: "azimut de chaque station vu de l'épicentre, puis plus grand écart entre deux azimuts voisins",
-        calcul: `azimuts triés : ${azTri.map((a1) => `${fd(a1, 0)}°`).join(", ")} ; écarts : ${ecarts.map((e1) => `${fd(e1, 0)}°`).join(", ")} → lacune <b>${fd(L.gap, 0)}°</b> ${L.gap > 180 ? "(&gt; 180° : hors du réseau)" : "(&lt; 180° : séisme entouré)"}` },
+        calcul: `azimuts triés : ${azTri.map((a1) => `${fd(a1, 0)}°`).join(", ")} ; écarts : ${ecarts.map((e1) => `${fd(e1, 0)}°`).join(", ")} → lacune <b>${fd(L.gap, 0)}°</b> ${L.gap > 180 ? "(&gt; 180° : hors du réseau)" : "(&lt; 180° : séisme entouré)"}`,
+        schema: rosaceAzimuts({ stations: STATIONS.map((st, i) => ({ nom: st.nom, az: az[i], d: Math.hypot(st.x - L.x, st.y - L.y) })) }),
+        legende: "Les stations vues de l'épicentre localisé, à leur azimut (distances à l'échelle) ; le secteur rouge est le plus grand angle sans station." },
     ],
   });
   const ecart = Math.hypot(L.x - x, L.y - y), large = L.zone.length ? Math.max(...L.zone.map(([a, b]) => Math.hypot(a - L.x, b - L.y))) : 0;
@@ -156,7 +159,9 @@ const majProf = garde("prOut", () => {
       { titre: "Profondeur (triangle rectangle épicentre–foyer–station)", formule: "h = √(R² − Δ²)", calcul: `h = √(${fd(R, 2)}² − ${fd(D, 1)}²) = √(${fd(R * R, 1)} − ${fd(D * D, 1)}) = <b>${fd(h, 1)} km</b>` },
       { titre: "Effet d'une erreur de lecture", formule: "R<sub>±</sub> = 8,4 × (S − P ± e) ; h<sub>±</sub> = √(R<sub>±</sub>² − Δ²)",
         calcul: `R<sub>−</sub> = ${fd(K * (sp - e), 2)} km → h = ${fd(hBas, 1)} km ; R<sub>+</sub> = ${fd(K * (sp + e), 2)} km → h = ${fd(hHaut, 1)} km`,
-        note: `L'erreur sur R (8,4 × ${fd(e, 2)} = ${fd(K * e, 2)} km) est amplifiée d'un facteur dh/dR = R/h = ${fd(R / h, 2)} : d'autant plus que la station est loin devant la profondeur.` },
+        note: `L'erreur sur R (8,4 × ${fd(e, 2)} = ${fd(K * e, 2)} km) est amplifiée d'un facteur dh/dR = R/h = ${fd(R / h, 2)} : d'autant plus que la station est loin devant la profondeur.`,
+        schema: triangleProfondeur({ D, h, R, Rm: K * (sp - e), Rp: K * (sp + e) }),
+        legende: "Le foyer est sur la verticale de l'épicentre, à la distance R de la station. Une erreur sur R déplace le cercle de rayon R : sa trace sur la verticale bouge d'autant plus que le cercle la coupe en biais, c'est-à-dire que Δ est grand devant h." },
     ],
   });
   el("prOut").innerHTML = `R = 8,4 × ${fd(sp, 2)} = ${fd(R, 1)} km → <strong>h = √(R² − Δ²) = √(${fd(R, 1)}² − ${fd(D, 1)}²) = ${fd(h, 1)} km</strong>

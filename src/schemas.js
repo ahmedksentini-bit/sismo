@@ -2,37 +2,13 @@
 // SVG pur, partagée par le cours et le polycopié. Les grandeurs qui se calculent sortent des solveurs (aires de
 // Wells et Coppersmith, mécanismes) ; le reste est dessiné à l'échelle de la notion, sans prétendre à la mesure.
 import { svg, texte, ligne, COULEURS } from "./figures.js";
+import { RAD, chemin, titre, note, etiquette, fleche, doubleFleche, etoile, station, imbriquer, projeter, comb, cadre, frs } from "./traits.js";
 import { ballon } from "./ballon.js";
 import Faille from "./sismo/faille.js";
 import Spectre from "./sismo/spectre.js";
 import Gmpe from "./sismo/gmpe.js";
 import Psha from "./sismo/psha.js";
 import Batiment from "./sismo/batiment.js";
-
-const RAD = Math.PI / 180;
-const chemin = (pts, ferme = false) => pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join("") + (ferme ? "Z" : "");
-const titre = (x, y, s, ancre = "start") => texte(x, y, s, `text-anchor="${ancre}" style="font-size:12.5px;font-weight:800"`);
-const note = (x, y, s, ancre = "start") => texte(x, y, s, `text-anchor="${ancre}" class="pt"`);
-const etiquette = (x, y, s, couleur = COULEURS.encre, ancre = "start", taille = 11.5) =>
-  texte(x, y, s, `text-anchor="${ancre}" class="halo" style="font-size:${taille}px;font-weight:700;fill:${couleur}"`);
-const fleche = (id, x1, y1, x2, y2, couleur = COULEURS.effort, ep = 2, marque = "fl") =>
-  ligne(x1, y1, x2, y2, couleur, ep, `marker-end="url(#${id}-${marque})"`);
-const doubleFleche = (id, x1, y1, x2, y2, couleur = COULEURS.cote) =>
-  ligne(x1, y1, x2, y2, couleur, 1.4, `marker-start="url(#${id}-fc)" marker-end="url(#${id}-fc)"`);
-const etoile = (x, y, r = 8) => {
-  const p = [];
-  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, q = i % 2 ? r * 0.45 : r; p.push([x + q * Math.cos(a), y + q * Math.sin(a)]); }
-  return `<path d="${chemin(p, true)}" fill="${COULEURS.effort}" stroke="#fff" stroke-width="1"/>`;
-};
-const station = (x, y, couleur = COULEURS.reaction) => `<path d="M${x.toFixed(1)} ${(y - 9).toFixed(1)}l7 12h-14z" fill="${couleur}" stroke="#fff" stroke-width="1"/>`;
-
-/** Insère un SVG complet dans un autre, à la position et à la largeur données. */
-function imbriquer(s, x, y, largeur) {
-  const [, , w, h] = s.match(/viewBox="([\d.\s-]+)"/)[1].trim().split(/\s+/).map(Number);
-  // le style en ligne l'emporte sur les règles de page (.figure-cours svg : largeur 100 %, bordure)
-  const H = ((largeur * h) / w).toFixed(1), L = largeur.toFixed(1);
-  return s.replace(/^<svg /, `<svg x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${L}" height="${H}" style="width:${L}px;height:${H}px;border:0;border-radius:0;background:none" `);
-}
 
 // ── Chapitre 1 : les quatre ondes ─────────────────────────────────────────
 
@@ -140,10 +116,6 @@ export function lacune({ largeur = 560 } = {}) {
 }
 
 // ── Chapitre 3 : les trois angles et les trois types de failles ───────────
-
-// Projection oblique : x vers l'est (droite), y vers le nord (fuyant en haut à droite), z vers le haut.
-const projeter = (ox, oy, e = 1) => ([x, y, z]) => [ox + e * (x + 0.5 * y), oy - e * (z + 0.32 * y)];
-const comb = (a, b, ka, kb) => a.map((v, i) => ka * v + kb * b[i]);
 
 /** Bloc diagramme d'une faille : azimut φ depuis le nord, pendage δ, glissement λ du toit dans le plan. */
 export function anglesFaille({ largeur = 560, phi = 35, delta = 50, lambda = 60 } = {}) {
@@ -314,23 +286,6 @@ export function sismometre({ largeur = 560 } = {}) {
   });
 }
 
-
-// ── Petits graphiques dans les schémas ────────────────────────────────────
-
-/** Cadre de graphique compact : axes, graduations choisies, échelles linéaires ou logarithmiques. */
-function cadre({ x0, y0, w, h, xmin, xmax, ymin, ymax, logX = false, logY = false, gx = [], gy = [], fx = String, fy = String, xlabel = "", ylabel = "" }) {
-  const tx = logX ? (v) => (Math.log10(v) - Math.log10(xmin)) / (Math.log10(xmax) - Math.log10(xmin)) : (v) => (v - xmin) / (xmax - xmin);
-  const ty = logY ? (v) => (Math.log10(v) - Math.log10(ymin)) / (Math.log10(ymax) - Math.log10(ymin)) : (v) => (v - ymin) / (ymax - ymin);
-  const X = (v) => x0 + w * tx(v), Y = (v) => y0 + h - h * ty(v);
-  let s = `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#fff" stroke="#cbd5e1"/>`;
-  for (const v of gx) s += ligne(X(v), y0, X(v), y0 + h, COULEURS.grille, 0.8) + note(X(v), y0 + h + 13, fx(v), "middle");
-  for (const v of gy) s += ligne(x0, Y(v), x0 + w, Y(v), COULEURS.grille, 0.8) + note(x0 - 4, Y(v) + 4, fy(v), "end");
-  if (xlabel) s += note(x0 + w / 2, y0 + h + 27, xlabel, "middle");
-  if (ylabel) s += texte(x0 - 38, y0 + h / 2, ylabel, `class="pt" text-anchor="middle" transform="rotate(-90 ${x0 - 38} ${(y0 + h / 2).toFixed(1)})"`);
-  const trace = (pts, couleur, ep = 2, attrs = "") => `<path d="${chemin(pts.map(([a, b]) => [X(a), Y(b)]))}" fill="none" stroke="${couleur}" stroke-width="${ep}" ${attrs}/>`;
-  return { X, Y, s, trace };
-}
-const frs = (x, c = 2) => Number(x).toLocaleString("fr-FR", { maximumSignificantDigits: c });
 
 // ── Chapitre 7 : une famille d'oscillateurs ───────────────────────────────
 
@@ -511,21 +466,21 @@ export function demarche({ largeur = 560 } = {}) {
 // ── Chapitre 12 : une couche de sol sur un rocher ─────────────────────────
 
 /** Couche de sol molle sur un rocher : onde S montante, réflexion en surface, mode du quart d'onde. */
-export function coucheSol({ largeur = 560, Vs = 200, H = 20 } = {}) {
+export function coucheSol({ largeur = 560, Vs = 200, H = 20, Vr = null } = {}) {
   const top = 40, hs = 150, roc = 70, x0 = 30, w = 300, f0 = Vs / (4 * H);
   return svg({
     largeur, hauteur: top + hs + roc + 40, titre: "Une couche de sol sur un rocher", contenu: (id) => {
       let s = `<rect x="${x0}" y="${top}" width="${w}" height="${hs}" fill="#e8dcc3"/>`;
       s += `<rect x="${x0}" y="${top + hs}" width="${w}" height="${roc}" fill="url(#${id}-roche)" stroke="none"/><rect x="${x0}" y="${top + hs}" width="${w}" height="${roc}" fill="rgba(100,116,139,.25)"/>`;
       s += ligne(x0, top, x0 + w, top, "#8b5a2b", 2.4) + ligne(x0, top + hs, x0 + w, top + hs, "#475569", 1.4);
-      s += etiquette(x0 + 8, top + 20, `sol mou : Vs = ${Vs} m/s`, "#5b4a2f") + etiquette(x0 + 8, top + hs + 22, "rocher : Vs élevée", "#334155");
+      s += etiquette(x0 + 8, top + 20, `sol mou : Vs = ${frs(Vs, 4)} m/s`, "#5b4a2f") + etiquette(x0 + 8, top + hs + 22, Vr ? `rocher : Vr = ${frs(Vr, 4)} m/s` : "rocher : Vs élevée", "#334155");
       // onde montante et réfléchie (zigzag)
       const zig = [[x0 + 120, top + hs + roc - 6], [x0 + 150, top + hs], [x0 + 190, top + 2], [x0 + 230, top + hs], [x0 + 262, top + hs + roc - 6]];
       s += fleche(id, ...zig[0], ...zig[1], COULEURS.bleu, 1.6, "fb") + fleche(id, ...zig[1], ...zig[2], COULEURS.bleu, 1.6, "fb");
       s += fleche(id, ...zig[2], ...zig[3], COULEURS.bleu, 1.6, "fb") + fleche(id, ...zig[3], ...zig[4], COULEURS.bleu, 1.2, "fb");
       s += etiquette(x0 + 196, top + hs + 34, "une part repart vers le bas", "#334155", "start", 10.5);
       s += note(x0 + 150, top - 8, "réflexion à la surface libre", "middle");
-      s += doubleFleche(id, x0 + w + 14, top, x0 + w + 14, top + hs) + etiquette(x0 + w + 20, top + hs / 2 + 4, `H = ${H} m`, COULEURS.cote);
+      s += doubleFleche(id, x0 + w + 14, top, x0 + w + 14, top + hs) + etiquette(x0 + w + 20, top + hs / 2 + 4, `H = ${frs(H, 4)} m`, COULEURS.cote);
       // mode fondamental : déplacement cos(πz/2H), maximal en surface, nul au rocher
       const mx = x0 + w + 92, A = 70, pts = Array.from({ length: 41 }, (_, i) => { const z = (i / 40) * hs; return [mx + A * Math.cos((Math.PI * z) / (2 * hs)), top + z]; });
       s += ligne(mx, top - 6, mx, top + hs + 10, "#94a3b8", 1) + `<path d="${chemin(pts)}" fill="none" stroke="${COULEURS.effort}" stroke-width="2.4"/>`;

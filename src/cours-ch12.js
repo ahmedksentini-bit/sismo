@@ -5,6 +5,8 @@ import { graphe, echantillon, COULEURS } from "./figures.js";
 import Site from "./sismo/site.js";
 import Spectre from "./sismo/spectre.js";
 import Accelero from "./sismo/accelerogramme.js";
+import { coucheSol } from "./schemas.js";
+import { colonneVs30 } from "./schemas-notes.js";
 
 const poids = (vs) => (vs < 200 ? 17.5 : vs < 300 ? 18.5 : vs < 450 ? 19.5 : 20.5);
 
@@ -27,7 +29,9 @@ const majCouche = garde("coOut", () => {
   noter("calcCoucheNote", {
     donnees: [["H", `${f(H, 3)} m`], ["V<sub>s</sub>", `${f(vs, 3)} m/s`], ["ξ", fd(xi, 3)], ["V<sub>r</sub>", `${f(vr, 4)} m/s`], ["poids volumiques", "17,5 (sol) et 22 kN/m³ (rocher)"]],
     etapes: [
-      { titre: "Fréquence fondamentale (quart d'onde)", formule: "f<sub>0</sub> = V<sub>s</sub> / (4H) ; T<sub>0</sub> = 1/f<sub>0</sub>", calcul: `f<sub>0</sub> = ${f(vs, 3)} / (4 × ${f(H, 3)}) = <b>${f(f0, 3)} Hz</b> ; T<sub>0</sub> = <b>${f(1 / f0, 3)} s</b> ; harmoniques 3f<sub>0</sub> = ${f(3 * f0, 3)} Hz, 5f<sub>0</sub> = ${f(5 * f0, 3)} Hz` },
+      { titre: "Fréquence fondamentale (quart d'onde)", formule: "f<sub>0</sub> = V<sub>s</sub> / (4H) ; T<sub>0</sub> = 1/f<sub>0</sub>", calcul: `f<sub>0</sub> = ${f(vs, 3)} / (4 × ${f(H, 3)}) = <b>${f(f0, 3)} Hz</b> ; T<sub>0</sub> = <b>${f(1 / f0, 3)} s</b> ; harmoniques 3f<sub>0</sub> = ${f(3 * f0, 3)} Hz, 5f<sub>0</sub> = ${f(5 * f0, 3)} Hz`,
+        schema: coucheSol({ Vs: vs, H, Vr: vr }),
+        legende: "Au mode fondamental, le déplacement est maximal en surface et nul au toit du rocher : l'épaisseur de la couche vaut un quart de longueur d'onde, λ = 4H, d'où f<sub>0</sub> = V<sub>s</sub>/λ." },
       { titre: "Contraste d'impédance", formule: "I = ρ<sub>s</sub>V<sub>s</sub> / (ρ<sub>r</sub>V<sub>r</sub>)", calcul: `I = 17,5 × ${f(vs, 3)} / (22 × ${f(vr, 4)}) = <b>${fd(I, 4)}</b>` },
       { titre: "Amplification approchée au pic", formule: "A(f<sub>0</sub>) ≈ 1 / (I + πξ/2)", calcul: `A ≈ 1 / (${fd(I, 4)} + π × ${fd(xi, 3)}/2) = 1 / ${fd(I + (Math.PI * xi) / 2, 4)} = <b>${f(1 / (I + (Math.PI * xi) / 2), 3)}</b>` },
       { titre: "Fonction de transfert exacte (ondes SH, module complexe G·(√(1 − 4ξ²) + 2iξ))", formule: "|H(f)| = |u surface / u rocher affleurant|", calcul: `pic : <b>${f(pic[1], 3)}</b> à ${f(pic[0], 3)} Hz ; à 3f<sub>0</sub> : ${f(A(3 * f0), 3)}` },
@@ -89,7 +93,9 @@ const majProfil = garde("siResultat", () => {
   noter("calcProfilSiteNote", {
     donnees: [["couches (h, V<sub>s</sub>)", couches.map((c) => `${c.h} m à ${c.vs} m/s`).join(" ; ")], ["rocher", `${rocher.vs} m/s`], ["PGA au rocher", `${f(pga, 3)} g`], ["séisme", "Mw 6,5 à 20 km (simulé)"]],
     etapes: [
-      { titre: "Vs30", formule: "V<sub>s30</sub> = 30 / Σ(h<sub>i</sub>/V<sub>i</sub>) sur 30 m", calcul: `V<sub>s30</sub> = 30 / (${termes.join(" + ")}) = <b>${f(cls.vs30, 3)} m/s</b> → classe <b>${cls.classe}</b>` },
+      { titre: "Vs30", formule: "V<sub>s30</sub> = 30 / Σ(h<sub>i</sub>/V<sub>i</sub>) sur 30 m", calcul: `V<sub>s30</sub> = 30 / (${termes.join(" + ")}) = <b>${f(cls.vs30, 3)} m/s</b> → classe <b>${cls.classe}</b>`,
+        schema: colonneVs30({ couches, vr: rocher.vs, vs30: cls.vs30, classe: cls.classe }),
+        legende: "La colonne à l'échelle et son profil de V<sub>s</sub> ; au droit de chaque tranche, son temps de parcours vertical, jusqu'à 30 m de profondeur." },
       { titre: "Fréquence fondamentale approchée", formule: "f<sub>0</sub> = 1 / (4·Σ h<sub>i</sub>/V<sub>i</sub>)", calcul: `Σ h/V = ${fd(tH, 4)} s → f<sub>0</sub> = 1/(4 × ${fd(tH, 4)}) = <b>${f(f0, 3)} Hz</b>` },
       { titre: "Calcul linéaire", formule: "fonction de transfert de la colonne (ondes SH) avec G<sub>0</sub> = ρV<sub>s</sub>² et ξ<sub>0</sub> ; surface = transfert × spectre du rocher", calcul: `PGA en surface = <b>${f(res.pLin, 3)} g</b> (×${f(res.pLin / pga, 3)})` },
       { titre: "Calcul linéaire équivalent", formule: "γ<sub>eff</sub> = 0,65·γ<sub>max</sub> → G/G<sub>0</sub>(γ<sub>eff</sub>), ξ(γ<sub>eff</sub>) (Darendeli) → nouveau calcul, jusqu'à stabilité", calcul: `${res.eql.iterations} itérations ; γ<sub>max</sub> jusqu'à ${f(gmax * 100, 3)} % ; G/G<sub>0</sub> minimal ${fd(gg0, 3)} ; PGA en surface = <b>${f(res.pEql, 3)} g</b> (×${f(res.pEql / pga, 3)})` },

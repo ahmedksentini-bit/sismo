@@ -69,14 +69,16 @@ export function garde(idSortie, fn) {
  * Note de calcul d'un calculateur : données, puis étapes numérotées — titre, formule littérale, application
  * numérique et résultat —, enfin la conclusion. Chaînes HTML (indices et exposants permis). Ouverte par défaut,
  * repliable, imprimée ouverte dans le polycopié.
- * etapes : [{ titre, formule?, calcul?, note? }] ; donnees : [[libellé, valeur]].
+ * etapes : [{ titre, formule?, calcul?, note?, schema?, legende? }] ; donnees : [[libellé, valeur]]. Le schéma (SVG de
+ * src/schemas-notes.js, dessiné avec les valeurs du calcul) se place sous l'application numérique de son étape.
  */
 export function noteCalcul({ titre = "Note de calcul", donnees = [], etapes = [], conclusion = "" } = {}) {
   return `<details class="note-calcul" open><summary>${titre}</summary><div class="nc-corps">
     ${donnees.length ? `<p class="nc-donnees"><span class="nc-tete">Données</span>${donnees.map(([k, v]) => `<span>${k}${/^[a-zà-ÿ]{4,}/.test(k.replace(/<[^>]+>/g, "")) ? " :" : " ="} <b>${v}</b></span>`).join("")}</p>` : ""}
     <ol class="nc-etapes">${etapes.filter(Boolean).map((e) => `<li><span class="nc-titre">${e.titre}</span>${
       e.formule ? `<span class="nc-formule">${e.formule}</span>` : ""}${e.calcul ? `<span class="nc-calcul">${e.calcul}</span>` : ""}${
-      e.note ? `<span class="nc-note">${e.note}</span>` : ""}</li>`).join("")}</ol>
+      e.note ? `<span class="nc-note">${e.note}</span>` : ""}${
+      e.schema ? `<figure class="nc-schema">${e.schema}${e.legende ? `<figcaption>${e.legende}</figcaption>` : ""}</figure>` : ""}</li>`).join("")}</ol>
     ${conclusion ? `<p class="nc-conclusion">${conclusion}</p>` : ""}</div></details>`;
 }
 

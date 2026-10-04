@@ -6,6 +6,7 @@ import { svg, texte, graphe, echantillon, COULEURS } from "./figures.js";
 import Gmpe from "./sismo/gmpe.js";
 import Psha from "./sismo/psha.js";
 import Spectre from "./sismo/spectre.js";
+import { gaussienne, zonePSHA } from "./schemas-notes.js";
 
 // ── Médiane, dispersion et probabilité de dépassement ────────────────────
 const majGMPE = garde("gmOut", () => {
@@ -33,7 +34,9 @@ const majGMPE = garde("gmOut", () => {
       { titre: "Dispersion totale", formule: "σ = √(τ² + φ²)", calcul: `σ = √(${fd(c.tau, 3)}² + ${fd(c.phi, 3)}²) = <b>${fd(c.sigma, 3)}</b>` },
       { titre: "Écart réduit du seuil", formule: "ε = (ln y − ln PGA<sub>méd</sub>) / σ", calcul: `ε = (${fd(Math.log(y), 3)} − ${fd(c.ln, 3)}) / ${fd(c.sigma, 3)} = <b>${fd(z, 3)}</b>` },
       { titre: "Probabilité de dépassement (loi normale tronquée à ± 3σ)", formule: "P = (Φ(3) − Φ(ε)) / (Φ(3) − Φ(−3))",
-        calcul: z >= 3 ? "ε ≥ 3 : P = 0" : z <= -3 ? "ε ≤ −3 : P = 1" : `Φ(ε) = ${fd(Phi(z), 4)} ; P = (${fd(Phi(3), 5)} − ${fd(Phi(z), 4)}) / ${fd(Phi(3) - Phi(-3), 5)} = <b>${fd(100 * P, 2)} %</b>` },
+        calcul: z >= 3 ? "ε ≥ 3 : P = 0" : z <= -3 ? "ε ≤ −3 : P = 1" : `Φ(ε) = ${fd(Phi(z), 4)} ; P = (${fd(Phi(3), 5)} − ${fd(Phi(z), 4)}) / ${fd(Phi(3) - Phi(-3), 5)} = <b>${fd(100 * P, 2)} %</b>`,
+        schema: gaussienne({ eps: z, P, med: Math.exp(c.ln), sigma: c.sigma, y }),
+        legende: "ln PGA suit une loi normale autour de la médiane de la loi ; le seuil y se place à ε écarts types. La probabilité de dépassement est l'aire rouge, sous la courbe tronquée à ± 3σ et renormalisée." },
       { titre: "Fractile à 84 %", formule: "PGA<sub>84</sub> = PGA<sub>méd</sub>·e<sup>σ</sup>", calcul: `${f(Math.exp(c.ln), 3)} × ${f(Math.exp(c.sigma), 3)} = <b>${f(Math.exp(c.ln + c.sigma), 3)} g</b>` },
     ],
   });
@@ -114,7 +117,9 @@ const majPSHA = garde("psOut", () => {
       { titre: "Répartition dans la zone", formule: `grille de ${modele.pasGrille} km : N points ; chaque point reçoit λ<sub>i</sub>/N`, calcul: `N = <b>${pts.length}</b> points` },
       { titre: `Un terme de la somme : classe M ${fd(cl.M, 2)}, point de la grille à ${fd(Rex, 1)} km du site`, formule: "λ<sub>i</sub>/N × P(PGA &gt; y | M, R), P moyennée sur les trois lois (arbre logique)",
         calcul: `pour y = ${f(a475, 3)} g : P = (${lois3.map((x) => fd(x, 4)).join(" + ")}) / 3 = ${fd(pMoy, 4)} ; terme = ${f(cl.taux, 3)} / ${pts.length} × ${fd(pMoy, 4)} = <b>${sci((cl.taux / pts.length) * pMoy)} /an</b>`,
-        note: "Choisi près du scénario moyen de la désagrégation ; la courbe somme tous les points et toutes les classes." },
+        note: "Choisi près du scénario moyen de la désagrégation ; la courbe somme tous les points et toutes les classes.",
+        schema: zonePSHA({ polygone: zone.polygone, points: pts, ex: pt }),
+        legende: "Vue en plan : la zone source découpée en points de grille, chacun portant une part égale de la sismicité, et le point du terme détaillé, à la distance R du site." },
       { titre: "Courbe d'aléa et lecture à 10 % en 50 ans", formule: "λ(y) = Σ des termes ; P<sub>50</sub> = 1 − e<sup>−50·λ(y)</sup> ; 10 % ↔ λ = −ln(0,9)/50", calcul: `λ = ${f(lam475, 4)} /an (1/475) → interpolation log-log entre niveaux : <b>PGA = ${f(a475, 3)} g</b> ; à 2 % en 50 ans : <b>${f(a2475, 3)} g</b>` },
       { titre: "Désagrégation", formule: "part de chaque case (M, R) dans λ(PGA &gt; a<sub>475</sub>) ; M̄ = Σ part·M, R̄ = Σ part·R", calcul: `M̄ = <b>${fd(desag.mMoy, 2)}</b>, R̄ = <b>${fd(desag.rMoy, 1)} km</b>` },
     ],

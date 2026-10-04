@@ -163,4 +163,8 @@ la virgule décimale.
     (testé) ; chaque chapitre rédigé en a au moins un (testé). Ce qui se chiffre sort des solveurs (aires de Wells et
     Coppersmith, mécanismes, spectre EC8, modèle simple d'aléa, loi d'Akkar, modes du bâtiment) ; le reste est dessiné
     « de principe ». Un SVG imbriqué (sphère focale) porte sa taille en style en ligne, sinon la règle
-    `.figure-cours svg` (largeur 100 %) l'agrandit.
+    `.figure-cours svg` (largeur 100 %) l'agrandit. Les **schémas des notes de calcul** (`src/schemas-notes.js`, outils
+    communs dans `src/traits.js`) se dessinent avec les valeurs du calcul et se placent sous leur étape (`{ schema,
+    legende }` de `ui.noter`) ; ils restent lisibles dans les cas limites (station sur l'épicentre, tenseur isotrope, pas de
+    Pn…), chaque figure sert à un calculateur et ce qu'elle chiffre est ce que calcule la note (testé). Une faille
+    quelconque se dessine dans son repère (trace fixe, azimut sur une rose à part), jamais en projection géographique.

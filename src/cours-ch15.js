@@ -5,6 +5,7 @@ import { el, num, f, fd, brancher, garde, verdict, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Batiment from "./sismo/batiment.js";
 import Spectre from "./sismo/spectre.js";
+import { consoleModele, forcesEtages } from "./schemas-notes.js";
 
 const G = Spectre.G;
 // Profils du banc « bâtiment » : multiplicateurs de masse et de raideur par étage i (0 = rez-de-chaussée).
@@ -39,7 +40,9 @@ const majModes = garde("mpOut", () => {
   noter("calcModesNote", {
     donnees: [["étages", `${n} de 3 m`], ["profil", el("mpProfil").selectedOptions[0]?.textContent || profil], ["masse", `${f(masse, 4)} t par étage (×profil)`], ["raideur", `${f(raideur, 4)} kN/m par étage (×profil)`]],
     etapes: [
-      { titre: "Matrices de masse et de rigidité", formule: "M = diag(m<sub>i</sub>) ; K<sub>ii</sub> = k<sub>i</sub> + k<sub>i+1</sub>, K<sub>i,i+1</sub> = −k<sub>i+1</sub> (console de cisaillement)", calcul: `masse totale M = <b>${f(Mt, 4)} t</b>` },
+      { titre: "Matrices de masse et de rigidité", formule: "M = diag(m<sub>i</sub>) ; K<sub>ii</sub> = k<sub>i</sub> + k<sub>i+1</sub>, K<sub>i,i+1</sub> = −k<sub>i+1</sub> (console de cisaillement)", calcul: `masse totale M = <b>${f(Mt, 4)} t</b>`,
+        schema: consoleModele({ m: bat.m, k: bat.k }),
+        legende: "Planchers rigides, poteaux souples : chaque étage se réduit à une masse et à un ressort de cisaillement. La masse m<sub>i</sub> ne se couple qu'aux niveaux voisins, d'où une matrice de rigidité tridiagonale." },
       { titre: "Problème aux valeurs propres", formule: "(K − ω²·M)·φ = 0, résolu par la méthode de Jacobi ; T = 2π/ω",
         calcul: `ω<sub>1</sub> = ${f(m1.w, 4)} rad/s → T<sub>1</sub> = 2π/${f(m1.w, 4)} = <b>${f(m1.T, 3)} s</b>${n > 1 ? ` ; T<sub>2</sub> = ${f(md[1].T, 3)} s` : ""}${n > 2 ? ` ; T<sub>3</sub> = ${f(md[2].T, 3)} s` : ""}` },
       { titre: "Déformée du mode 1 (normée au sommet)", calcul: court ? `φ<sub>1</sub> = (${m1.phi.map((x) => fd(x, 3)).join(" ; ")})` : `φ<sub>1</sub> de ${fd(m1.phi[0], 3)} au premier étage à 1 au sommet` },
@@ -82,7 +85,9 @@ const majAnalyse = garde("anOut", () => {
     etapes: [
       { titre: "Ordonnée du spectre de calcul à T<sub>1</sub>", formule: "S<sub>d</sub>(T<sub>1</sub>) (expressions 3.13 à 3.16)", calcul: `T<sub>1</sub> = ${f(T1, 3)} s → S<sub>d</sub> = <b>${f(Sd(T1) / G, 3)} g</b> = ${f(Sd(T1), 3)} m/s²` },
       { titre: "Forces latérales : effort à la base", formule: "F<sub>b</sub> = S<sub>d</sub>(T<sub>1</sub>)·M·λ, λ = 0,85 si T<sub>1</sub> ≤ 2T<sub>C</sub> et plus de deux étages", calcul: `F<sub>b</sub> = ${f(Sd(T1), 3)} × ${f(M, 4)} × ${fd(fl.lambda, 2)} = <b>${f(fl.Fb, 4)} kN</b>${permis ? "" : " (méthode hors de son domaine : T<sub>1</sub> trop long ou bâtiment irrégulier)"}` },
-      { titre: "Répartition sur la hauteur", formule: "F<sub>i</sub> = F<sub>b</sub>·z<sub>i</sub>m<sub>i</sub> / Σ z<sub>j</sub>m<sub>j</sub>", calcul: `Σ z·m = ${f(szm, 4)} t·m ; au sommet : F = ${f(fl.Fb, 4)} × ${f(zc[n - 1], 3)} × ${f(bat.m[n - 1], 4)} / ${f(szm, 4)} = <b>${f(fl.F[n - 1], 4)} kN</b>` },
+      { titre: "Répartition sur la hauteur", formule: "F<sub>i</sub> = F<sub>b</sub>·z<sub>i</sub>m<sub>i</sub> / Σ z<sub>j</sub>m<sub>j</sub>", calcul: `Σ z·m = ${f(szm, 4)} t·m ; au sommet : F = ${f(fl.Fb, 4)} × ${f(zc[n - 1], 3)} × ${f(bat.m[n - 1], 4)} / ${f(szm, 4)} = <b>${f(fl.F[n - 1], 4)} kN</b>`,
+        schema: forcesEtages({ z: zc, F: fl.F, Fb: fl.Fb }),
+        legende: "Forces à l'échelle : proportionnelles à z<sub>i</sub>·m<sub>i</sub>, elles croissent avec la hauteur comme la déformée du premier mode ; leur somme est l'effort à la base F<sub>b</sub>." },
       { titre: "Analyse modale : effort à la base de chaque mode", formule: "V<sub>b,j</sub> = S<sub>d</sub>(T<sub>j</sub>)·m<sub>eff,j</sub>", calcul: vb.map((v, j) => `mode ${j + 1} : ${f(md[j].meff, 4)} t × ${f(sp.modes[j].Sa, 3)} m/s² = ${f(v, 4)} kN`).join(" ; ") },
       { titre: `Combinaison ${regle.toUpperCase()}`, formule: regle === "srss" ? "V = √(Σ V<sub>j</sub>²)" : "V = √(Σ<sub>i</sub>Σ<sub>j</sub> ρ<sub>ij</sub>V<sub>i</sub>V<sub>j</sub>), ρ de Der Kiureghian", calcul: `V<sub>base</sub> = <b>${f(sp.V[0], 4)} kN</b> (forces latérales : ${f(fl.Fb, 4)} kN)` },
       { titre: `Limitation des dommages, étage ${iR + 1}`, formule: "d<sub>r</sub> = q·d<sub>e</sub> ; d<sub>r</sub>·ν/h ≤ 0,5 %", calcul: `d<sub>r</sub> = ${fd(q, 2)} × ${f(sp.d[iR] * 1000, 3)} = ${f(ver.dr[iR] * 1000, 3)} mm ; ${f(ver.dr[iR] * 1000, 3)} × 0,5 / 3 000 = <b>${fd(100 * ver.ratio[iR], 3)} %</b>` },

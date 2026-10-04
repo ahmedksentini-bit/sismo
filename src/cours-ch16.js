@@ -6,6 +6,7 @@ import { graphe, COULEURS } from "./figures.js";
 import Poussee from "./sismo/poussee.js";
 import Batiment from "./sismo/batiment.js";
 import Spectre from "./sismo/spectre.js";
+import { n2ADRS } from "./schemas-notes.js";
 
 const G = Spectre.G;
 // Mêmes bâtiments que le banc « poussée » : rez souple et faible (raideur × 0,5, résistance × 0,6), toiture × 2,5.
@@ -65,7 +66,9 @@ const majPoussee = garde("puOut", () => {
       { titre: "Période du système équivalent", formule: "T* = 2π·√(m*·d*<sub>y</sub> / F*<sub>y</sub>)", calcul: `T* = 2π × √(${f(c0.mEtoile, 4)} × ${f(c0.dy, 4)} / ${f(c0.Fy, 4)}) = <b>${f(c0.T, 3)} s</b>` },
       { titre: "Déplacement élastique demandé", formule: "d*<sub>et</sub> = S<sub>e</sub>(T*)·(T*/2π)²", calcul: `S<sub>e</sub>(T*) = ${f(c0.se / G, 3)} g ; d*<sub>et</sub> = ${f(c0.se, 4)} × (${f(c0.T, 3)}/2π)² = <b>${f(de * 1000, 4)} mm</b>` },
       { titre: "Déplacement cible du système équivalent (annexe B)", formule: "q<sub>u</sub> = S<sub>e</sub>(T*)·m*/F*<sub>y</sub> ; si T* ≥ T<sub>C</sub> : d*<sub>t</sub> = d*<sub>et</sub> ; sinon d*<sub>t</sub> = d*<sub>et</sub>/q<sub>u</sub>·(1 + (q<sub>u</sub> − 1)·T<sub>C</sub>/T*) ≥ d*<sub>et</sub>",
-        calcul: `q<sub>u</sub> = <b>${fd(c0.qu, 3)}</b> (${c0.regle}) → d*<sub>t</sub> = <b>${f(c0.dtEtoile * 1000, 4)} mm</b>` },
+        calcul: `q<sub>u</sub> = <b>${fd(c0.qu, 3)}</b> (${c0.regle}) → d*<sub>t</sub> = <b>${f(c0.dtEtoile * 1000, 4)} mm</b>`,
+        schema: n2ADRS({ se: (T) => se(T) / G, Ts: c0.T, TC, dy: c0.dy, ay: c0.Fy / c0.mEtoile / G, de, dt: c0.dtEtoile, sae: c0.se / G }),
+        legende: `Format accélération–déplacement : la droite de période T* coupe la demande élastique en d*<sub>et</sub> ; la capacité plafonne à F*<sub>y</sub>/m*. ${c0.T >= TC ? "T* ≥ T<sub>C</sub> : égaux déplacements, d*<sub>t</sub> = d*<sub>et</sub>." : "T* < T<sub>C</sub> : le déplacement cible dépasse d*<sub>et</sub>."}` },
       { titre: "Déplacement cible du bâtiment", formule: "d<sub>t</sub> = Γ·d*<sub>t</sub>", calcul: `d<sub>t</sub> = ${fd(c0.gamma, 4)} × ${f(c0.dtEtoile * 1000, 4)} = <b>${f(c0.dt * 1000, 4)} mm</b> ; répartition uniforme : ${f(cas[1].dt * 1000, 4)} mm` },
     ],
   });

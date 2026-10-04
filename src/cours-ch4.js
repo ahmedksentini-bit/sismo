@@ -5,6 +5,7 @@ import { graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Source from "./sismo/source.js";
 import Faille from "./sismo/faille.js";
+import { ruptureMoment } from "./schemas-notes.js";
 
 const BETA = Sismo.MODELE.vs1 * 1000;
 const moment = (Mw) => 10 ** (1.5 * Mw + 9.05);
@@ -23,7 +24,9 @@ const majMoment = garde("moOut", () => {
       { titre: "Surface rompue (en m²)", formule: "A = L × W", calcul: `A = ${f(L * 1e3, 4)} × ${f(W * 1e3, 4)} = <b>${sci(L * W * 1e6)} m²</b>` },
       { titre: "Moment sismique", formule: "M<sub>0</sub> = μ·A·D", calcul: `M<sub>0</sub> = ${fd(mu, 0)}·10<sup>9</sup> × ${sci(L * W * 1e6)} × ${f(D, 3)} = <b>${sci(M0)} N·m</b>` },
       { titre: "Magnitude de moment", formule: "Mw = (log<sub>10</sub> M<sub>0</sub> − 9,05) / 1,5", calcul: `log<sub>10</sub> M<sub>0</sub> = ${fd(Math.log10(M0), 3)} ; Mw = (${fd(Math.log10(M0), 3)} − 9,05) / 1,5 = <b>${fd(Mw, 2)}</b>`, note: `Avec la constante 9,1 de l'IASPEI : ${fd(Mw91, 2)}.` },
-      { titre: "Comparaison à Wells et Coppersmith (1994)", formule: "log<sub>10</sub> A = −3,49 + 0,91·Mw (km²) ; D = M<sub>0</sub>/(μA)", calcul: `A = 10<sup>−3,49 + 0,91 × ${fd(Mw, 2)}</sup> = ${f(Awc, 3)} km² ; D = ${sci(M0)} / (${fd(mu, 0)}·10<sup>9</sup> × ${f(Awc * 1e6, 3)}) = <b>${f(Dwc, 2)} m</b>` },
+      { titre: "Comparaison à Wells et Coppersmith (1994)", formule: "log<sub>10</sub> A = −3,49 + 0,91·Mw (km²) ; D = M<sub>0</sub>/(μA)", calcul: `A = 10<sup>−3,49 + 0,91 × ${fd(Mw, 2)}</sup> = ${f(Awc, 3)} km² ; D = ${sci(M0)} / (${fd(mu, 0)}·10<sup>9</sup> × ${f(Awc * 1e6, 3)}) = <b>${f(Dwc, 2)} m</b>`,
+        schema: ruptureMoment({ L, W, D, Awc, M0, Mw }),
+        legende: "À la même échelle, la surface rompue saisie et la surface médiane d'un séisme du même moment selon Wells et Coppersmith (1994), dessinée avec le même allongement L/W." },
     ],
   });
   el("moOut").innerHTML = `M<sub>0</sub> = ${fd(mu, 0)}·10<sup>9</sup> × ${f(L * 1e3, 4)} × ${f(W * 1e3, 4)} × ${f(D, 3)} = ${sci(M0)} N·m →
