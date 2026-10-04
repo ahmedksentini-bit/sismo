@@ -40,7 +40,9 @@ la virgule décimale.
     moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le
     déclusterage suit les conventions de HMTK (année de 364,75 j, amas, pas de condition de
-    magnitude). OpenQuake n'est jamais embarqué dans le site (AGPL).
+    magnitude). OpenQuake n'est jamais embarqué dans le site (AGPL). Les équations des lois montrées au cours
+    (chapitre 10, notes de calcul) se déroulent par `Gmpe.LOIS[id].detailler` : la somme des termes affichés est la
+    médiane du solveur (testé) ; les tableaux de coefficients (`src/gmpe-notes.js`) sont lus dans les fichiers exportés.
 13. **PSHA** (`src/sismo/psha.js`) : classes de magnitude et taux de la Gutenberg-Richter
     tronquée identiques à `TruncatedGRMFD` (arrondi au pas, centres m₀ + pas/2) ; écarts types
     tronqués à ±3σ ; PoE = 1 − exp(−λT) ; la moyenne de l'arbre porte sur les probabilités,

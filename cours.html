@@ -1549,6 +1549,60 @@
        0,61 ; la probabilité de dépasser 0,3 g lors de ce séisme vaut 19 %. Les deux autres lois donnent 0,142
        et 0,128 g : l'écart entre lois est une incertitude d'une autre nature que σ.</p></div>
 
+  <h3>Les trois lois du cours : équations et coefficients</h3>
+  <p>Toutes ont la même architecture. Un <strong>terme de source</strong> fait croître le mouvement avec la
+     magnitude, de moins en moins vite pour les grands séismes (saturation). Un <strong>terme de trajet</strong>
+     le fait décroître avec la distance : expansion géométrique en ln R ou log R, dont la pente dépend de la
+     magnitude, et parfois atténuation anélastique en −c·R ; la distance est « adoucie » en √(R<sub>jb</sub>² + h²),
+     où la pseudo-profondeur h évite une valeur infinie au droit de la faille. Un <strong>terme de site</strong>
+     corrige du rocher de référence vers le Vs30 du site, avec une part non linéaire qui réduit l'amplification
+     des sols mous sous les fortes secousses. Un <strong>terme de style</strong> distingue failles normales,
+     inverses et décrochements. Les coefficients changent avec la grandeur prédite : une ligne par période.</p>
+  <p class="method-note">Les équations ci-dessous sont celles du programme du cours, vérifiées contre OpenQuake ;
+     les coefficients sont lus dans les fichiers exportés d'OpenQuake (hazardlib), jamais recopiés à la main. Le
+     tableau en donne quelques colonnes ; entre deux périodes tabulées, on interpole linéairement en ln T. Hors du
+     domaine de validité indiqué, une loi n'est plus qu'une extrapolation.</p>
+
+  <h4>Akkar, Sandıkkaya et Bommer (2014)</h4>
+  <p class="formula">ln Y = a<sub>1</sub> + a<sub>2</sub>·(M − c<sub>1</sub>) + a<sub>3</sub>·(8,5 − M)² + [a<sub>4</sub> + a<sub>5</sub>·(M − c<sub>1</sub>)]·ln √(R<sub>jb</sub>² + a<sub>6</sub>²) + a<sub>8</sub>·F<sub>N</sub> + a<sub>9</sub>·F<sub>R</sub> + ln S</p>
+  <p class="formula">ln S = b<sub>1</sub>·ln(V<sub>s30</sub>/V<sub>ref</sub>) + b<sub>2</sub>·ln[(PGA<sub>ref</sub> + c·(V<sub>s30</sub>/V<sub>ref</sub>)<sup>n</sup>) / ((PGA<sub>ref</sub> + c)·(V<sub>s30</sub>/V<sub>ref</sub>)<sup>n</sup>)] si V<sub>s30</sub> &lt; V<sub>ref</sub> ; ln S = b<sub>1</sub>·ln(min(V<sub>s30</sub> ; V<sub>con</sub>)/V<sub>ref</sub>) sinon</p>
+  <p class="method-note">Y en g (PGA, Sa) ou cm/s (PGV). Au-dessus de M = c<sub>1</sub>, a<sub>7</sub> remplace
+     a<sub>2</sub>. F<sub>N</sub> = 1 pour une faille normale (−135° &lt; λ &lt; −45°), F<sub>R</sub> = 1 pour une
+     faille inverse (45° &lt; λ &lt; 135°), 0 sinon. PGA<sub>ref</sub> : PGA médian au rocher de référence, tiré de la
+     même équation sans ln S. Écart type σ = √(φ² + τ²), φ intra-événement, τ inter-événement.</p>
+  <p class="nc-constantes" id="gmpeConstAkkar"></p>
+  <div class="table-large"><table class="resultats coefficients" id="tabAkkar"></table></div>
+
+  <h4>Bindi et al. (2014)</h4>
+  <p class="formula">log<sub>10</sub> Y = e<sub>1</sub> + F<sub>M</sub>(M) + F<sub>D</sub>(R<sub>jb</sub>, M) + F<sub>S</sub> + F<sub>sof</sub></p>
+  <p class="formula">F<sub>M</sub> = b<sub>1</sub>·(M − M<sub>h</sub>) + b<sub>2</sub>·(M − M<sub>h</sub>)² si M &lt; M<sub>h</sub> ; b<sub>3</sub>·(M − M<sub>h</sub>) sinon</p>
+  <p class="formula">F<sub>D</sub> = [c<sub>1</sub> + c<sub>2</sub>·(M − M<sub>ref</sub>)]·log<sub>10</sub>(R/R<sub>ref</sub>) − c<sub>3</sub>·(R − R<sub>ref</sub>), R = √(R<sub>jb</sub>² + h²) ; F<sub>S</sub> = γ·log<sub>10</sub>(V<sub>s30</sub>/V<sub>ref</sub>)</p>
+  <p class="method-note">Logarithmes décimaux, Y en cm/s² (PGA, Sa) ou cm/s (PGV) : on divise par 100 puis par
+     g = 9,806 65 m/s² pour passer en g. F<sub>sof</sub> vaut sofN, sofR ou sofS selon le style de faille (décrochement :
+     glissement λ à moins de 30° de 0° ou de ±180°). Les écarts types, donnés en log<sub>10</sub>, se multiplient par ln 10 = 2,303
+     pour passer en ln.</p>
+  <p class="nc-constantes" id="gmpeConstBindi"></p>
+  <div class="table-large"><table class="resultats coefficients" id="tabBindi"></table></div>
+
+  <h4>Boore, Stewart, Seyhan et Atkinson (2014), NGA-West2</h4>
+  <p class="formula">ln Y = F<sub>E</sub>(M, style) + F<sub>P</sub>(R<sub>jb</sub>, M) + F<sub>S</sub>(V<sub>s30</sub>, PGA<sub>r</sub>)</p>
+  <p class="formula">F<sub>E</sub> = e<sub>style</sub> + e<sub>4</sub>·(M − M<sub>h</sub>) + e<sub>5</sub>·(M − M<sub>h</sub>)² si M ≤ M<sub>h</sub> ; e<sub>style</sub> + e<sub>6</sub>·(M − M<sub>h</sub>) sinon</p>
+  <p class="formula">F<sub>P</sub> = [c<sub>1</sub> + c<sub>2</sub>·(M − M<sub>ref</sub>)]·ln(R/R<sub>ref</sub>) + (c<sub>3</sub> + Δc<sub>3</sub>)·(R − R<sub>ref</sub>), R = √(R<sub>jb</sub>² + h²)</p>
+  <p class="formula">F<sub>S</sub> = c·ln(min(V<sub>s30</sub> ; V<sub>c</sub>)/V<sub>ref</sub>) + f<sub>1</sub> + f<sub>2</sub>·ln((PGA<sub>r</sub> + f<sub>3</sub>)/f<sub>3</sub>), f<sub>2</sub> = f<sub>4</sub>·[e<sup>f<sub>5</sub>·(min(V<sub>s30</sub> ; 760) − 360)</sup> − e<sup>f<sub>5</sub>·(760 − 360)</sup>]</p>
+  <p class="method-note">Y en g (PGA, Sa) ou cm/s (PGV). e<sub>style</sub> = e<sub>1</sub> (décrochement),
+     e<sub>2</sub> (normale) ou e<sub>3</sub> (inverse) ; e<sub>0</sub> sert quand le style est inconnu. PGA<sub>r</sub> :
+     PGA médian au rocher de référence (V<sub>s30</sub> = 760 m/s), tiré de F<sub>E</sub> + F<sub>P</sub>. Sans terme de
+     bassin. τ passe de τ<sub>1</sub> à τ<sub>2</sub> entre M 4,5 et 5,5 ; φ de φ<sub>1</sub> à φ<sub>2</sub> de même,
+     augmenté de Δφ<sub>R</sub> au-delà de R<sub>1</sub> (atteint à R<sub>2</sub>) et diminué de Δφ<sub>V</sub> pour les
+     sols mous (V<sub>s30</sub> ≤ 300 m/s) ; σ = √(τ² + φ²).</p>
+  <p class="nc-constantes" id="gmpeConstBoore"></p>
+  <div class="table-large"><table class="resultats coefficients" id="tabBoore"></table></div>
+
+  <h4>Exemple : les trois lois terme à terme</h4>
+  <p>Mw 6 à R<sub>jb</sub> = 10 km, rocher (V<sub>s30</sub> = 800 m/s), décrochement : chaque terme se calcule avec
+     les coefficients de la colonne PGA, et leur somme donne la médiane de l'exemple ci-dessus.</p>
+  <div id="exGmpe"></div>
+
   <div class="calc" id="calcGMPE">
     <h3>Médiane, dispersion et probabilité de dépassement</h3>
     <div class="data-grid">
@@ -1558,6 +1612,8 @@
         <div class="input-wrap"><input id="gmR" type="text" inputmode="decimal" value="10" data-curseur="1 200 1"><span class="unit">km</span></div></div>
       <div class="field"><label for="gmLoi">Loi</label>
         <div class="input-wrap"><select id="gmLoi"><option value="boore2014">Boore et al. (2014)</option><option value="akkar2014">Akkar et al. (2014)</option><option value="bindi2014">Bindi et al. (2014)</option></select></div></div>
+      <div class="field"><label for="gmImt">Grandeur</label>
+        <div class="input-wrap"><select id="gmImt"><option value="PGA">PGA</option><option value="0.2">Sa(0,2 s)</option><option value="0.5">Sa(0,5 s)</option><option value="1">Sa(1 s)</option><option value="2">Sa(2 s)</option></select></div></div>
       <div class="field"><label for="gmY">Seuil d'accélération</label>
         <div class="input-wrap"><input id="gmY" type="text" inputmode="decimal" value="0.3" data-curseur="0.01 1 0.01"><span class="unit">g</span></div></div>
     </div>
