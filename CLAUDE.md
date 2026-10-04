@@ -145,6 +145,8 @@ la virgule décimale.
     (`src/exos/chNN.js`) tirent leurs lectures du générateur et appliquent les règles du cours aux valeurs arrondies ;
     les banques `data/exercices-chN.json` se régénèrent par `npm run exercices` (test de reproductibilité). Les
     exemples chiffrés du texte sont testés. Les anciennes ancres de bancs sur `index.html` redirigent vers `labo.html`.
+    Chaque calculateur écrit sa **note de calcul** (`ui.noter` dans `<div id="calc…Note">`) : données, puis pour chaque
+    étape la formule littérale, l'application numérique et le résultat, avec les valeurs mêmes du calcul (testé).
 30. **Globe** (`src/sismo/globe.js`) : Terre à symétrie sphérique ak135, dont le modèle (`coefficients/ak135.js`)
     est exporté d'ObsPy par `tools/obspy/globe.py`, jamais recopié à la main. Sous-couches ≤ 10 km, vitesses
     linéaires en profondeur entre nœuds, loi de Bullen v = A·r^B par sous-couche (Δ et T en forme close), nœud

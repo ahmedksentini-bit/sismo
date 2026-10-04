@@ -29,12 +29,12 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 
 /** Nombre au format français, chiffres significatifs. */
 export const f = (x, c = 3) => (Number.isFinite(x)
-  ? Number(x).toLocaleString("fr-FR", { maximumSignificantDigits: c })
+  ? Number(x).toLocaleString("fr-FR", { maximumSignificantDigits: c }).replace("-", "−")
   : "—");
 
 /** Nombre au format français, décimales fixes. */
 export const fd = (x, d = 2) => (Number.isFinite(x)
-  ? Number(x).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d })
+  ? Number(x).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }).replace("-", "−")
   : "—");
 
 /** Pastille de verdict. */
@@ -63,4 +63,25 @@ export function garde(idSortie, fn) {
       console.error(e);
     }
   };
+}
+
+/**
+ * Note de calcul d'un calculateur : données, puis étapes numérotées — titre, formule littérale, application
+ * numérique et résultat —, enfin la conclusion. Chaînes HTML (indices et exposants permis). Ouverte par défaut,
+ * repliable, imprimée ouverte dans le polycopié.
+ * etapes : [{ titre, formule?, calcul?, note? }] ; donnees : [[libellé, valeur]].
+ */
+export function noteCalcul({ titre = "Note de calcul", donnees = [], etapes = [], conclusion = "" } = {}) {
+  return `<details class="note-calcul" open><summary>${titre}</summary><div class="nc-corps">
+    ${donnees.length ? `<p class="nc-donnees"><span class="nc-tete">Données</span>${donnees.map(([k, v]) => `<span>${k}${/^[a-zà-ÿ]{4,}/.test(k.replace(/<[^>]+>/g, "")) ? " :" : " ="} <b>${v}</b></span>`).join("")}</p>` : ""}
+    <ol class="nc-etapes">${etapes.filter(Boolean).map((e) => `<li><span class="nc-titre">${e.titre}</span>${
+      e.formule ? `<span class="nc-formule">${e.formule}</span>` : ""}${e.calcul ? `<span class="nc-calcul">${e.calcul}</span>` : ""}${
+      e.note ? `<span class="nc-note">${e.note}</span>` : ""}</li>`).join("")}</ol>
+    ${conclusion ? `<p class="nc-conclusion">${conclusion}</p>` : ""}</div></details>`;
+}
+
+/** Écrit la note de calcul dans le conteneur `id` (vide si la note est nulle). */
+export function noter(id, note) {
+  const e = el(id);
+  if (e) e.innerHTML = note ? noteCalcul(note) : "";
 }

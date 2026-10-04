@@ -330,3 +330,22 @@ a.brand strong,a.brand small{text-decoration:none}
 .plage-etat{font-size:12.5px;font-weight:800;color:#166534}
 .plage-etat.impose{color:#b45309}
 @media print{.plage-choix{display:none}}
+/* Note de calcul des calculateurs du cours */
+.note-calcul{margin:14px 0 0;border:1px solid #cbd5e1;border-radius:12px;background:#fff}
+.note-calcul>summary{cursor:pointer;padding:10px 14px;font-weight:800;color:#0f172a;list-style:none}
+.note-calcul>summary::-webkit-details-marker{display:none}
+.note-calcul>summary::before{content:"▸ ";color:var(--blue)}
+.note-calcul[open]>summary::before{content:"▾ "}
+.nc-corps{padding:2px 16px 14px;border-top:1px solid #e2e8f0}
+.nc-donnees{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 0 4px;font-size:14px;color:#334155}
+.nc-donnees .nc-tete{font-weight:800;color:#075985}
+.nc-donnees b{font-weight:700;color:#0f172a}
+.nc-etapes{margin:6px 0 0;padding-left:24px;font-size:14.5px;line-height:1.55}
+.nc-etapes li{margin:9px 0;break-inside:avoid}
+.nc-etapes li>span{display:block}
+.nc-titre{font-weight:700;color:#075985}
+.nc-formule{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:15.5px;color:#0f172a}
+.nc-calcul{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.nc-note{color:var(--muted);font-size:13px}
+.nc-conclusion{margin:10px 0 0;padding:8px 12px;border-left:4px solid var(--blue);background:#f0f9ff;font-weight:600}
+@media print{.note-calcul>summary::before{content:""}}

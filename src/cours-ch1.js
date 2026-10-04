@@ -2,7 +2,8 @@
 // générateur des bancs), distance et heure d'origine à partir des lectures, magnitude locale,
 // accélération médiane en fonction de la distance (moyenne des trois lois d'atténuation du cours) ; coupe du globe
 // avec ses couches et les rais des principales phases (src/globe-figure.js).
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
+import Gmpe from "./sismo/gmpe.js";
 import { svg, texte, ligne, graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Accelero from "./sismo/accelerogramme.js";
@@ -57,7 +58,23 @@ const majSismo = garde("smOut", () => {
       return s;
     },
   });
-  const sp = tt.tSg - tt.tP;
+  const sp = tt.tSg - tt.tP, m = Sismo.MODELE, ic = Math.asin(m.vp1 / m.vp2), xc = (2 * m.H - h) * Math.tan(ic), ti = ((2 * m.H - h) * Math.cos(ic)) / m.vp1;
+  const pn = tt.tPn !== null && tt.tPn < tt.tPg;
+  noter("calcSismoNote", {
+    donnees: [["Δ", `${fd(delta, 0)} km`], ["h", `${fd(h, 0)} km`], ["croûte", `H = ${m.H} km, Vp = ${fd(m.vp1, 1)} km/s, Vs = ${fd(m.vs1, 1)} km/s`], ["manteau", `Vp₂ = ${fd(m.vp2, 1)} km/s`]],
+    etapes: [
+      { titre: "Distance au foyer", formule: "R = √(Δ² + h²)", calcul: `R = √(${fd(delta, 0)}² + ${fd(h, 0)}²) = <b>${fd(tt.R, 1)} km</b>` },
+      { titre: "Onde P directe (Pg), temps depuis l'origine", formule: "t<sub>Pg</sub> = R / Vp", calcul: `t<sub>Pg</sub> = ${fd(tt.R, 1)} / ${fd(m.vp1, 1)} = <b>${fd(tt.tPg, 2)} s</b>` },
+      { titre: "Onde P réfractée sur le Moho (Pn)", formule: "sin i<sub>c</sub> = Vp/Vp₂ ; x<sub>c</sub> = (2H − h)·tan i<sub>c</sub> ; t<sub>Pn</sub> = Δ/Vp₂ + (2H − h)·cos i<sub>c</sub>/Vp",
+        calcul: `i<sub>c</sub> = arcsin(${fd(m.vp1, 1)}/${fd(m.vp2, 1)}) = ${fd((ic * 180) / Math.PI, 1)}° ; x<sub>c</sub> = (${2 * m.H} − ${fd(h, 0)}) × ${fd(Math.tan(ic), 3)} = ${fd(xc, 0)} km${
+          tt.tPn === null ? ` > Δ : <b>pas encore d'onde réfractée</b>` : ` ; t<sub>Pn</sub> = ${fd(delta, 0)}/${fd(m.vp2, 1)} + ${fd(ti, 2)} = <b>${fd(tt.tPn, 2)} s</b>`}` },
+      { titre: "Première onde P", calcul: `t<sub>P</sub> = ${tt.tPn === null ? `t<sub>Pg</sub>` : `min(${fd(tt.tPg, 2)} ; ${fd(tt.tPn, 2)})`} = <b>${fd(tt.tP, 2)} s</b> (${pn ? "Pn" : "Pg"})` },
+      { titre: "Onde S directe", formule: "t<sub>S</sub> = R / Vs", calcul: `t<sub>S</sub> = ${fd(tt.R, 1)} / ${fd(m.vs1, 1)} = <b>${fd(tt.tSg, 2)} s</b>` },
+      { titre: "Distance lue sur l'écart S − P", formule: "R ≈ k·(t<sub>S</sub> − t<sub>P</sub>), avec k = Vp·Vs/(Vp − Vs)",
+        calcul: `k = ${fd(m.vp1, 1)} × ${fd(m.vs1, 1)} / (${fd(m.vp1, 1)} − ${fd(m.vs1, 1)}) = ${fd(K, 2)} km/s ; S − P = ${fd(tt.tSg, 2)} − ${fd(tt.tP, 2)} = ${fd(sp, 2)} s ; R ≈ ${fd(K, 2)} × ${fd(sp, 2)} = <b>${fd(Sismo.distanceSP(sp), 1)} km</b>`,
+        note: pn ? "La première P est Pn, plus rapide que l'onde directe : S − P est trop court et la règle sous-estime R." : "La règle suppose les deux ondes directes : elle redonne R." },
+    ],
+  });
   el("smOut").innerHTML = `P à ${fd(tt.tP - debut, 1)} s · S à ${fd(tt.tSg - debut, 1)} s · S − P = ${fd(sp, 1)} s →
     <strong>R ≈ ${fd(K, 1)} × ${fd(sp, 1)} = ${fd(Sismo.distanceSP(sp), 0)} km</strong>
     <small>distance vraie au foyer : ${fd(tt.R, 0)} km${tt.tPn !== null && tt.tPn < tt.tPg ? " — la première onde P est passée par le manteau (Pn) : la règle surestime un peu" : ""}.</small>`;
@@ -71,6 +88,16 @@ const majSP = garde("spOut", () => {
   if (!(tS > tP)) { el("spOut").textContent = "L'onde S arrive après l'onde P : tS doit dépasser tP."; return; }
   const sp = tS - tP, R = Sismo.distanceSP(sp), t0 = Sismo.origineDepuis(tP, sp);
   const epi = R > h ? Math.sqrt(R * R - h * h) : null;
+  noter("calcSPNote", {
+    donnees: [["t<sub>P</sub>", `${fd(tP, 1)} s`], ["t<sub>S</sub>", `${fd(tS, 1)} s`], ["h", `${fd(h, 0)} km`], ["Vp, Vs", `${fd(VP, 1)} et ${fd(VS, 1)} km/s`]],
+    etapes: [
+      { titre: "Écart des deux lectures", formule: "S − P = t<sub>S</sub> − t<sub>P</sub>", calcul: `S − P = ${fd(tS, 1)} − ${fd(tP, 1)} = <b>${fd(sp, 1)} s</b>` },
+      { titre: "Coefficient de la règle", formule: "k = Vp·Vs / (Vp − Vs)", calcul: `k = ${fd(VP, 1)} × ${fd(VS, 1)} / (${fd(VP, 1)} − ${fd(VS, 1)}) = <b>${fd(K, 2)} km/s</b>`, note: "Les deux ondes parcourent R : R/Vs − R/Vp = S − P." },
+      { titre: "Distance au foyer", formule: "R = k·(S − P)", calcul: `R = ${fd(K, 2)} × ${fd(sp, 1)} = <b>${fd(R, 1)} km</b>` },
+      { titre: "Distance à l'épicentre", formule: "Δ = √(R² − h²)", calcul: epi === null ? `R = ${fd(R, 1)} km &lt; h = ${fd(h, 0)} km : <b>lectures incohérentes</b>` : `Δ = √(${fd(R, 1)}² − ${fd(h, 0)}²) = <b>${fd(epi, 1)} km</b>` },
+      { titre: "Heure d'origine", formule: "t<sub>0</sub> = t<sub>P</sub> − R/Vp", calcul: `t<sub>0</sub> = ${fd(tP, 1)} − ${fd(R, 1)}/${fd(VP, 1)} = ${fd(tP, 1)} − ${fd(R / VP, 2)} = <b>${fd(t0, 1)} s</b>` },
+    ],
+  });
   el("spOut").innerHTML = `S − P = ${fd(sp, 1)} s → <strong>R ≈ ${fd(K, 1)} × ${fd(sp, 1)} = ${fd(R, 0)} km</strong> ·
     épicentre à ${epi === null ? "—" : `√(R² − h²) = ${fd(epi, 0)} km`} ·
     <strong>t<sub>0</sub> = t<sub>P</sub> − R/Vp = ${fd(tP, 1)} − ${fd(R / VP, 1)} = ${fd(t0, 1)} s</strong>
@@ -84,6 +111,16 @@ const majML = garde("mlOut", () => {
   if (!(Number.isFinite(la) && R > 0)) { el("mlOut").textContent = "Saisir l'amplitude et la distance."; return; }
   const A = 10 ** la, corr = 1.11 * Math.log10(R) + 0.00189 * R - 2.09, ml = Sismo.ML(A, R);
   const ecrit = A >= 1e6 ? `${f(A / 1e6, 3)} mm` : A >= 1e3 ? `${f(A / 1e3, 3)} µm` : `${f(A, 3)} nm`;
+  noter("calcMLNote", {
+    donnees: [["A (Wood-Anderson)", `${ecrit} = ${f(A, 4)} nm`], ["R", `${fd(R, 0)} km`]],
+    etapes: [
+      { titre: "Logarithme de l'amplitude (en nm)", formule: "log<sub>10</sub> A", calcul: `log<sub>10</sub>(${f(A, 4)}) = <b>${fd(la, 2)}</b>` },
+      { titre: "Correction de distance (IASPEI 2013)", formule: "−log<sub>10</sub> A<sub>0</sub>(R) = 1,11·log<sub>10</sub> R + 0,00189·R − 2,09",
+        calcul: `1,11 × log<sub>10</sub>(${fd(R, 0)}) + 0,00189 × ${fd(R, 0)} − 2,09 = 1,11 × ${fd(Math.log10(R), 3)} + ${fd(0.00189 * R, 3)} − 2,09 = <b>${fd(corr, 2)}</b>` },
+      { titre: "Magnitude locale", formule: "ML = log<sub>10</sub> A − log<sub>10</sub> A<sub>0</sub>(R)", calcul: `ML = ${fd(la, 2)} + ${fd(corr, 2)} = <b>${fd(ml, 2)}</b> ≈ ${fd(ml, 1)}` },
+    ],
+    conclusion: "En pratique, on fait la moyenne des ML des deux composantes horizontales et des stations du réseau.",
+  });
   el("mlOut").innerHTML = `A = ${ecrit} · log<sub>10</sub> A = ${fd(la, 2)} · correction de distance 1,11·log<sub>10</sub> R + 0,00189·R − 2,09 = ${fd(corr, 2)}
     → <strong>ML = ${fd(ml, 1)}</strong>
     <small>À la même distance, une amplitude dix fois plus grande donnerait ML = ${fd(ml + 1, 1)}.</small>`;
@@ -103,6 +140,16 @@ const majPGA = garde("pgOut", () => {
     xlabel: "distance Rjb (km)", ylabel: "accélération maximale médiane (g)",
     series: [serie(M - 1, COULEURS.discret, 1.6, "5 4"), serie(M, COULEURS.bleu, 2.8), serie(M + 1, COULEURS.violet, 1.6, "5 4")].filter((x) => x.points.length),
     marques: [{ x: R, y: ici, couleur: COULEURS.effort, guides: true, libelle: `${f(ici, 2)} g` }],
+  });
+  const lois = [["Akkar et al. (2014)", "akkar2014"], ["Bindi et al. (2014)", "bindi2014"], ["Boore et al. (2014)", "boore2014"]].map(([nom, id]) => [nom, Gmpe.LOIS[id].calculer({ M, Rjb: R, vs30: 800, rake: 0 }, "PGA").ln]);
+  const lnm = lois.reduce((s, [, l]) => s + l, 0) / 3;
+  noter("calcPGANote", {
+    donnees: [["Mw", fd(M, 1)], ["R<sub>jb</sub>", `${fd(R, 0)} km`], ["V<sub>s30</sub>", "800 m/s (rocher)"], ["mécanisme", "décrochement"]],
+    etapes: [
+      ...lois.map(([nom, l]) => ({ titre: `Médiane : ${nom}`, formule: "ln PGA = f(Mw, R<sub>jb</sub>, V<sub>s30</sub>) (coefficients de la loi)", calcul: `ln PGA = ${fd(l, 3)} → PGA = e<sup>${fd(l, 3)}</sup> = <b>${f(Math.exp(l), 3)} g</b>` })),
+      { titre: "Médiane des trois lois, à poids égaux", formule: "ln PGA = (ln PGA₁ + ln PGA₂ + ln PGA₃) / 3", calcul: `ln PGA = (${lois.map(([, l]) => fd(l, 3)).join(" + ")}) / 3 = ${fd(lnm, 3)} → PGA = e<sup>${fd(lnm, 3)}</sup> = <b>${f(ici, 3)} g</b>`,
+        note: "On moyenne les logarithmes (médiane géométrique) : les lois sont log-normales." },
+    ],
   });
   el("pgOut").innerHTML = `Mw ${fd(M, 1)} à ${fd(R, 0)} km : accélération maximale médiane au rocher <strong>${f(ici, 2)} g</strong>
     <small>à 2 × ${fd(R, 0)} km : ${f(pga(M, 2 * R), 2)} g · une magnitude de plus à la même distance : ${f(pga(M + 1, R), 2)} g.</small>`;
