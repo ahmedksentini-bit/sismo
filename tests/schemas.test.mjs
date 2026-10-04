@@ -17,7 +17,7 @@ test('chaque schéma a un conteneur unique dans le cours et se dessine sans vale
     assert.ok(!/NaN|undefined|Infinity/.test(s), `${id} : valeur manquante`);
     assert.ok(legende.length > 40, id);
   }
-  assert.ok(cours.includes('<script type="module" src="src/cours-schemas.js"></script>'));
+  assert.match(cours, /<script type="module" src="src\/cours-schemas\.js(\?v=[0-9a-f]+)?"><\/script>/);
 });
 
 test('ruptures : aires de Wells et Coppersmith, glissement M0/(μA), légende cohérente', () => {

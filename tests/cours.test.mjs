@@ -81,7 +81,7 @@ test('pages : chaque fichier local référencé existe ; chaque champ lu par un 
       assert.ok(existsSync(new URL(`../${cible}`, import.meta.url)), `${page} → ${cible}`);
     }
   }
-  const scripts = [...cours.matchAll(/src="(src\/cours-[^"]+)"/g)].map(m => m[1]);
+  const scripts = [...cours.matchAll(/src="(src\/cours-[^"?]+)/g)].map(m => m[1]);
   assert.ok(scripts.length >= 1);
   for (const s of scripts) {
     const ids = new Set([...lire(s).matchAll(/(?:el|num)\("([A-Za-z0-9]+)"/g)].map(m => m[1]));

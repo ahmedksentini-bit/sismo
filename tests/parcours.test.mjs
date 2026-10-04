@@ -31,7 +31,7 @@ test('ancres uniques et réversibles ; précédent et suivant enchaînent tout l
 });
 
 test('chaque banc a un script qui l\'ouvre sur « banc:ouvert », chargé par labo.html', () => {
-  const scripts = [...html.matchAll(/<script type="module" src="(src\/[^"]+)"/g)].map(m => m[1]);
+  const scripts = [...html.matchAll(/<script type="module" src="(src\/[^"?]+)/g)].map(m => m[1]);
   const textes = scripts.map(s => readFileSync(new URL(`../${s}`, import.meta.url), 'utf-8'));
   for (const b of P.ordre.filter(x => x !== 'station' && x !== 'reseau')) assert.ok(textes.some(t => t.includes(`'${b}'`) && t.includes('banc:ouvert')), `script de ${b}`);
   // aucun script de banc oublié dans src/

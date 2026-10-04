@@ -222,3 +222,10 @@ la virgule décimale.
     déclenche de temps en temps, c'est attendu. Côtes et pays Natural Earth produits par `tools/carte/cotes.py` et
     `tools/carte/pays.py`. Essai local sans réseau : `node tools/direct/serveurs-essai.mjs` puis `wrangler pages dev .
     --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding "FDSN_ESSAI=http://127.0.0.1:8090/{centre}"`.
+35. **Versions** (`tools/versions.mjs`, `npm run versions`) : chaque page qui charge des modules porte en tête une carte
+    d'import (`<script type="importmap">`) qui donne à chaque module de `src/` l'empreinte de son contenu (`?v=`, 10
+    caractères de SHA-256) ; scripts d'entrée et feuilles de style la portent dans leur attribut. Les pages HTML ne sont
+    pas gardées en cache mais les scripts peuvent l'être plusieurs heures : sans versions, une page neuve exécutait
+    d'anciens modules (la page « En direct » appelait un relais disparu). À relancer après toute modification d'un
+    script ou d'une feuille de style, ne jamais modifier la carte à la main ; un script d'entrée n'est importé par aucun
+    module (testé).
