@@ -209,6 +209,31 @@ test('chapitre 6 : le globe, les phases et la zone d\'ombre', async () => {
     'donnerait 4 100 km au lieu de 6 700', 'entre ~100° et ~145°']) assert.ok(cours.includes(x), x);
 });
 
+test('chapitre 6 : profondeur par pP et sP', async () => {
+  const G = (await import('../src/sismo/globe.js')).default;
+  const mmss = s => `${Math.floor(s / 60)} min ${(s % 60).toFixed(1).replace('.', ',')} s`;
+  assert.equal(mmss(G.arrivees('P', 100, 60)[0].temps), '9 min 56,0 s');
+  assert.equal(G.retard('pP', 100, 60).toFixed(1), '24.6');
+  assert.equal(G.retard('sP', 100, 60).toFixed(1), '35.7');
+  assert.equal(mmss(G.retard('pP', 600, 60)), '1 min 55,7 s');
+  // vitesse moyenne de 0 à 100 km (temps vertical dans ak135) et angle du rai au foyer
+  let tv = 0;
+  for (let z = 0.05; z < 100; z += 0.1) {
+    const M = G.modele, i = M.findIndex((l, j) => j && M[j - 1][0] <= z && l[0] > z), [z1, v1] = M[i - 1], [z2, v2] = M[i];
+    tv += 0.1 / (v1 + ((v2 - v1) * (z - z1)) / (z2 - z1));
+  }
+  assert.equal((100 / tv).toFixed(1), '7.2');
+  assert.equal(Math.round(G.arrivees('P', 100, 60)[0].depart), 30);
+  assert.ok(Math.abs(180 - G.arrivees('pP', 100, 60)[0].depart - 30) < 1);
+  assert.equal(Math.round(2 * 100 * Math.cos(Math.PI / 6) / 7.2), 24);
+  // le retard croît un peu avec la distance, sP suit à environ une fois et demie le retard de pP
+  assert.ok(G.retard('pP', 100, 40) < G.retard('pP', 100, 90));
+  const q = G.retard('sP', 100, 60) / G.retard('pP', 100, 60);
+  assert.ok(q > 1.35 && q < 1.6, q);
+  for (const x of ['P arrive après 9 min 56,0 s ; pP le suit de <strong>24,6 s</strong> et sP\n       de 35,7 s',
+    '2 × 100 × cos 30° / 7,2 ≈ 24 s', 'pP − P atteint 1 min 55,7 s']) assert.ok(cours.includes(x), x);
+});
+
 test('chapitre 7 : les exemples chiffrés du texte', async () => {
   const S = (await import('../src/sismo/spectre.js')).default;
   const se = (T, type = 1) => S.ec8(T, { type, sol: 'C', ag: 0.2 });

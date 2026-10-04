@@ -1,4 +1,5 @@
-// Calculateurs du chapitre 6 : couches du globe et phases à travers lui (Globe, vérifié contre TauP) ; hodochrones
+// Calculateurs du chapitre 6 : couches du globe et phases à travers lui (Globe, vérifié contre TauP), zone de
+// subduction, profondeur d'un séisme lointain par pP et sP ; hodochrones
 // Pg et Pn d'une croûte sur manteau (temps vrais ou réduits), inversion d'un profil de premières arrivées (vitesses,
 // intercept, épaisseur), sismique réfraction de site.
 import { el, num, f, fd, brancher, garde, lireTableau, esc } from "./ui.js";
@@ -6,7 +7,7 @@ import { graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Refraction from "./sismo/refraction.js";
 import Globe from "./sismo/globe.js";
-import { globe, eventail, raisVers, COULEURS_PHASES } from "./globe-figure.js";
+import { globe, eventail, raisVers, foyer, subduction, COULEURS_PHASES } from "./globe-figure.js";
 
 // Moindres carrés t = ti + Δ/V sur des points [Δ, t].
 function droiteMC(pts) {
@@ -140,3 +141,49 @@ const majGlobe = garde("glOut", () => {
     : "Aucune des phases calculées n'atteint cette distance.";
 });
 brancher(["glH", "glD", "glVue"], majGlobe);
+
+// ── Plaques, profondeur des séismes et phases de profondeur ──────────────
+
+{
+  const z = el("figSubduction");
+  if (z) z.innerHTML = `<div style="max-width:560px;margin:0 auto">${subduction()}</div>`;
+}
+
+// Retards pP − P et sP − P en fonction de la profondeur, mémorisés par distance (branches rapides de Globe).
+const PROF = [1, 25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700], courbes = new Map();
+const courbe = (ph, d) => {
+  const cle = `${ph}|${d}`;
+  if (!courbes.has(cle)) courbes.set(cle, PROF.map((h) => [h, Globe.retard(ph, h, d)]));
+  return courbes.get(cle);
+};
+const majPP = garde("ppOut", () => {
+  const d = num("ppD"), ph = el("ppPh").value, lu = num("ppR");
+  if (!(d >= 40 && d <= 95) || !(lu > 0)) { el("ppOut").textContent = "Distance de 40 à 95° et retard positif."; el("ppGraph").innerHTML = el("ppFig").innerHTML = ""; return; }
+  const h = Globe.profondeur(lu, d, ph), autre = ph === "pP" ? "sP" : "pP";
+  const cPP = courbe("pP", d), cSP = courbe("sP", d), ymax = Math.ceil(Math.max(...cSP.map((q) => q[1])) / 20) * 20;
+  el("ppGraph").innerHTML = graphe({
+    largeur: 560, hauteur: 300, xmin: 0, xmax: 700, ymin: 0, ymax, pasX: 100, pasY: 20,
+    xlabel: "profondeur du foyer (km)", ylabel: "retard sur P (s)",
+    series: [
+      { points: courbe("pP", 40), couleur: COULEURS_PHASES.pP, epaisseur: 1, tirets: "3 3", libelle: "pP à 40°" },
+      { points: courbe("pP", 95), couleur: COULEURS_PHASES.pP, epaisseur: 1, tirets: "8 3", libelle: "pP à 95°" },
+      { points: cPP, couleur: COULEURS_PHASES.pP, epaisseur: 2.4, libelle: `pP − P à ${fd(d, 0)}°` },
+      { points: cSP, couleur: COULEURS_PHASES.sP, epaisseur: 2.4, libelle: `sP − P à ${fd(d, 0)}°` },
+      { points: [[0, lu], [700, lu]], couleur: COULEURS.discret, epaisseur: 1, tirets: "4 3" },
+    ],
+    marques: Number.isFinite(h) ? [{ x: h, y: lu, couleur: COULEURS_PHASES[ph], rayon: 5 }] : [],
+  });
+  if (!Number.isFinite(h)) {
+    el("ppFig").innerHTML = "";
+    el("ppOut").innerHTML = `À ${fd(d, 0)}°, ${ph} − P va de ${fd(Globe.retard(ph, 1, d), 1)} s (foyer à 1 km) à ${fd(Globe.retard(ph, 700, d), 1)} s (700 km) : <strong>retard hors de portée</strong>.`;
+    return;
+  }
+  const rais = ["P", "pP", "sP"].map((p) => { const a = Globe.arrivees(p, h, d, { rapide: true })[0]; return { phase: p, points: a && Globe.trajet(p, h, a.p) }; });
+  el("ppFig").innerHTML = `<div style="max-width:560px;margin:0 auto">${foyer({ h, rais, distance: fd(d, 0) })}</div>`;
+  const classe = h < 70 ? "superficiel" : h < 300 ? "intermédiaire" : "profond";
+  el("ppOut").innerHTML = `${ph} − P = ${fd(lu, 1)} s à ${fd(d, 0)}° : <strong>foyer à ${fd(h, 0)} km</strong> (séisme ${classe}) ;
+    ${autre} devrait suivre P de ${fd(Globe.retard(autre, h, d), 1)} s.
+    <small>${h < 30 ? "À cette profondeur, pP suit P de quelques secondes et se confond avec lui sur un enregistrement réel." : `La formule 2h·cos i/v donne l'ordre de grandeur ; le calcul suit les rais dans ak135.`}</small>`;
+});
+// une demi-seconde de calcul (courbes et dichotomie) : après le premier affichage de la page
+setTimeout(() => brancher(["ppD", "ppPh", "ppR"], majPP), 0);

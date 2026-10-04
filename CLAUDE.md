@@ -149,6 +149,10 @@ la virgule décimale.
     est exporté d'ObsPy par `tools/obspy/globe.py`, jamais recopié à la main. Sous-couches ≤ 10 km, vitesses
     linéaires en profondeur entre nœuds, loi de Bullen v = A·r^B par sous-couche (Δ et T en forme close), nœud
     inséré à la profondeur du foyer. Une phase est une suite de segments (P, S, K, I) ; un segment non final ne
-    tourne pas, un rai qui ne pénètre pas la région suivante n'appartient pas à la phase (réflexion totale). Toutes
-    les arrivées de TauP (8 phases, 4 profondeurs, 28 distances, `tests/references/phases.json`) sont retrouvées,
-    aucune de plus : temps à 0,02 s, angles à 0,05°. L'onde P diffractée n'est pas calculée.
+    tourne pas, un rai qui ne pénètre pas la région suivante n'appartient pas à la phase (réflexion totale). Les
+    phases de profondeur (pP, sP) commencent par un segment montant jusqu'à la surface ; angle de départ compté
+    depuis la verticale descendante, comme TauP. Échantillonnage de p resserré juste sous η = r/v de chaque nœud du
+    modèle (sans quoi des triplications échappent). Toutes les arrivées de TauP (10 phases, 4 profondeurs,
+    28 distances, `tests/references/phases.json`) sont retrouvées, aucune de plus : temps à 0,02 s, angles à 0,05°.
+    Le mode `rapide` (80 rais) n'est exact que là où Δ(p) est monotone : P, pP, sP de 40° à 95° (testé) ; il sert
+    à `retard` et `profondeur`. L'onde P diffractée n'est pas calculée.

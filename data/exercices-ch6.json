@@ -239,6 +239,104 @@
    ]
   },
   {
+   "id": "ch6-pP",
+   "titre": "La profondeur d'un séisme lointain par pP",
+   "difficulte": 2,
+   "graine": 4024313879,
+   "enonce": "Une station située à 63° de l'épicentre d'un séisme lit l'onde P à 10 h 15 min 44,8 s et, plus faible, une phase pP à 10 h 15 min 58,4 s. Le tableau donne, pour cette distance, le retard pP − P calculé dans le modèle ak135 selon la profondeur du foyer.",
+   "donnees": [
+    {
+     "label": "distance Δ",
+     "valeur": "63°"
+    },
+    {
+     "label": "P lue",
+     "valeur": "10 h 15 min 44,8 s"
+    },
+    {
+     "label": "pP lue",
+     "valeur": "10 h 15 min 58,4 s"
+    },
+    {
+     "label": "pP − P, foyer à 25 km",
+     "valeur": "7,9 s"
+    },
+    {
+     "label": "pP − P, foyer à 50 km",
+     "valeur": "14,0 s"
+    },
+    {
+     "label": "pP − P, foyer à 100 km",
+     "valeur": "24,8 s"
+    },
+    {
+     "label": "pP − P, foyer à 200 km",
+     "valeur": "46,1 s"
+    },
+    {
+     "label": "pP − P, foyer à 300 km",
+     "valeur": "66,3 s"
+    },
+    {
+     "label": "pP − P, foyer à 400 km",
+     "valeur": "85,1 s"
+    },
+    {
+     "label": "pP − P, foyer à 500 km",
+     "valeur": "101,9 s"
+    },
+    {
+     "label": "pP − P, foyer à 600 km",
+     "valeur": "117,4 s"
+    },
+    {
+     "label": "pP − P, foyer à 700 km",
+     "valeur": "131,2 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Retard pP − P lu ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 13.6,
+     "explication": "pP − P = 10 h 15 min 58,4 s − 10 h 15 min 44,8 s = 13,6 s.",
+     "tolerance": 0.15
+    },
+    {
+     "texte": "Profondeur du foyer, par interpolation linéaire dans le tableau ?",
+     "type": "nombre",
+     "unite": "km",
+     "reponse": 48.3607,
+     "explication": "13,6 s est entre 7,9 s (25 km) et 14,0 s (50 km) : h = 25 + (13,6 − 7,9) × (50 − 25) / (14,0 − 7,9) = 48 km (foyer vrai : 48 km ; le retard n'est pas tout à fait linéaire en profondeur).",
+     "toleranceRel": 0.04
+    },
+    {
+     "texte": "Ce séisme est…",
+     "type": "choix",
+     "options": [
+      "superficiel",
+      "profond",
+      "intermédiaire"
+     ],
+     "reponse": 0,
+     "explication": "Superficiel jusqu'à 70 km, intermédiaire de 70 à 300 km, profond au-delà ; 48 km : séisme superficiel."
+    },
+    {
+     "texte": "Pourquoi le retard pP − P dépend-il surtout de la profondeur, et peu de la distance ?",
+     "type": "choix",
+     "options": [
+      "parce que la station est dans la zone d'ombre",
+      "parce que pP se propage plus vite que P",
+      "parce que pP traverse le noyau",
+      "parce que pP et P suivent presque le même chemin, à l'aller-retour au-dessus du foyer près"
+     ],
+     "reponse": 3,
+     "explication": "pP monte, se réfléchit sous la surface près de l'épicentre, puis suit P : le retard ≈ 2h·cos i/v ne varie avec la distance que par l'angle i."
+    }
+   ]
+  },
+  {
    "id": "ch6-notions",
    "titre": "Croûte, Moho et premières arrivées",
    "difficulte": 1,
