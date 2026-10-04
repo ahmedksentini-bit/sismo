@@ -48,7 +48,7 @@ test('le globe : rayons des discontinuités, zone d\'ombre de P, S arrêtée par
 });
 
 test('tracé d\'un rai : du foyer à la station, à la distance de l\'arrivée', () => {
-  for (const [phase, d] of [['P', 60], ['ScS', 40], ['PKIKP', 150], ['SKS', 100]]) {
+  for (const [phase, d] of [['P', 60], ['ScS', 40], ['PKIKP', 150], ['SKS', 100], ['pP', 60], ['sP', 80]]) {
     const a = G.arrivees(phase, 100, d)[0], t = G.trajet(phase, 100, a.p);
     assert.deepEqual(t[0], [G.R - 100, 0]);
     const fin = t[t.length - 1];
@@ -58,5 +58,26 @@ test('tracé d\'un rai : du foyer à la station, à la distance de l\'arrivée',
     const rMin = Math.min(...t.map(q => q[0]));
     if (phase === 'ScS') assert.ok(Math.abs(rMin - G.RAYONS.noyau) < 1e-6);
     if (phase === 'P') assert.ok(rMin > G.RAYONS.noyau);
+    // une phase de profondeur monte d'abord jusqu'à la surface, puis repart vers le bas
+    if (phase[0] === 'p' || phase[0] === 's') {
+      const iSurf = t.findIndex(q => q[0] === G.R);
+      assert.ok(iSurf > 0 && iSurf < t.length - 1 && t.slice(0, iSurf).every((q, i) => !i || q[0] >= t[i - 1][0]));
+    }
   }
+});
+
+test('phases de profondeur : mode rapide exact de 40° à 95°, profondeur retrouvée d\'après les retards de TauP', () => {
+  for (const h of [1, 33, 100, 250, 450, 700]) for (let d = 40; d <= 95; d += 5) for (const ph of ['P', 'pP', 'sP']) {
+    const a = G.arrivees(ph, h, d)[0], b = G.arrivees(ph, h, d, { rapide: true })[0];
+    assert.ok(a && b && Math.abs(a.temps - b.temps) < 1e-6, `${ph} ${h} km ${d}°`);
+  }
+  // retards pP − P et sP − P lus par TauP : la dichotomie sur la profondeur retrouve le foyer à 0,5 km près
+  const t = (ph, h, d) => Math.min(...ref.arrivees.filter(a => a.phase === ph && a.profondeur === h && a.distance === d).map(a => a.temps));
+  for (const h of [100, 300, 600]) for (const d of [40, 60, 90]) for (const ph of ['pP', 'sP']) {
+    const z = G.profondeur(t(ph, h, d) - t('P', h, d), d, ph);
+    assert.ok(Math.abs(z - h) < 0.5, `${ph} ${h} km ${d}° : ${z}`);
+  }
+  // le retard croît avec la profondeur et un peu avec la distance ; hors de 1 à 700 km : NaN
+  assert.ok(G.retard('pP', 100, 40) < G.retard('pP', 100, 90) && G.retard('pP', 100, 60) < G.retard('pP', 300, 60));
+  assert.ok(Number.isNaN(G.profondeur(500, 60)));
 });

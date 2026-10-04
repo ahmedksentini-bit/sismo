@@ -360,7 +360,8 @@
      t<sub>0</sub> se « troquent ». Seule une station <strong>proche</strong>, à une distance
      comparable à la profondeur, sépare les deux. Avec la station la plus proche, à la distance
      épicentrale Δ, on a h = √(R² − Δ²) : une petite erreur sur R pèse d'autant plus que Δ dépasse
-     h.</p>
+     h. Pour un séisme lointain, la profondeur se lit sur les phases réfléchies sous la surface, pP et sP
+     (chapitre 6).</p>
   <div class="a-retenir"><strong>Exemple</strong>
     <p>SIM1 est à Δ = 17,9 km de l'épicentre et lit S − P = 2,5 s, soit R ≈ 21,0 km :
        h = √(21,0² − 17,9²) ≈ <strong>11 km</strong> (le foyer vrai est à 10 km). Une erreur de 0,1 s sur
@@ -886,7 +887,8 @@
   <div class="calc" id="calcGlobe">
     <h3>Les phases à travers le globe</h3>
     <p class="method-note">Modèle de Terre ak135 (Kennett, Engdahl et Buland, 1995). Rais tracés dans une Terre à
-       symétrie sphérique ; temps et paramètres de rai vérifiés contre TauP (ObsPy) à 0,02 s près.</p>
+       symétrie sphérique ; temps et paramètres de rai vérifiés contre TauP (ObsPy) à 0,02 s près. Angles comptés depuis
+       la verticale descendante : un départ de plus de 90° (pP, sP) part vers le haut.</p>
     <div class="data-grid">
       <div class="field"><label for="glH">Profondeur du foyer</label>
         <div class="input-wrap"><select id="glH"><option value="10">10 km</option><option value="100">100 km</option><option value="300">300 km</option><option value="600">600 km</option></select></div></div>
@@ -904,8 +906,62 @@
   <h3>Les tables de temps de trajet</h3>
   <p>Les temps de trajet de toutes ces phases, calculés dans un modèle de Terre moyen — Jeffreys et Bullen (1940),
      puis iasp91 et ak135 —, servent aux agences internationales pour localiser les séismes lointains et pour
-     identifier les phases sur les enregistrements, comme l'écart S − P sert à la station locale. Le reste du
-     chapitre revient à la croûte, où se joue la localisation des séismes proches.</p>
+     identifier les phases sur les enregistrements, comme l'écart S − P sert à la station locale.</p>
+
+  <h3>Où naissent les séismes : plaques et profondeur</h3>
+  <p>La croûte et le haut du manteau forment une coque rigide, la <strong>lithosphère</strong>, épaisse d'une
+     centaine de kilomètres et découpée en <strong>plaques</strong> qui se déplacent de quelques centimètres par an
+     sur l'asthénosphère, plus chaude et plus déformable. La plupart des séismes naissent à leurs frontières
+     (Isacks, Oliver et Sykes, 1968) : sous les dorsales, où les plaques s'écartent (failles normales, séismes
+     superficiels) ; le long des failles transformantes, où elles coulissent (décrochements) ; et surtout aux
+     frontières convergentes, où l'une plonge sous l'autre — la <strong>subduction</strong> — ou où deux continents
+     se heurtent. Les plus grands séismes connus, Chili 1960 (Mw 9,5), Sumatra 2004, Japon 2011, sont nés sur le
+     contact entre deux plaques, à faible profondeur.</p>
+  <div class="figure-cours" id="figSubduction"></div>
+  <p>Dans une zone de subduction, les foyers dessinent un plan incliné qui suit la plaque plongeante jusqu'à
+     700 km de profondeur : la <strong>zone de Wadati-Benioff</strong> (Wadati, 1928 ; Benioff, 1949). On distingue
+     les séismes <strong>superficiels</strong> (jusqu'à 70 km), <strong>intermédiaires</strong> (70 à 300 km) et
+     <strong>profonds</strong> (300 à 700 km). Au Maghreb, la convergence de l'Afrique et de l'Eurasie, de quelques
+     millimètres par an, donne surtout des séismes superficiels ; c'est plus au nord, sous la mer Tyrrhénienne,
+     qu'une plaque plongeante porte des séismes jusque vers 500 km. Pour l'ingénieur, un séisme profond secoue
+     moins fort mais plus loin : ses ondes ont déjà parcouru des centaines de kilomètres avant d'atteindre la
+     surface.</p>
+
+  <h3>La profondeur d'un séisme lointain : pP et sP</h3>
+  <p>Au chapitre 2, seule une station proche fixait la profondeur. Loin du séisme, elle se lit autrement : une
+     part de l'énergie part vers le haut, se réfléchit sous la surface près de l'épicentre, puis suit presque le
+     même chemin que P. C'est la <strong>phase de profondeur pP</strong> ; partie en onde S et convertie en P à la
+     réflexion, elle devient <strong>sP</strong>. Leur retard sur P est le temps de l'aller-retour au-dessus du
+     foyer :</p>
+  <div class="formula">pP − P ≈ 2 h · cos i / v</div>
+  <p>où v est la vitesse moyenne au-dessus du foyer et i l'angle du rai avec la verticale. Le retard dépend donc
+     surtout de la profondeur, et un peu de la distance : plus la station est loin, plus les rais sont raides et
+     plus le retard est long. sP, qui monte plus lentement, suit P d'environ une fois et demie le retard de pP :
+     la paire pP, sP aide à reconnaître les deux phases sur l'enregistrement. Pour un foyer à moins de 20 ou
+     30 km, pP se confond avec P : la profondeur des séismes superficiels lointains reste mal connue.</p>
+  <div class="a-retenir"><strong>Exemple</strong>
+    <p>Foyer à 100 km, station à 60° : P arrive après 9 min 56,0 s ; pP le suit de <strong>24,6 s</strong> et sP
+       de 35,7 s. La formule donne 2 × 100 × cos 30° / 7,2 ≈ 24 s (7,2 km/s : vitesse moyenne de la croûte et du
+       haut du manteau ; 30° : angle du rai au foyer). Pour un foyer à 600 km, pP − P atteint 1 min 55,7 s.</p></div>
+
+  <div class="calc" id="calcPP">
+    <h3>La profondeur par le retard de pP ou de sP</h3>
+    <p class="method-note">Retards calculés dans ak135 et vérifiés contre TauP ; profondeur cherchée par dichotomie
+       de 1 à 700 km. Distances de 40° à 95°, où P et ses phases de profondeur n'ont qu'une arrivée.</p>
+    <div class="data-grid">
+      <div class="field"><label for="ppD">Distance de la station Δ</label>
+        <div class="input-wrap"><input id="ppD" type="text" inputmode="decimal" value="60" data-curseur="40 95 1"><span class="unit">°</span></div></div>
+      <div class="field"><label for="ppPh">Phase lue</label>
+        <div class="input-wrap"><select id="ppPh"><option value="pP">pP</option><option value="sP">sP</option></select></div></div>
+      <div class="field"><label for="ppR">Retard lu sur P</label>
+        <div class="input-wrap"><input id="ppR" type="text" inputmode="decimal" value="24.6" data-curseur="1 220 0.1"><span class="unit">s</span></div></div>
+    </div>
+    <div class="figure" id="ppGraph"></div>
+    <div class="figure" id="ppFig"></div>
+    <p class="final-result" id="ppOut"></p>
+  </div>
+
+  <p>Le reste du chapitre revient à la croûte, où se joue la localisation des séismes proches.</p>
 
   <h3>Les hodochrones</h3>
   <p>Alignons des stations sur un profil, de quelques kilomètres à quelques centaines de kilomètres du
@@ -1033,6 +1089,8 @@
       <li>Même méthode en sismique réfraction de site, en mètres et en millisecondes.</li>
       <li>Globe : croûte, manteau (410 et 660 km), noyau externe liquide (2 891 km), graine (5 154 km) ; phases P, S,
         PcP, ScS, PKP, SKS, PKIKP ; zone d'ombre de P entre ~100° et ~145°.</li>
+      <li>Séismes superficiels (&lt; 70 km), intermédiaires et profonds (jusqu'à 700 km, zones de Wadati-Benioff).
+        Profondeur d'un séisme lointain : retard de pP sur P ≈ 2h·cos i/v, environ 25 s pour 100 km.</li>
     </ul></div>
 
   <div class="actions"><a class="primary" href="index.html#ch6">Exercices du chapitre</a>

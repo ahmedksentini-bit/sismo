@@ -98,6 +98,34 @@ export default [
     },
   },
   {
+    id: "ch6-pP", titre: "La profondeur d'un séisme lointain par pP", difficulte: 2,
+    generer(a) {
+      // profondeur loin des limites de classes (70 et 300 km) et hors des lignes du tableau ; distance où P et pP
+      // n'ont qu'une arrivée
+      const h0 = a.choix([a.entier(40, 55), a.entier(100, 270), a.entier(330, 650)]), h = h0 % 25 ? h0 : h0 + 7, D = a.entier(40, 90);
+      const [P] = Globe.arrivees("P", h, D, { rapide: true }), [pP] = Globe.arrivees("pP", h, D, { rapide: true });
+      const t0 = a.entier(0, 3000), tP = +(t0 + P.temps).toFixed(1), tpP = +(t0 + pP.temps).toFixed(1), lu = +(tpP - tP).toFixed(1);
+      const table = [25, 50, 100, 200, 300, 400, 500, 600, 700].map((z) => [z, +Globe.retard("pP", z, D).toFixed(1)]);
+      const j = table.findIndex(([, r]) => r >= lu), [z1, r1] = table[j - 1], [z2, r2] = table[j];
+      const hLu = z1 + ((lu - r1) * (z2 - z1)) / (r2 - r1), classe = hLu < 70 ? "superficiel" : hLu < 300 ? "intermédiaire" : "profond";
+      const heure = (t) => `${10 + Math.floor(t / 3600)} h ${String(Math.floor((t % 3600) / 60)).padStart(2, "0")} min ${frd(t % 60, 1)} s`;
+      return {
+        enonce: `Une station située à ${D}° de l'épicentre d'un séisme lit l'onde P à ${heure(tP)} et, plus faible, une phase pP à ${heure(tpP)}. Le tableau donne, pour cette distance, le retard pP − P calculé dans le modèle ak135 selon la profondeur du foyer.`,
+        donnees: [donnee("distance Δ", `${D}°`), donnee("P lue", heure(tP)), donnee("pP lue", heure(tpP)),
+          ...table.map(([z, r]) => donnee(`pP − P, foyer à ${z} km`, `${frd(r, 1)} s`))],
+        questions: [
+          nombre("Retard pP − P lu ?", lu, "s", `pP − P = ${heure(tpP)} − ${heure(tP)} = ${frd(lu, 1)} s.`, { abs: 0.15 }),
+          nombre("Profondeur du foyer, par interpolation linéaire dans le tableau ?", hLu, "km", `${frd(lu, 1)} s est entre ${frd(r1, 1)} s (${z1} km) et ${frd(r2, 1)} s (${z2} km) : h = ${z1} + (${frd(lu, 1)} − ${frd(r1, 1)}) × (${z2} − ${z1}) / (${frd(r2, 1)} − ${frd(r1, 1)}) = ${frd(hLu, 0)} km (foyer vrai : ${h} km ; le retard n'est pas tout à fait linéaire en profondeur).`, { rel: 0.04 }),
+          choixMelange(a, "Ce séisme est…", [classe, ...["superficiel", "intermédiaire", "profond"].filter((c) => c !== classe)].map((c) => `${c}`),
+            `Superficiel jusqu'à 70 km, intermédiaire de 70 à 300 km, profond au-delà ; ${frd(hLu, 0)} km : séisme ${classe}.`),
+          choixMelange(a, "Pourquoi le retard pP − P dépend-il surtout de la profondeur, et peu de la distance ?",
+            ["parce que pP et P suivent presque le même chemin, à l'aller-retour au-dessus du foyer près", "parce que pP se propage plus vite que P", "parce que pP traverse le noyau", "parce que la station est dans la zone d'ombre"],
+            "pP monte, se réfléchit sous la surface près de l'épicentre, puis suit P : le retard ≈ 2h·cos i/v ne varie avec la distance que par l'angle i."),
+        ],
+      };
+    },
+  },
+  {
     id: "ch6-notions", titre: "Croûte, Moho et premières arrivées", difficulte: 1,
     generer(a) {
       const pool = [

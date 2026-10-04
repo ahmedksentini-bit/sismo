@@ -4,7 +4,7 @@ jamais embarqué).
 1. Lit le modèle ak135 livré avec ObsPy (obspy/taup/data/ak135.tvel : profondeur, Vp, Vs, masse volumique) et
    l'écrit dans src/sismo/coefficients/ak135.js (fichier produit, à ne pas modifier à la main).
 2. Calcule avec TauPyModel('ak135') les temps de trajet et les paramètres de rai de quelques phases (P, S, PcP,
-   ScS, PKP, PKiKP, PKIKP, SKS) pour plusieurs profondeurs et distances, et les écrit dans
+   ScS, PKP, PKiKP, PKIKP, SKS et les phases de profondeur pP, sP) pour plusieurs profondeurs et distances, et les écrit dans
    tests/references/phases.json : le solveur src/sismo/globe.js doit les retrouver (tests/globe.test.mjs).
 """
 import json
@@ -15,7 +15,7 @@ import obspy.taup
 from obspy.taup import TauPyModel
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
-PHASES = ['P', 'S', 'PcP', 'ScS', 'PKP', 'PKiKP', 'PKIKP', 'SKS']
+PHASES = ['P', 'S', 'PcP', 'ScS', 'PKP', 'PKiKP', 'PKIKP', 'SKS', 'pP', 'sP']
 PROFONDEURS = [10, 100, 300, 600]
 DISTANCES = list(range(10, 181, 10)) + [95, 105, 115, 125, 135, 143, 145, 147, 150, 155]
 
