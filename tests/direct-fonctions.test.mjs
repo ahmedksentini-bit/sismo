@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { onRequestGet } from '../functions/api/fdsn.js';
+import { onRequestGet as ancienChemin } from '../functions/api/geofon.js';
 
 test('relais FDSN : requête transmise au centre demandé (GEOFON par défaut) avec les seuls paramètres permis ; refus sinon', async () => {
   const appels = [], fetchOrigine = globalThis.fetch;
@@ -28,6 +29,8 @@ test('relais FDSN : requête transmise au centre demandé (GEOFON par défaut) a
       assert.equal(e.status, 400, q);
     }
     assert.equal(appels.length, 3, 'aucune requête refusée n\'est partie vers un centre');
+    // l'ancien chemin (api/geofon, page restée en cache) mène au même relais, vers GEOFON
+    assert.equal(ancienChemin, onRequestGet);
   } finally { globalThis.fetch = fetchOrigine; }
 });
 

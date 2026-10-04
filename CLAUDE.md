@@ -202,8 +202,11 @@ la virgule décimale.
     Snell au Moho, onde conique). En mode Exercice, l'animation reste masquée jusqu'à « Vérifier ».
 34. **En direct** (`direct.html`, `src/direct-page.js`) : stations autour de la Méditerranée des centres de données de
     `src/sismo/centres.js` (GEOFON, INGV, Epos-France, NOA, KOERI, SED, NIEP, ORFEUS, IGN, ICGC, EarthScope), choisies par
-    réseau (carte « Réseaux », GE et tout réseau ayant une station en Tunisie cochés au départ ; pays par les polygones de
-    `tools/carte/pays.py`). Cette liste est la liste blanche des deux fonctions Cloudflare Pages (`functions/api/`), relais
+    réseau (carte « Réseaux », GE et tout réseau ayant une station en Tunisie cochés au départ, sinon le plus grand réseau
+    permanent ; pays par les polygones de `tools/carte/pays.py`). La page démarre sur le réseau GE de GEOFON, demandé par
+    son nom (requête courte) ; les inventaires complets des centres, lents sans nom de réseau, complètent la liste à
+    leur arrivée (60 s au plus), et « Centres interrogés » donne la cause d'un échec. `api/geofon` reste un alias de
+    `api/fdsn` pour les pages restées en cache. Cette liste est la liste blanche des deux fonctions Cloudflare Pages (`functions/api/`), relais
     bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 12 flux validés au plus, reprise
     ≤ 30 min, ne transmet que les voies demandées, se ferme au bout de 10 min (la page se reconnecte depuis son dernier
     échantillon) ; `?sonde=1` dit quels serveurs répondent à HELLO, `?diagnostic=1` déroule l'échange avec l'un d'eux ;

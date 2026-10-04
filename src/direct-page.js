@@ -93,23 +93,37 @@ import Sismo from './sismo/signal.js';
   // réseaux affichés : GE tant que le choix n'est pas fait (stations en cours de chargement)
   const actif = code => (etat.actifs === null ? code === 'GE' : etat.actifs.has(code));
   const visibles = () => etat.stations.filter(s => actif(s.reseau) && dansVue(s));
-  // Voies verticales et réseaux d'un centre, dans la zone ; les stations gardent leur centre et leur pays.
-  async function chargerCentre(c) {
-    const p = { channel: 'BHZ,HHZ', format: 'text', includerestricted: 'false', ...ZONE, endafter: Fdsn.heure(Date.now()) };
+  // Chargements des listes : d'abord le réseau GE de GEOFON (requête courte, nommée : la page démarre dessus), puis
+  // chaque centre en entier, GEOFON compris pour ses autres réseaux. Sans nom de réseau, un centre parcourt tout son
+  // inventaire : la réponse peut prendre une demi-minute, elle complète la liste quand elle arrive.
+  const CHARGEMENTS = [
+    { cle: 'geofon-ge', centre: 'geofon', nom: 'GEOFON, réseau GE', params: { network: 'GE' }, delai: 30000 },
+    ...Centres.LISTE.map(c => ({ cle: c.id, centre: c.id, nom: c.id === 'geofon' ? 'GEOFON, autres réseaux' : `${c.nom} (${c.organisme})`, params: {}, delai: 60000 })),
+  ];
+  // Voies verticales et réseaux d'un chargement, dans la zone ; les stations gardent leur centre et leur pays.
+  async function chargerCentre(ch) {
+    const p = { ...ch.params, channel: 'BHZ,HHZ', format: 'text', includerestricted: 'false', ...ZONE, endafter: Fdsn.heure(Date.now()) };
     const info = { etat: 'attente', stations: 0 };
-    etat.centres.set(c.id, info);
+    etat.centres.set(ch.cle, info);
+    // un service qui refuserait includerestricted (400) est réinterrogé sans
+    const station = async level => {
+      const r = await charger(api('station', { ...p, level }, ch.centre), ch.delai);
+      if (r.status !== 400) return r;
+      const { includerestricted, ...q } = p;
+      return charger(api('station', { ...q, level }, ch.centre), ch.delai);
+    };
     try {
-      const [rv, rr] = await Promise.all([charger(api('station', { ...p, level: 'channel' }, c.id), 20000), charger(api('station', { ...p, level: 'network' }, c.id), 20000).catch(() => null)]);
+      const [rv, rr] = await Promise.all([station('channel'), station('network').catch(() => null)]);
       if (rv.status === 204) { Object.assign(info, { etat: 'vide' }); return; }
-      if (!rv.ok) throw new Error(`HTTP ${rv.status}`);
-      const liste = Fdsn.choisirVoies(Fdsn.voies(await rv.text())).map(s => ({ ...s, centre: c.id, pays: Direct.pays(s.lat, s.lon, etat.pays) }));
+      if (!rv.ok) throw new Error(`HTTP ${rv.status}${await rv.text().then(t => (t.trim() ? ` : ${t.trim().replace(/\s+/g, ' ').slice(0, 90)}` : ''), () => '')}`);
+      const liste = Fdsn.choisirVoies(Fdsn.voies(await rv.text())).map(s => ({ ...s, centre: ch.centre, pays: Direct.pays(s.lat, s.lon, etat.pays) }));
       const noms = new Map((rr && rr.ok && rr.status !== 204 ? Fdsn.reseaux(await rr.text()) : []).map(r => [r.reseau, r.description]));
-      ajouterStations(liste, noms, c.id);
+      ajouterStations(liste, noms, ch.centre);
       Object.assign(info, { etat: 'ok', stations: liste.length });
-      journal(`${c.nom} : ${liste.length} stations dans la zone`);
+      journal(`${ch.nom} : ${liste.length} stations dans la zone`);
     } catch (err) {
-      Object.assign(info, { etat: 'echec', erreur: err.name === 'AbortError' ? 'délai dépassé' : (err.message || String(err)) });
-      journal(`${c.nom} : liste des stations inaccessible (${info.erreur})`);
+      Object.assign(info, { etat: 'echec', erreur: err.name === 'AbortError' ? `pas de réponse en ${ch.delai / 1000} s` : (err.message || String(err)) });
+      journal(`${ch.nom} : liste des stations inaccessible (${info.erreur})`);
     } finally { majReseaux(); dessinerCarte(); }
   }
   function ajouterStations(liste, noms, centre) {
@@ -121,11 +135,20 @@ import Sismo from './sismo/signal.js';
     }
     etat.listeOk = etat.stations.length > 0;
   }
-  // Réseaux affichés au départ : ceux de la dernière visite, sinon GE (GEOFON) et tout réseau qui a une station en Tunisie.
+  // Réseaux affichés au départ : ceux de la dernière visite, sinon GE (GEOFON) et tout réseau qui a une station en
+  // Tunisie ; si aucun d'eux n'a de station sur la carte (GEOFON muet, par exemple), le plus grand réseau permanent.
   function actifsParDefaut() {
-    try { const m = JSON.parse(localStorage.getItem('sismo-direct-reseaux')); if (Array.isArray(m) && m.length) return new Set(m); } catch { /* stockage indisponible */ }
-    const out = new Set(['GE']);
-    for (const r of etat.reseaux.values()) if (r.stations.some(s => s.pays && s.pays.code === 'TN')) out.add(r.code);
+    let out = null;
+    try { const m = JSON.parse(localStorage.getItem('sismo-direct-reseaux')); if (Array.isArray(m) && m.length) out = new Set(m); } catch { /* stockage indisponible */ }
+    if (!out) {
+      out = new Set(['GE']);
+      for (const r of etat.reseaux.values()) if (r.stations.some(s => s.pays && s.pays.code === 'TN')) out.add(r.code);
+    }
+    const sur = r => r.stations.filter(dansVue).length;
+    if (![...out].some(code => etat.reseaux.has(code) && sur(etat.reseaux.get(code)))) {
+      const grand = [...etat.reseaux.values()].filter(r => !Centres.temporaire(r.code) && sur(r)).sort((a, b) => sur(b) - sur(a))[0];
+      if (grand) out.add(grand.code);
+    }
     return out;
   }
   function memoriserActifs() { try { localStorage.setItem('sismo-direct-reseaux', JSON.stringify([...etat.actifs])); } catch { /* stockage indisponible */ } }
@@ -589,7 +612,7 @@ import Sismo from './sismo/signal.js';
   function majReseaux() {
     const div = $('#dr-reseaux');
     if (!div) return;
-    const enCours = Centres.LISTE.some(c => !etat.centres.has(c.id) || etat.centres.get(c.id).etat === 'attente');
+    const enCours = CHARGEMENTS.some(ch => !etat.centres.has(ch.cle) || etat.centres.get(ch.cle).etat === 'attente');
     const liste = [...etat.reseaux.values()].map(r => ({ ...r, vues: r.stations.filter(dansVue) })).filter(r => r.vues.length)
       .sort((a, b) => (actif(b.code) - actif(a.code)) || (Centres.temporaire(a.code) - Centres.temporaire(b.code)) || (b.vues.length - a.vues.length) || a.code.localeCompare(b.code));
     const paysDe = r => {
@@ -610,9 +633,9 @@ import Sismo from './sismo/signal.js';
       t = `aucune station en libre accès dans les centres interrogés : le réseau national ne diffuse pas ses données par les services FDSN.${proches.length ? ` Les plus proches de Tunis : ${proches.map(s => `${s.reseau}.${s.station} (${s.pays ? s.pays.nom : 'en mer'}, ${Math.round(d(s))} km)`).join(', ')}.` : ''}`;
     }
     $('#dr-tunisie').innerHTML = `<b>Tunisie :</b> ${echapper(t)}`;
-    $('#dr-centres').innerHTML = Centres.LISTE.map(c => {
-      const i = etat.centres.get(c.id) || { etat: 'attente' };
-      return `<li>${echapper(c.nom)} (${echapper(c.organisme)}) : ${i.etat === 'ok' ? `${i.stations} station${pl(i.stations)}` : i.etat === 'vide' ? 'aucune station dans la zone' : i.etat === 'echec' ? `inaccessible (${echapper(i.erreur)})` : 'en cours…'}</li>`;
+    $('#dr-centres').innerHTML = CHARGEMENTS.map(ch => {
+      const i = etat.centres.get(ch.cle) || { etat: 'attente' };
+      return `<li>${echapper(ch.nom)} : ${i.etat === 'ok' ? `${i.stations} station${pl(i.stations)}` : i.etat === 'vide' ? 'aucune station dans la zone' : i.etat === 'echec' ? `inaccessible (${echapper(i.erreur)})` : 'en cours…'}</li>`;
     }).join('');
   }
   // Un réseau coché paraît sur la carte et ses deux stations les plus utiles rejoignent les traces (s'il reste de la
@@ -710,7 +733,7 @@ import Sismo from './sismo/signal.js';
     badge('Chargement des stations…', true);
     if (!etat.pays.length) { try { etat.pays = (await (await fetch('data/pays-mediterranee.json')).json()).pays; } catch { /* stations sans pays */ } }
     etat.stations = []; etat.reseaux.clear(); etat.listeOk = false;
-    const promesses = Centres.LISTE.map(c => chargerCentre(c));
+    const promesses = CHARGEMENTS.map(ch => chargerCentre(ch));
     await promesses[0];
     await Promise.race([Promise.allSettled(promesses), delai(12000)]);
     chargerSeismes();
