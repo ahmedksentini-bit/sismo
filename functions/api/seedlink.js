@@ -4,17 +4,20 @@
 // enregistrement miniSEED (512 octets) en message binaire. Messages texte (JSON) : { type: 'etat' | 'erreur' | 'fin' }.
 // La connexion se ferme d'elle-même après 10 minutes : la page se reconnecte en demandant la reprise (TIME) à partir de
 // son dernier échantillon, ce qui garde chaque invocation courte. SEEDLINK_SERVEUR (hôte:port) remplace le serveur pour
-// les essais.
+// les essais. Diagnostic (requête HTTP ordinaire, ?diagnostic=1&flux=…) : chaque étape de l'échange avec chaque serveur,
+// jusqu'au premier paquet reçu (15 s au plus), en JSON, pour comprendre un relais qui ne livre rien.
 import { connect } from 'cloudflare:sockets';
 import SeedLink from '../../src/sismo/seedlink.js';
+import MiniSeed from '../../src/sismo/miniseed.js';
 
 const SERVEURS = ['geofon.gfz.de:18000', 'geofon.gfz-potsdam.de:18000'];
 const DUREE_MAX = 10 * 60 * 1000, DELAI_REPONSE = 15000, BATTEMENT = 25000;
 
 export async function onRequest(context) {
   const { request, env } = context;
-  if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return new Response('Connexion WebSocket attendue', { status: 426 });
   const url = new URL(request.url), flux = SeedLink.lireFlux(url.searchParams.get('flux'));
+  if (url.searchParams.has('diagnostic')) return diagnostiquer(flux ? flux.slice(0, 1) : SeedLink.lireFlux('GE.MTE..BHZ'), env || {});
+  if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return new Response('Connexion WebSocket attendue', { status: 426 });
   if (!flux) return new Response('Flux invalides : RESEAU.STATION.EMPLACEMENT.VOIE, 12 au plus', { status: 400 });
   const depuis = SeedLink.lireDepuis(url.searchParams.get('depuis'));
   const [client, serveur] = Object.values(new WebSocketPair());
@@ -96,4 +99,57 @@ async function dialoguer(etat, ws, flux, depuis, envoyer, hote) {
     try { etat.socket.close(); } catch { /* déjà fermé */ }
     try { ws.close(1000, 'fin'); } catch { /* déjà fermé */ }
   }
+}
+
+// Diagnostic : pour chaque serveur, ouverture de la connexion, bannière de HELLO, réponse à chaque commande, puis premier
+// paquet (identifiant et heure du premier échantillon) ou délai dépassé. Une station au plus, 15 s par serveur.
+async function diagnostiquer(flux, env) {
+  const serveurs = env.SEEDLINK_SERVEUR ? [env.SEEDLINK_SERVEUR] : SERVEURS, essais = [];
+  for (const adresse of serveurs) {
+    const [hostname, port] = adresse.split(':'), e = { serveur: adresse, etapes: [] }, t0 = Date.now();
+    let socket = null;
+    try {
+      socket = connect({ hostname, port: Number(port) });
+      await Promise.race([socket.opened, delai(8000).then(() => { throw new Error('ouverture : délai de 8 s dépassé'); })]);
+      e.etapes.push('connexion ouverte');
+      const ecrivain = socket.writable.getWriter(), lecteur = socket.readable.getReader(), lignes = SeedLink.lecteurLignes(), attente = [];
+      const ecrire = l => ecrivain.write(new TextEncoder().encode(l + '\r\n'));
+      const ligne = async () => {
+        while (!attente.length) {
+          const r = await Promise.race([lecteur.read(), delai(8000)]);
+          if (!r) throw new Error('pas de réponse en 8 s');
+          if (r.done) throw new Error('connexion fermée par le serveur');
+          attente.push(...lignes.pousser(r.value));
+        }
+        return attente.shift();
+      };
+      await ecrire('HELLO');
+      e.etapes.push(`HELLO → ${await ligne()} · ${await ligne()}`);
+      for (const c of SeedLink.commandes(flux, Date.now() - 5 * 60000)) {
+        await ecrire(c.ligne);
+        e.etapes.push(c.reponse ? `${c.ligne} → ${await ligne()}` : c.ligne);
+      }
+      const decoupe = SeedLink.decoupeur(), fin = Date.now() + 15000;
+      while (Date.now() < fin && !e.paquet) {
+        const r = await Promise.race([lecteur.read(), delai(fin - Date.now())]);
+        if (!r) break;
+        if (r.done) { e.etapes.push('connexion fermée par le serveur'); break; }
+        for (const p of decoupe.pousser(r.value)) {
+          if (p.info) continue;
+          const m = MiniSeed.enregistrement(p.enregistrement);
+          e.paquet = m ? { id: m.id, debut: new Date(m.debut).toISOString(), echantillons: m.echantillons.length, cadence: m.cadence } : { illisible: true };
+          break;
+        }
+      }
+      if (!e.paquet) e.etapes.push('aucun paquet en 15 s');
+    } catch (err) {
+      e.erreur = String((err && err.message) || err);
+    } finally {
+      e.duree = Date.now() - t0;
+      try { socket && socket.close(); } catch { /* déjà fermé */ }
+    }
+    essais.push(e);
+    if (e.paquet) break;
+  }
+  return new Response(JSON.stringify({ flux: SeedLink.versFlux(flux), essais }, null, 1), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 }

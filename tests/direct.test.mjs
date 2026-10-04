@@ -91,3 +91,19 @@ gfz2026tlah|2026-10-04T18:12:33.21|35.12|23.44|18.0|GFZ|GEOFON|GFZ|gfz2026tlah|m
     ['admin', {}],
   ]) assert.ok(F.requete(s, p).erreur, `${s} ${JSON.stringify(p)} refusé`);
 });
+
+test('préparation avant filtrage : décalage retiré, départ adouci, le filtre ne sonne plus sur la marche du début', () => {
+  // coups d'un numériseur : grand décalage constant plus un petit signal ; filtre étroit de 18 à 22 s
+  const fs = 20, n = 20 * 60 * fs, x = Float64Array.from({ length: n }, (_, i) => 250000 + 30 * Math.sin((2 * Math.PI * i) / (5 * fs)));
+  const sos = D.butterPasseBande(4, 1 / 22, 1 / 18, fs), fin = y => Math.max(...Array.from(y.subarray(n / 2), Math.abs));
+  const brut = D.filtrer(x, sos), prep = D.filtrer(D.preparer(x, 1, 20 * fs), sos);
+  const debut = y => Math.max(...Array.from(y.subarray(0, 120 * fs), Math.abs));
+  // sans préparation, la marche de 250 000 coups fait sonner le filtre étroit pendant plus de dix minutes
+  assert.ok(debut(brut) > 10000 && fin(brut) > 1, `sans préparation : ${debut(brut).toFixed(0)} puis ${fin(brut).toFixed(1)}`);
+  assert.ok(debut(prep) < 1 && fin(prep) < 0.01, `avec préparation : ${debut(prep).toFixed(3)} puis ${fin(prep)}`);
+  // un trou (NaN) reste un trou et la reprise est adoucie à son tour
+  const t = Float64Array.from(x); for (let i = 1000; i < 1100; i++) t[i] = NaN;
+  const p = D.preparer(t, 2, 40);
+  assert.ok(Number.isNaN(p[1050]) && Math.abs(p[1100]) < 1e-9 && Math.abs(p[0]) < 1e-9);
+  assert.ok(Math.abs(p[2000] - 2 * (x[2000] - 250000)) < 1, 'facteur appliqué, moyenne retirée');
+});

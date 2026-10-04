@@ -18,7 +18,9 @@ import Sismo from './sismo/signal.js';
   const MONO = 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace';
   const VUE = { lon: [-12, 42], lat: [28, 48.5] };
   const ZONE = { minlatitude: 25, maxlatitude: 50, minlongitude: -15, maxlongitude: 45 };
-  const MAX_SUIVIES = 12, DEFAUT_SUIVIES = 8, INTERVALLE_FDSN = 20000, LATENCE_GRISE = 180;
+  const MAX_SUIVIES = 12, DEFAUT_SUIVIES = 8, INTERVALLE_FDSN = 20000;
+  // au-delà de cette latence (s), une station est grise : le service FDSN publie avec plusieurs minutes de retard
+  const latenceGrise = () => (etat.mode === 'fdsn' ? 900 : 180);
   const FILTRES = { aucun: null, large: [2, 0.5, 5], proche: [2, 1, 8], tele: [2, 0.5, 2], ms: [4, 1 / 22, 1 / 18], detecteur: [4, 0.7, 2] };
   // Détecteur : STA de 2 s sur LTA de 80 s, voie filtrée de 0,7 à 2 Hz (ordre 4), déclenchement au-dessus de 4, fin sous 1,5.
   const DETECTEUR = { sta: 2, lta: 80, on: 4, off: 1.5 };
@@ -26,14 +28,23 @@ import Sismo from './sismo/signal.js';
   const STATIONS_DEMO = [['DEMO1', 36.8, 10.2], ['DEMO2', 41.9, 12.5], ['DEMO3', 38.0, 23.7], ['DEMO4', 41.0, 29.0], ['DEMO5', 40.4, -3.7], ['DEMO6', 35.2, 33.4]]
     .map(([s, lat, lon]) => ({ reseau: 'XX', station: s, emplacement: '', voie: 'BHZ', lat, lon, sensibilite: 6e8, cadence: 20, site: 'station fictive' }));
   const ident = s => `${s.reseau}.${s.station}.${s.emplacement}.${s.voie}`;
+  const dansVue = o => o.lon >= VUE.lon[0] && o.lon <= VUE.lon[1] && o.lat >= VUE.lat[0] && o.lat <= VUE.lat[1];
   const hms = t => new Date(t).toISOString().slice(11, 19);
   const depuisQuand = ms => { const s = Math.round(ms / 1000); return s < 90 ? `${s} s` : s < 5400 ? `${Math.round(s / 60)} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} j`; };
 
   const etat = {
     mode: 'seedlink', stations: [], suivies: [], voies: new Map(), seismes: [], catalogue: 'med', choisi: null,
     fenetre: 15, filtre: 'large', pause: null, cotes: null, demo: null, mesures: new Map(), arrivees: new Map(),
-    cx: { ws: null, etat: 'arret', paquets: 0, dernier: null, echecs: 0, minuteur: 0, message: '' }, listeOk: false,
+    cx: { ws: null, etat: 'arret', paquets: 0, dernier: null, echecs: 0, minuteur: 0, message: '', diagnostic: false }, listeOk: false, journal: [],
   };
+  // Journal de connexion (les 8 derniers événements), affiché sous la source des données : il dit ce qui se passe quand
+  // le temps réel ne vient pas.
+  function journal(msg) {
+    etat.journal.unshift(`${new Date().toISOString().slice(11, 19)} ${msg}`);
+    etat.journal.length = Math.min(etat.journal.length, 8);
+    const ul = $('#dr-journal');
+    if (ul) ul.innerHTML = etat.journal.map(l => `<li>${l.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</li>`).join('');
+  }
   const maintenant = () => etat.pause ?? Date.now();
 
   // ── Petits utilitaires ──────────────────────────────────────────────────────────────────────────────────────
@@ -112,8 +123,9 @@ import Sismo from './sismo/signal.js';
     etat.cx.paquets++; etat.cx.dernier = Date.now();
   }
   // Reprise : à partir du plus ancien des derniers échantillons reçus (sans dépasser la fenêtre ni 30 minutes).
+  // Première demande : la fenêtre plus 3 minutes, pour que l'amorce des filtres tombe avant la partie affichée.
   function reprise() {
-    const plus = Date.now() - Math.min(30, etat.fenetre) * 60000, fins = etat.suivies.map(s => { const v = etat.voies.get(ident(s)); return v ? v.fin() : null; });
+    const plus = Date.now() - Math.min(30, etat.fenetre + 3) * 60000, fins = etat.suivies.map(s => { const v = etat.voies.get(ident(s)); return v ? v.fin() : null; });
     return fins.some(f => f === null) ? plus : Math.max(plus, Math.min(...fins) - 2000);
   }
   function fermer() {
@@ -129,25 +141,45 @@ import Sismo from './sismo/signal.js';
     catch { basculer('fdsn', 'WebSocket indisponible : interrogation du service FDSN.'); return; }
     ws.binaryType = 'arraybuffer';
     etat.cx.ws = ws; etat.cx.etat = 'connexion'; badge('Connexion SeedLink…', true);
+    journal(`SeedLink : connexion au relais (${etat.suivies.length} flux)`);
+    ws.onopen = () => journal('SeedLink : relais ouvert');
     let recu = false;
     const garde = setTimeout(() => { if (!recu && etat.cx.ws === ws) { etat.cx.echecs++; ws.close(); } }, 20000);
     ws.onmessage = e => {
       if (typeof e.data === 'string') {
-        try { const m = JSON.parse(e.data); if (m.message) etat.cx.message = m.message; if (m.type === 'erreur') etat.cx.echecs++; } catch { /* message illisible */ }
+        try {
+          const m = JSON.parse(e.data);
+          if (m.message) { etat.cx.message = m.message; journal(`relais : ${m.message}`); }
+          if (m.type === 'fin') journal(`relais : fin (${m.raison}, ${m.paquets} paquets)`);
+          if (m.type === 'erreur') etat.cx.echecs++;
+        } catch { /* message illisible */ }
         return;
       }
-      if (!recu) { recu = true; etat.cx.echecs = 0; etat.cx.etat = 'ouvert'; badge(`Temps réel · ${etat.suivies.length} stations`); }
+      if (!recu) { recu = true; etat.cx.echecs = 0; etat.cx.etat = 'ouvert'; badge(`Temps réel · ${etat.suivies.length} stations`); journal('SeedLink : premier paquet reçu'); }
       recevoir(MiniSeed.enregistrement(e.data));
     };
-    ws.onclose = () => {
+    ws.onclose = ev => {
       clearTimeout(garde);
       if (etat.cx.ws !== ws || etat.mode !== 'seedlink') return;
       etat.cx.ws = null;
+      journal(`SeedLink : relais fermé (code ${ev.code}${ev.reason ? `, ${ev.reason}` : ''})${recu ? '' : ', aucun paquet'}`);
       if (!recu) etat.cx.echecs++;
-      // fermeture normale (10 minutes) : reconnexion immédiate ; deux échecs de suite : service FDSN
-      if (etat.cx.echecs >= 2) basculer('fdsn', 'Relais SeedLink indisponible : interrogation du service FDSN toutes les 20 s.');
+      // fermeture normale (10 minutes) : reconnexion immédiate ; deux échecs de suite : service FDSN et diagnostic
+      if (etat.cx.echecs >= 2) { basculer('fdsn', 'Relais SeedLink indisponible : interrogation du service FDSN toutes les 20 s.'); diagnostiquer(); }
       else etat.cx.minuteur = setTimeout(connecterSeedLink, recu ? 500 : 3000);
     };
+  }
+  // Diagnostic du relais SeedLink (une fois par page) : chaque étape de l'échange avec GEOFON, dans le journal.
+  async function diagnostiquer() {
+    if (etat.cx.diagnostic || !etat.suivies.length) return;
+    etat.cx.diagnostic = true;
+    journal('diagnostic du relais SeedLink en cours (jusqu\'à 40 s)…');
+    try {
+      const r = await fetch(`api/seedlink?diagnostic=1&flux=${encodeURIComponent(ident(etat.suivies[0]))}`), d = await r.json();
+      for (const e of d.essais.slice().reverse()) {
+        journal(`diagnostic ${e.serveur} : ${e.etapes.join(' ; ') || '—'}${e.erreur ? ` ; erreur : ${e.erreur}` : ''}${e.paquet ? ` ; paquet ${e.paquet.id} du ${e.paquet.debut}` : ''}`);
+      }
+    } catch (err) { journal(`diagnostic impossible : ${err.message || err}`); }
   }
   async function interrogerFdsn() {
     if (!etat.suivies.length || etat.mode !== 'fdsn') return;
@@ -155,13 +187,15 @@ import Sismo from './sismo/signal.js';
     badge('Interrogation FDSN…', true);
     try {
       const r = await fetch(api('dataselect', { network: reseaux.join(','), station: etat.suivies.map(s => s.station).join(','), channel: voies.join(','), starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }));
-      if (r.status === 204) { etat.cx.etat = 'ouvert'; badge(`Toutes les 20 s · ${etat.suivies.length} stations`); return; }
+      if (r.status === 204) { etat.cx.etat = 'ouvert'; badge(`Toutes les 20 s · ${etat.suivies.length} stations`); journal('FDSN : pas de nouvelle donnée'); return; }
       if (!r.ok) throw new Error(r.status);
-      const suivis = new Set(etat.suivies.map(ident));
-      for (const e of MiniSeed.lire(await r.arrayBuffer())) if (suivis.has(e.id)) recevoir(e);
+      const suivis = new Set(etat.suivies.map(ident)), enr = MiniSeed.lire(await r.arrayBuffer());
+      for (const e of enr) if (suivis.has(e.id)) recevoir(e);
+      journal(`FDSN : ${enr.length} enregistrements, ${new Set(enr.map(e => e.id)).size} voies`);
       etat.cx.echecs = 0; etat.cx.etat = 'ouvert'; badge(`Toutes les 20 s · ${etat.suivies.length} stations`);
-    } catch {
+    } catch (err) {
       etat.cx.echecs++;
+      journal(`FDSN : échec (${err.message || err})`);
       if (etat.cx.echecs >= 2 && !etat.voies.size) basculer('demo', 'GEOFON injoignable : mode démonstration (signaux simulés).');
       else badge('FDSN : nouvel essai…', true);
     }
@@ -238,12 +272,8 @@ import Sismo from './sismo/signal.js';
     const f = FILTRES[etat.filtre], amorce = f ? Math.min(600, Math.max(60, 6 / f[1])) * 1000 : 0, amorceL = (DETECTEUR.lta + 20) * 1000;
     const e = v.extraire(t0 - Math.max(amorce, amorceL), t1);
     if (!e || !e.donnees.length) return null;
-    const fs = e.cadence, k = 1e6 / s.sensibilite, brut = Float64Array.from(e.donnees, x => x * k);
-    // sans filtre : on retire la moyenne de la fenêtre (décalage du numériseur)
-    let m = 0, nm = 0;
-    for (const x of brut) if (!Number.isNaN(x)) { m += x; nm++; }
-    m = nm ? m / nm : 0;
-    const large = Direct.filtrer(brut, sos('large', fs)), aff = f ? (etat.filtre === 'large' ? large : Direct.filtrer(brut, sos(etat.filtre, fs))) : brut.map(x => x - m);
+    const fs = e.cadence, brut = Direct.preparer(e.donnees, 1e6 / s.sensibilite, Math.round(20 * fs));
+    const large = Direct.filtrer(brut, sos('large', fs)), aff = f ? (etat.filtre === 'large' ? large : Direct.filtrer(brut, sos(etat.filtre, fs))) : brut;
     const iV = Math.round((t0 - e.t0) / (1000 / fs)), vue = aff.subarray(Math.max(0, iV));
     // STA/LTA sur la voie du détecteur, déclenchements dans la fenêtre (un trou remplacé par des zéros ferait
     // déclencher à la reprise : on ignore la durée de la LTA qui suit un trou)
@@ -312,7 +342,7 @@ import Sismo from './sismo/signal.js';
       const lat = Direct.latence(mes ? mes.fin : null, Date.now());
       const dist = choisi ? Direct.distanceAzimut(choisi.lat, choisi.lon, s.lat, s.lon).distance : null;
       texte(ctx, `${s.reseau}.${s.station} ${s.voie}${dist !== null ? ` · Δ ${virg(dist, 1)}°` : ''}`, g.x0 + 4, yc - hR / 2 + 9, COUL.ink, `700 11.5px ${MONO}`);
-      texte(ctx, mes ? `max ${virg(max, max < 1 ? 3 : 1)} µm/s · latence ${Number.isFinite(lat) ? depuisQuand(lat * 1000) : '—'}` : 'en attente de données', g.x1 - 4, yc - hR / 2 + 9, lat > LATENCE_GRISE ? COUL.bad : COUL.muted, `10.5px ${MONO}`, 'right');
+      texte(ctx, mes ? `max ${virg(max, max < 1 ? 3 : 1)} µm/s · latence ${Number.isFinite(lat) ? depuisQuand(lat * 1000) : '—'}` : 'en attente de données', g.x1 - 4, yc - hR / 2 + 9, lat > latenceGrise() ? COUL.bad : COUL.muted, `10.5px ${MONO}`, 'right');
     });
   }
   // Arrivées prévues (ak135) d'un séisme à une station, mises en cache.
@@ -387,10 +417,10 @@ import Sismo from './sismo/signal.js';
     }
     // stations : triangles colorés par l'amplitude (suivies), vides sinon
     const suivies = new Set(etat.suivies.map(ident));
-    for (const s of etat.stations) {
+    for (const s of etat.stations.filter(dansVue)) {
       const x = X(s.lon), y = Y(s.lat), suivie = suivies.has(ident(s)), m = etat.mesures.get(ident(s)), lat = Direct.latence(m ? m.fin : null, Date.now());
       ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + 6.5, y + 4.5); ctx.lineTo(x - 6.5, y + 4.5); ctx.closePath();
-      if (suivie) { ctx.fillStyle = m && lat <= LATENCE_GRISE ? couleurAmplitude(m.amp) : '#94a3b8'; ctx.fill(); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1.2; ctx.stroke(); }
+      if (suivie) { ctx.fillStyle = m && lat <= latenceGrise() ? couleurAmplitude(m.amp) : '#94a3b8'; ctx.fill(); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1.2; ctx.stroke(); }
       else { ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1.2; ctx.stroke(); }
       if (suivie && m && m.decl.some(td => Date.now() - td < 60000)) { ctx.strokeStyle = COUL.bad; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.stroke(); }
       if (suivie) texte(ctx, s.station, x + 8, y - 6, COUL.ink, `700 10.5px ${MONO}`);
@@ -422,7 +452,7 @@ import Sismo from './sismo/signal.js';
     $('#dr-afficheurs').innerHTML = [
       afficheur('Stations reçues', `${recues} / ${etat.suivies.length}`, etat.mode === 'demo' ? 'signaux simulés' : etat.listeOk ? `${etat.stations.length} stations GEOFON dans la zone` : 'liste de GEOFON inaccessible'),
       afficheur('Latence médiane', lat.length ? depuisQuand(lat[Math.floor(lat.length / 2)] * 1000) : '—', 'depuis le dernier échantillon'),
-      afficheur('Paquets reçus', String(etat.cx.paquets), etat.cx.dernier ? `dernier il y a ${depuisQuand(Date.now() - etat.cx.dernier)}` : (etat.cx.message || '&nbsp;')),
+      afficheur('Paquets reçus', String(etat.cx.paquets), etat.cx.dernier ? `dernier il y a ${depuisQuand(Date.now() - etat.cx.dernier)}` : '&nbsp;'),
       afficheur('Heure UTC', hms(Date.now()), etat.pause ? 'traces figées (pause)' : 'traces en direct'),
     ].join('');
   }
@@ -457,7 +487,7 @@ import Sismo from './sismo/signal.js';
     if (!geo) return;
     const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
     const proche = (liste, f) => liste.reduce((m, o) => { const d = Math.hypot(geo.X(f(o).lon) - x, geo.Y(f(o).lat) - y); return d < m.d ? { o, d } : m; }, { o: null, d: Infinity });
-    const st = proche(etat.stations, s => s);
+    const st = proche(etat.stations.filter(dansVue), s => s);
     if (st.o && st.d < 14 && etat.mode !== 'demo') {
       const id = ident(st.o), i = etat.suivies.findIndex(s => ident(s) === id);
       if (i >= 0) etat.suivies.splice(i, 1);
@@ -499,7 +529,8 @@ import Sismo from './sismo/signal.js';
   async function demarrer() {
     badge('Chargement des stations…', true);
     const liste = await chargerStations();
-    etat.suivies = liste ? suiviesParDefaut(etat.stations) : [];
+    etat.suivies = liste ? suiviesParDefaut(etat.stations.filter(dansVue)) : [];
+    journal(liste ? `GEOFON : ${etat.stations.length} stations dans la zone` : 'GEOFON : liste des stations inaccessible');
     chargerSeismes();
     if (!liste) { changerMode('demo'); toast('Liste des stations de GEOFON inaccessible : mode démonstration (signaux simulés).'); return; }
     changerMode(etat.mode === 'demo' ? 'seedlink' : etat.mode);

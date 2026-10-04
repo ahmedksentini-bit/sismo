@@ -400,3 +400,5 @@ aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; 
 #poste-direct .carte { min-width: 0; max-width: 100%; }
 /* barre du haut des travaux pratiques : le lien « En direct » cède la place sur téléphone (le banc Station y renvoie) */
 @media (max-width: 760px) { .brand .lien-direct { display: none; } }
+#dr-journal { margin: 4px 0 0; padding: 0; list-style: none; font: 11.5px/1.45 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+#dr-journal li + li { margin-top: 3px; }
