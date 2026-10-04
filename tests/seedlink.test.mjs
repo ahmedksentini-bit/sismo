@@ -23,7 +23,7 @@ test('flux demandés : bien formés, 12 au plus ; reprise bornée à 30 minutes'
 test('poignée de main : STATION, SELECT, TIME ou DATA par station, puis END', () => {
   const f = SL.lireFlux('GE.TNTN..BHZ,GE.TNTN..BHN,GE.ISP.00.HHZ');
   assert.deepEqual(SL.commandes(f, Date.UTC(2026, 9, 4, 19, 55, 7)).map(c => c.ligne), [
-    'STATION TNTN GE', 'SELECT ??BHZ.D', 'SELECT ??BHN.D', 'TIME 2026,10,04,19,55,07',
+    'STATION TNTN GE', 'SELECT BHZ.D', 'SELECT BHN.D', 'TIME 2026,10,04,19,55,07',
     'STATION ISP GE', 'SELECT 00HHZ.D', 'TIME 2026,10,04,19,55,07', 'END']);
   assert.deepEqual(SL.commandes(f.slice(2)).map(c => c.ligne), ['STATION ISP GE', 'SELECT 00HHZ.D', 'DATA', 'END']);
   const l = SL.lecteurLignes();

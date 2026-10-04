@@ -68,6 +68,24 @@ const Direct = (() => {
     return y;
   }
 
+  // Préparation d'une trace brute avant filtrage : conversion (facteur k, coups → µm/s), moyenne retirée (décalage du
+  // numériseur) et départ de chaque segment continu adouci en cosinus sur n échantillons ; sans cela, le filtre
+  // « sonne » sur la marche du début (longtemps pour une bande étroite) et le détecteur y déclenche. NaN : trous.
+  function preparer(x, k = 1, n = 0) {
+    const y = Float64Array.from(x, v => v * k);
+    let m = 0, nm = 0;
+    for (const v of y) if (!Number.isNaN(v)) { m += v; nm++; }
+    m = nm ? m / nm : 0;
+    let depuis = 0;
+    for (let i = 0; i < y.length; i++) {
+      if (Number.isNaN(y[i])) { depuis = 0; continue; }
+      y[i] -= m;
+      if (depuis < n) y[i] *= 0.5 - 0.5 * Math.cos((Math.PI * depuis) / n);
+      depuis++;
+    }
+    return y;
+  }
+
   // ── Détection STA/LTA ─────────────────────────────────────────────────────────────────────────────────────────
   // Rapport classique (ObsPy, classic_sta_lta) : moyennes glissantes de x² sur nsta et nlta échantillons, nul avant
   // nlta − 1. Déclenchements (trigger_onset) : début quand le rapport dépasse `on`, fin quand il redescend sous `off`.
@@ -161,6 +179,6 @@ const Direct = (() => {
   // Latence (s) d'une voie : temps écoulé depuis son dernier échantillon.
   const latence = (fin, maintenant = Date.now()) => (fin === null ? Infinity : (maintenant - fin) / 1000);
 
-  return { distanceAzimut, butterPasseBande, filtrer, staLta, declenchements, voie, arrivees, latence, PHASES };
+  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, latence, PHASES };
 })();
 export default Direct;

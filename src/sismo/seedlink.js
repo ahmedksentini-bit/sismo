@@ -32,14 +32,15 @@ const SeedLink = (() => {
   const deux = n => String(n).padStart(2, '0');
   const temps = ms => { const d = new Date(ms); return `${d.getUTCFullYear()},${deux(d.getUTCMonth() + 1)},${deux(d.getUTCDate())},${deux(d.getUTCHours())},${deux(d.getUTCMinutes())},${deux(d.getUTCSeconds())}`; };
 
-  // Commandes de la poignée de main, regroupées par station : STATION, un SELECT par voie (emplacement « ?? » s'il
-  // n'est pas précisé), TIME (reprise) ou DATA (temps réel seul), puis END qui lance le flux.
+  // Commandes de la poignée de main, regroupées par station : STATION, un SELECT par voie (« BHZ.D » sans emplacement,
+  // qui vaut pour tous ; « ??BHZ.D » ne trouve pas l'emplacement vide sur tous les serveurs), TIME (reprise) ou DATA
+  // (temps réel seul), puis END qui lance le flux.
   function commandes(flux, depuis = null) {
     const parStation = new Map();
     for (const f of flux) {
       const cle = `${f.reseau}.${f.station}`;
       if (!parStation.has(cle)) parStation.set(cle, { reseau: f.reseau, station: f.station, selections: [] });
-      parStation.get(cle).selections.push(`${f.emplacement ? f.emplacement : '??'}${f.voie}.D`);
+      parStation.get(cle).selections.push(`${f.emplacement || ''}${f.voie}.D`);
     }
     const out = [];
     for (const s of parStation.values()) {
