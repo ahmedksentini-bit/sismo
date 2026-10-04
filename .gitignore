@@ -10,3 +10,6 @@ __pycache__/
 Thumbs.db
 # Configuration locale de l'aperçu (Claude Code)
 .claude/
+
+# État local de « wrangler pages dev » (essai des fonctions Cloudflare)
+.wrangler/

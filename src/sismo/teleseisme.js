@@ -7,7 +7,7 @@ import Mecanisme from './mecanisme.js';
 // Phases de volume dans ak135 (Globe : temps, paramètre de rai, angles de départ et d'incidence), amplitudes de la
 // théorie des rais : rayonnement d'un double couple tiré de la graine (Mecanisme), expansion géométrique tirée de
 // dp/dΔ, atténuation t*, coefficients de réflexion et de transmission d'ordre de grandeur, surface libre. Source de
-// Brune (Δσ = 3 MPa), impulsions causales, codas diffusées (Boore 2003). Ondes de surface dispersées : Rayleigh (Z et
+// Brune (Δσ = 10 MPa), impulsions causales, codas diffusées (Boore 2003). Ondes de surface dispersées : Rayleigh (Z et
 // R, ellipse rétrograde) et Love (T), calées pour que Ms ≈ Mw avant la saturation. Lectures : distance par S − P
 // (rais ak135), heure d'origine, profondeur par pP − P, Ms (IASPEI 2013). Solveurs purs, sans accès au DOM.
 const Teleseisme = (() => {
@@ -15,9 +15,17 @@ const Teleseisme = (() => {
   const R = Globe.R, RAD = Math.PI / 180, DT = 0.05;
   const PHASES = ['P', 'pP', 'sP', 'PcP', 'PKIKP', 'PKiKP', 'PKP', 'S', 'ScS', 'SKS'];
   const PHASES_P = ['P', 'PKIKP', 'PKiKP', 'PKP'];
-  const DSIGMA = 30, BETA_SOURCE = 3.75; // bars (3 MPa) et km/s
+  // Δσ de Brune : 10 MPa (le modèle de Brune donne des chutes de contrainte plusieurs fois plus fortes que celui de
+  // Madariaga pour un même spectre) ; avec 3 MPa, la P à 1 Hz était dix fois trop faible (mb ≈ 5 pour Mw 6,6).
+  const DSIGMA = 100, BETA_SOURCE = 3.75; // bars et km/s
   // t* (s) : atténuation intégrée le long du rai (valeurs usuelles des téléséismes)
-  const TSTAR = { P: 0.7, pP: 0.7, sP: 1.2, PcP: 0.7, PKIKP: 1.2, PKiKP: 0.9, PKP: 1, S: 3.5, ScS: 4, SKS: 2.5 };
+  // t* (s) à la fréquence de référence de l'onde (1 Hz pour P, 0,3 Hz pour S) : l'atténuation intégrée décroît avec la
+  // fréquence ; l'opérateur causal (1 + i·f/f1)⁻⁴ vaut exp(−π·f·t*) à cette fréquence (voir `attenuation`).
+  const TSTAR = { P: 0.55, pP: 0.55, sP: 1, PcP: 0.55, PKIKP: 0.9, PKiKP: 0.7, PKP: 0.75, S: 3, ScS: 3.5, SKS: 2.2 };
+  const F_REF = { P: 1, S: 0.3 };
+  // Atténuation causale : produit de quatre passe-bas du premier ordre de coupure f1, égal à exp(−π·fref·t*) à fref
+  // (une seule paire de pôles amortissait trop la bande de 1 à 2 Hz).
+  const attenuation = (tstar, fref) => fref / Math.sqrt(Math.exp((Math.PI * fref * tstar) / 2) - 1);
   // Coefficient de réflexion ou de transmission (ordre de grandeur, signe compris) appliqué au rayonnement de départ :
   // pP se réfléchit sous la surface en changeant de signe, sP s'y convertit de S en P, PcP et ScS se réfléchissent
   // sur le noyau, PKP, PKIKP et SKS le traversent, PKiKP se réfléchit sur la graine.
@@ -112,10 +120,11 @@ const Teleseisme = (() => {
     const spec = () => ({ re: new Float64Array(N), im: new Float64Array(N) });
     const dZ = spec(), dR = spec(), dT = spec();
     for (const a of ph) {
-      const fc = a.onde === 'P' ? 1.5 * fcS : fcS, fa = 1 / (2 * Math.PI * a.tstar), retard = a.temps - t0;
+      const fc = a.onde === 'P' ? 1.5 * fcS : fcS, f1 = attenuation(a.tstar, F_REF[a.onde]), retard = a.temps - t0;
       for (let k = 1; k <= N / 2; k++) {
         const f = k * df, w = 2 * Math.PI * f;
-        let hh = cdiv([1, 0], cmul(cmul([1, f / fc], [1, f / fc]), cmul([1, f / fa], [1, f / fa])));
+        const q = cmul([1, f / f1], [1, f / f1]);
+        let hh = cdiv([1, 0], cmul(cmul([1, f / fc], [1, f / fc]), cmul(q, q)));
         hh = cmul(hh, [Math.cos(-w * retard), Math.sin(-w * retard)]);
         const ar = -w * w * hh[0], ai = -w * w * hh[1];
         dZ.re[k] += a.Z * ar; dZ.im[k] += a.Z * ai;

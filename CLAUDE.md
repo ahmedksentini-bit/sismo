@@ -185,7 +185,9 @@ la virgule décimale.
     PcP, PKP, PKiKP, PKIKP, S, ScS, SKS) ; amplitudes de la théorie des rais : double couple tiré de la graine
     (`rayonnementP`, `rayonnementS` au signe d'Aki et Richards, éq. 4.29, opposé au `farfield 'S'` d'ObsPy), expansion
     géométrique tirée de dp/dΔ (bornée aux caustiques), t*, coefficients de réflexion et de transmission d'ordre de grandeur ;
-    Brune à Δσ = 3 MPa ; codas 2 s (P) et 4 s (S) après l'onde directe, pour que le premier mouvement reste lisible. 20 Hz
+    Brune à Δσ = 10 MPa, t* donné à 1 Hz (P) ou 0,3 Hz (S) et appliqué par (1 + i·f/f1)⁻⁴, égal à exp(−π·f·t*) à cette
+    fréquence (avec Δσ = 3 MPa et une seule paire de pôles, la P à 1 Hz était dix fois trop faible) ; codas 2 s (P) et
+    4 s (S) après l'onde directe, pour que le premier mouvement reste lisible. 20 Hz
     (voies BH) ; la vitesse est l'intégrale causale (niveau d'avant P retranché). Ondes de surface c(T) = c0 + a·ln T,
     Q = 290, calées (`CALAGE`) pour que la Ms mesurée sans bruit (déplacement vertical, Butterworth d'ordre 4 de 18 à 22 s,
     IASPEI 2013) soit stable de 20° à 160° et proche de Mw avant la saturation (testé) : à recaler après tout changement de
@@ -198,3 +200,15 @@ la virgule décimale.
     SKS : jamais d'onde S dans le noyau), réfléchis sous la surface (pP, sS, trait fin) ou sur le noyau (PcP, ScS, tirets) ;
     le front rejoint la surface par interpolation des arrivées. Séisme local : coupe de la croûte du générateur (rais droits,
     Snell au Moho, onde conique). En mode Exercice, l'animation reste masquée jusqu'à « Vérifier ».
+34. **En direct** (`direct.html`, `src/direct-page.js`) : stations GEOFON (réseau GE) autour de la Méditerranée. Deux
+    fonctions Cloudflare Pages (`functions/api/`) servent de relais, bornés : `seedlink.js` ouvre une connexion TCP vers le
+    SeedLink de GEOFON (geofon.gfz.de:18000, seul serveur permis) pour 12 flux validés au plus, reprise ≤ 30 min, fermeture
+    au bout de 10 min (la page se reconnecte depuis son dernier échantillon) ; `geofon.js` ne transmet que les services
+    FDSN station, dataselect (≤ 2 h, ≤ 12 stations nommées) et event, au format texte. Si le relais SeedLink échoue deux
+    fois, la page interroge dataselect toutes les 20 s ; si GEOFON est injoignable, mode « Démo (simulée) » : séisme fictif,
+    signaux de `teleseisme.js`, toujours signalé comme tel. Décodage miniSEED (`src/sismo/miniseed.js`, Steim 1 et 2,
+    entiers, réels) vérifié contre ObsPy ; protocole SeedLink (`src/sismo/seedlink.js`) ; filtres de Butterworth comme scipy
+    (`butter` + `sosfilt`), STA/LTA et déclenchements comme ObsPy (`src/sismo/direct.js`). Détecteur : 0,7–2 Hz (ordre 4),
+    STA 2 s / LTA 80 s, seuils 4 et 1,5 ; le bruit gaussien déclenche de temps en temps, c'est attendu. Côtes Natural Earth
+    produites par `tools/carte/cotes.py`. Essai local sans réseau : `node tools/direct/serveurs-essai.mjs` puis
+    `wrangler pages dev . --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding GEOFON_FDSN=http://127.0.0.1:8090`.

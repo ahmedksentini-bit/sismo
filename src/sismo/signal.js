@@ -380,12 +380,12 @@ const Sismo = (() => {
     HH: { nom: 'Vélocimètre large bande', grandeur: 'vitesse', saturation: 0.015 },
     HN: { nom: 'Accéléromètre', grandeur: 'acceleration', bruit: 1e-4 },
   };
-  function bruitBande(n, dt, u, fmin, fmax, rms) {
+  function bruitBande(n, dt, u, fmin, fmax, rms, ordre = 2) {
     const N = puissance2(n);
     const re = new Float64Array(N), im = new Float64Array(N);
     for (let i = 0; i < N; i++) re[i] = u.gauss();
     fft(re, im, false);
-    const H = passeBande(fmin, fmax, 2);
+    const H = passeBande(fmin, fmax, ordre);
     multiplier(re, im, dt, H);
     fft(re, im, true);
     let s = 0;
@@ -402,7 +402,9 @@ const Sismo = (() => {
       if (capteur === 'HH') {
         const v = ev.vit[c];
         const kms = c === 'Z' ? 1.2 : 1;
-        const b1 = bruitBande(n, dt, u, 0.1, 0.35, lv.ms * kms), b2 = bruitBande(n, dt, u, 1, 25, lv.hf);
+        // microséisme : bande de 0,1 à 0,35 Hz à flancs raides (ordre 4), comme le pic de la houle qui retombe vite
+        // au-dessus de 0,5 Hz ; bruit de site au-dessus de 1 Hz
+        const b1 = bruitBande(n, dt, u, 0.1, 0.35, lv.ms * kms, 4), b2 = bruitBande(n, dt, u, 1, 25, lv.hf);
         const y = new Float64Array(n), s = CAPTEURS.HH.saturation;
         let nb = 0;
         for (let i = 0; i < n; i++) {
