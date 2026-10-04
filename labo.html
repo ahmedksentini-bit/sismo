@@ -6,7 +6,122 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Travaux pratiques de sismologie et d'aléa sismique : dix-sept bancs interactifs, de la lecture d'un sismogramme à l'isolation à la base">
 <title>Travaux pratiques — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css">
+<link rel="stylesheet" href="lecteur.css?v=90ba7ccaf5">
+<!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
+<script type="importmap">
+{"imports": {
+  "./src/app.js": "./src/app.js?v=1cd687d721",
+  "./src/ballon.js": "./src/ballon.js?v=34da25b99b",
+  "./src/banc-alea.js": "./src/banc-alea.js?v=efef685cad",
+  "./src/banc-batiment.js": "./src/banc-batiment.js?v=947c718313",
+  "./src/banc-ductilite.js": "./src/banc-ductilite.js?v=c29300a46c",
+  "./src/banc-geodesie.js": "./src/banc-geodesie.js?v=34dc2cee6d",
+  "./src/banc-isolation.js": "./src/banc-isolation.js?v=b75f629476",
+  "./src/banc-liquefaction.js": "./src/banc-liquefaction.js?v=a209e4a6a4",
+  "./src/banc-mecanisme.js": "./src/banc-mecanisme.js?v=5026120541",
+  "./src/banc-poussee.js": "./src/banc-poussee.js?v=1ae7248b49",
+  "./src/banc-profil.js": "./src/banc-profil.js?v=6a420e2770",
+  "./src/banc-selection.js": "./src/banc-selection.js?v=fa88657041",
+  "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=1bbd183b43",
+  "./src/banc-sismometre.js": "./src/banc-sismometre.js?v=97df4b1e82",
+  "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
+  "./src/banc-source.js": "./src/banc-source.js?v=f844666ceb",
+  "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
+  "./src/consignes.js": "./src/consignes.js?v=1998b5bbf8",
+  "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
+  "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
+  "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
+  "./src/cours-ch12.js": "./src/cours-ch12.js?v=8ba229b83f",
+  "./src/cours-ch13.js": "./src/cours-ch13.js?v=127efda660",
+  "./src/cours-ch14.js": "./src/cours-ch14.js?v=b42cafd416",
+  "./src/cours-ch15.js": "./src/cours-ch15.js?v=5937c15fe4",
+  "./src/cours-ch16.js": "./src/cours-ch16.js?v=b9534e0ba9",
+  "./src/cours-ch17.js": "./src/cours-ch17.js?v=a932da3933",
+  "./src/cours-ch2.js": "./src/cours-ch2.js?v=cdb5574b6b",
+  "./src/cours-ch3.js": "./src/cours-ch3.js?v=25f3fcf346",
+  "./src/cours-ch4.js": "./src/cours-ch4.js?v=f00aa1b6f7",
+  "./src/cours-ch5.js": "./src/cours-ch5.js?v=9f673f2c67",
+  "./src/cours-ch6.js": "./src/cours-ch6.js?v=950f094d03",
+  "./src/cours-ch7.js": "./src/cours-ch7.js?v=0722fb7d58",
+  "./src/cours-ch8.js": "./src/cours-ch8.js?v=048774fad0",
+  "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
+  "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
+  "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
+  "./src/direct-page.js": "./src/direct-page.js?v=73cbea972f",
+  "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
+  "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
+  "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
+  "./src/exos/alea.js": "./src/exos/alea.js?v=943933578f",
+  "./src/exos/ch01.js": "./src/exos/ch01.js?v=944b9ae569",
+  "./src/exos/ch02.js": "./src/exos/ch02.js?v=0fba193b19",
+  "./src/exos/ch03.js": "./src/exos/ch03.js?v=cd55fa09d0",
+  "./src/exos/ch04.js": "./src/exos/ch04.js?v=a9bfc3643b",
+  "./src/exos/ch05.js": "./src/exos/ch05.js?v=74082d3d6c",
+  "./src/exos/ch06.js": "./src/exos/ch06.js?v=35d5c8bc97",
+  "./src/exos/ch07.js": "./src/exos/ch07.js?v=ea215d6e96",
+  "./src/exos/ch08.js": "./src/exos/ch08.js?v=d60518c71b",
+  "./src/exos/ch09.js": "./src/exos/ch09.js?v=fa843f9ce2",
+  "./src/exos/ch10.js": "./src/exos/ch10.js?v=25cca25681",
+  "./src/exos/ch11.js": "./src/exos/ch11.js?v=c0f1d54c9b",
+  "./src/exos/ch12.js": "./src/exos/ch12.js?v=39bfee5e3e",
+  "./src/exos/ch13.js": "./src/exos/ch13.js?v=7b00ecaa18",
+  "./src/exos/ch14.js": "./src/exos/ch14.js?v=e0efe09300",
+  "./src/exos/ch15.js": "./src/exos/ch15.js?v=36ae7ae8df",
+  "./src/exos/ch16.js": "./src/exos/ch16.js?v=093f2c148a",
+  "./src/exos/ch17.js": "./src/exos/ch17.js?v=448af60040",
+  "./src/exos/index.js": "./src/exos/index.js?v=e4c58a46e2",
+  "./src/figures.js": "./src/figures.js?v=41aa5ac77c",
+  "./src/globe-figure.js": "./src/globe-figure.js?v=3dab247c58",
+  "./src/gmpe-notes.js": "./src/gmpe-notes.js?v=0c33f8c35b",
+  "./src/impression.js": "./src/impression.js?v=b8f76b944a",
+  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=dffb63d545",
+  "./src/lecteur-station.js": "./src/lecteur-station.js?v=2c4aacd228",
+  "./src/onglets.js": "./src/onglets.js?v=869ae39f99",
+  "./src/parcours.js": "./src/parcours.js?v=0576a3a1d5",
+  "./src/propagation-anim.js": "./src/propagation-anim.js?v=09b8d63d07",
+  "./src/schemas-notes.js": "./src/schemas-notes.js?v=875bc6fc7f",
+  "./src/schemas.js": "./src/schemas.js?v=a7836082b6",
+  "./src/sismo/accelerogramme.js": "./src/sismo/accelerogramme.js?v=c4d9584306",
+  "./src/sismo/batiment.js": "./src/sismo/batiment.js?v=64d6e346cb",
+  "./src/sismo/centres.js": "./src/sismo/centres.js?v=9434d01982",
+  "./src/sismo/coefficients/accelerogrammes.js": "./src/sismo/coefficients/accelerogrammes.js?v=f718def810",
+  "./src/sismo/coefficients/ak135.js": "./src/sismo/coefficients/ak135.js?v=02690d2d65",
+  "./src/sismo/coefficients/akkar2014.js": "./src/sismo/coefficients/akkar2014.js?v=d649279ca2",
+  "./src/sismo/coefficients/bindi2014.js": "./src/sismo/coefficients/bindi2014.js?v=75d65799f7",
+  "./src/sismo/coefficients/boore2014.js": "./src/sismo/coefficients/boore2014.js?v=61fd6969f4",
+  "./src/sismo/direct.js": "./src/sismo/direct.js?v=dda754cb0c",
+  "./src/sismo/faille.js": "./src/sismo/faille.js?v=711c6bcef2",
+  "./src/sismo/fdsn.js": "./src/sismo/fdsn.js?v=2cd2e7bb50",
+  "./src/sismo/geodesie.js": "./src/sismo/geodesie.js?v=c59d80cef9",
+  "./src/sismo/globe.js": "./src/sismo/globe.js?v=dc6b2eacec",
+  "./src/sismo/gmpe.js": "./src/sismo/gmpe.js?v=c3f0f1bb6b",
+  "./src/sismo/inelastique.js": "./src/sismo/inelastique.js?v=90547bdcbc",
+  "./src/sismo/intensite.js": "./src/sismo/intensite.js?v=26dfdc0e08",
+  "./src/sismo/isolation.js": "./src/sismo/isolation.js?v=de3977e9bb",
+  "./src/sismo/isolignes.js": "./src/sismo/isolignes.js?v=46595a3d75",
+  "./src/sismo/liquefaction.js": "./src/sismo/liquefaction.js?v=2fa95a312e",
+  "./src/sismo/mecanisme.js": "./src/sismo/mecanisme.js?v=9ddc2d867b",
+  "./src/sismo/miniseed.js": "./src/sismo/miniseed.js?v=001779fa85",
+  "./src/sismo/oscillateur.js": "./src/sismo/oscillateur.js?v=3f8504910f",
+  "./src/sismo/poussee.js": "./src/sismo/poussee.js?v=a9a6aa3dd5",
+  "./src/sismo/propagation.js": "./src/sismo/propagation.js?v=6b02374afd",
+  "./src/sismo/psha.js": "./src/sismo/psha.js?v=0e7f974e10",
+  "./src/sismo/refraction.js": "./src/sismo/refraction.js?v=beb5ebe9f0",
+  "./src/sismo/seedlink.js": "./src/sismo/seedlink.js?v=d1f8330f2a",
+  "./src/sismo/selection.js": "./src/sismo/selection.js?v=d7d9327078",
+  "./src/sismo/signal.js": "./src/sismo/signal.js?v=ec59567da2",
+  "./src/sismo/sismicite.js": "./src/sismo/sismicite.js?v=ae771a63c0",
+  "./src/sismo/site.js": "./src/sismo/site.js?v=a9116403be",
+  "./src/sismo/source.js": "./src/sismo/source.js?v=106a0e6fcd",
+  "./src/sismo/spectre.js": "./src/sismo/spectre.js?v=1202ae7996",
+  "./src/sismo/tables.js": "./src/sismo/tables.js?v=cc48159840",
+  "./src/sismo/teleseisme.js": "./src/sismo/teleseisme.js?v=548e548b4d",
+  "./src/socle.js": "./src/socle.js?v=1931acce73",
+  "./src/tableaux.js": "./src/tableaux.js?v=69a0ae895d",
+  "./src/traits.js": "./src/traits.js?v=1bf04c36d8",
+  "./src/ui.js": "./src/ui.js?v=71f30de7df"
+}}
+</script>
 </head>
 <body>
 
@@ -1369,23 +1484,23 @@
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript>Activez JavaScript pour utiliser le lecteur.</noscript>
-<script type="module" src="src/lecteur-station.js"></script>
-<script type="module" src="src/lecteur-reseau.js"></script>
-<script type="module" src="src/banc-sismometre.js"></script>
-<script type="module" src="src/banc-profil.js"></script>
-<script type="module" src="src/banc-spectre.js"></script>
-<script type="module" src="src/banc-sismicite.js"></script>
-<script type="module" src="src/banc-geodesie.js"></script>
-<script type="module" src="src/banc-alea.js"></script>
-<script type="module" src="src/banc-selection.js"></script>
-<script type="module" src="src/banc-site.js"></script>
-<script type="module" src="src/banc-liquefaction.js"></script>
-<script type="module" src="src/banc-ductilite.js"></script>
-<script type="module" src="src/banc-mecanisme.js"></script>
-<script type="module" src="src/banc-source.js"></script>
-<script type="module" src="src/banc-batiment.js"></script>
-<script type="module" src="src/banc-poussee.js"></script>
-<script type="module" src="src/banc-isolation.js"></script>
-<script type="module" src="src/onglets.js"></script>
+<script type="module" src="src/lecteur-station.js?v=2c4aacd228"></script>
+<script type="module" src="src/lecteur-reseau.js?v=dffb63d545"></script>
+<script type="module" src="src/banc-sismometre.js?v=97df4b1e82"></script>
+<script type="module" src="src/banc-profil.js?v=6a420e2770"></script>
+<script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>
+<script type="module" src="src/banc-sismicite.js?v=1bbd183b43"></script>
+<script type="module" src="src/banc-geodesie.js?v=34dc2cee6d"></script>
+<script type="module" src="src/banc-alea.js?v=efef685cad"></script>
+<script type="module" src="src/banc-selection.js?v=fa88657041"></script>
+<script type="module" src="src/banc-site.js?v=07d6eb2b49"></script>
+<script type="module" src="src/banc-liquefaction.js?v=a209e4a6a4"></script>
+<script type="module" src="src/banc-ductilite.js?v=c29300a46c"></script>
+<script type="module" src="src/banc-mecanisme.js?v=5026120541"></script>
+<script type="module" src="src/banc-source.js?v=f844666ceb"></script>
+<script type="module" src="src/banc-batiment.js?v=947c718313"></script>
+<script type="module" src="src/banc-poussee.js?v=1ae7248b49"></script>
+<script type="module" src="src/banc-isolation.js?v=b75f629476"></script>
+<script type="module" src="src/onglets.js?v=869ae39f99"></script>
 </body>
 </html>

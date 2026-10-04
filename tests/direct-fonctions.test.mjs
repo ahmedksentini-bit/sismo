@@ -46,6 +46,6 @@ test('relais SeedLink : serveurs de la liste blanche seulement, flux validés, v
   // la page « En direct » existe, charge son script et les côtes produites par tools/carte/cotes.py
   const page = readFileSync(new URL('../direct.html', import.meta.url), 'utf-8'), cotes = JSON.parse(readFileSync(new URL('../data/cotes-mediterranee.json', import.meta.url), 'utf-8'));
   for (const id of ['dr-carte', 'dr-traces', 'dr-seismes', 'dr-arrivees', 'dr-afficheurs', 'dr-reseaux', 'dr-tunisie', 'dr-centres', 'dr-journal']) assert.ok(page.includes(`id="${id}"`), id);
-  assert.ok(page.includes('src="src/direct-page.js"'));
+  assert.match(page, /src="src\/direct-page\.js(\?v=[0-9a-f]+)?"/);
   assert.ok(cotes.cotes.length > 50 && cotes.cotes.every(l => l.length % 2 === 0));
 });

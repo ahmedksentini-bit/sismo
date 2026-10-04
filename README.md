@@ -139,6 +139,7 @@ functions/api/          fonctions Cloudflare Pages : seedlink.js (relais SeedLin
                         fdsn.js (relais FDSN)
 tools/carte/cotes.py    côtes et frontières Natural Earth découpées à la Méditerranée (data/cotes-mediterranee.json)
 tools/carte/pays.py     pays Natural Earth découpés à la Méditerranée (data/pays-mediterranee.json)
+tools/versions.mjs      versions des scripts et feuilles de style (cartes d'import des pages) : npm run versions
 tools/direct/           serveurs SeedLink et FDSN d'essai, pour essayer les fonctions sans réseau (wrangler pages dev)
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
@@ -161,7 +162,7 @@ src/onglets.js          onglets et fil du parcours (partie, banc précédent et 
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays (198 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, versions des scripts (200 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
