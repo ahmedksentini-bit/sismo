@@ -347,5 +347,8 @@ a.brand strong,a.brand small{text-decoration:none}
 .nc-formule{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:15.5px;color:#0f172a}
 .nc-calcul{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .nc-note{color:var(--muted);font-size:13px}
+.nc-schema{margin:8px 0 4px;max-width:520px}
+.nc-schema svg{display:block;width:100%;height:auto;border:1px solid #e2e8f0;border-radius:10px;background:#fff}
+.nc-schema figcaption{margin-top:4px;font-size:12.5px;line-height:1.4;color:var(--muted)}
 .nc-conclusion{margin:10px 0 0;padding:8px 12px;border-left:4px solid var(--blue);background:#f0f9ff;font-weight:600}
-@media print{.note-calcul>summary::before{content:""}}
+@media print{.note-calcul>summary::before{content:""}.nc-schema{max-width:118mm;break-inside:avoid}}

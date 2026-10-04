@@ -5,6 +5,7 @@ import { graphe, COULEURS } from "./figures.js";
 import Spectre from "./sismo/spectre.js";
 import Oscillateur from "./sismo/oscillateur.js";
 import Accelero from "./sismo/accelerogramme.js";
+import { branchesEC8 } from "./schemas-notes.js";
 
 const G = Spectre.G, SOLS = ["A", "B", "C", "D", "E"];
 
@@ -102,7 +103,9 @@ const majEC8 = garde("ecOut", () => {
       { titre: "Correction d'amortissement", formule: "η = √(10 / (5 + ξ)) ≥ 0,55 (ξ en %)", calcul: `η = √(10 / (5 + ${fd(100 * xi, 0)})) = <b>${fd(eta, 3)}</b>` },
       { titre: "Plateau", formule: "a<sub>g</sub>·S·η·2,5", calcul: `${fd(ag, 3)} × ${fd(p.S, 2)} × ${fd(eta, 3)} × 2,5 = <b>${f(plateau, 3)} g</b>` },
       { titre: "Période fondamentale approchée", formule: "T<sub>1</sub> = C<sub>t</sub>·H<sup>3/4</sup>", calcul: `T<sub>1</sub> = ${fd(Spectre.CT[sys], 3)} × ${f(H, 3)}<sup>0,75</sup> = <b>${f(T1, 3)} s</b> → ${branche}` },
-      { titre: "Accélération spectrale à T<sub>1</sub>", formule: formule[0], calcul: `Se = ${formule[1]} = <b>${f(se1, 3)} g</b>` },
+      { titre: "Accélération spectrale à T<sub>1</sub>", formule: formule[0], calcul: `Se = ${formule[1]} = <b>${f(se1, 3)} g</b>`,
+        schema: branchesEC8({ courbe: (t) => Spectre.ec8(t, { type, sol, ag, xi }), TB: p.TB, TC: p.TC, TD: p.TD, T: T1 }),
+        legende: `Les quatre branches du spectre élastique (périodes en échelle logarithmique) : T<sub>1</sub> tombe sur la branche « ${branche} », d'où la formule employée.` },
       { titre: "Déplacement spectral", formule: "Sd = Se·g·(T/2π)²", calcul: `Sd = ${f(se1, 3)} × 9,81 × (${f(T1, 3)}/2π)² = <b>${f(se1 * G * (T1 / (2 * Math.PI)) ** 2 * 1000, 3)} mm</b>` },
     ],
   });

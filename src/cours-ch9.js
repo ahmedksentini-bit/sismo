@@ -3,6 +3,7 @@
 import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, echantillon, COULEURS } from "./figures.js";
 import Geodesie from "./sismo/geodesie.js";
+import { failleBloquee, mohrDeformation } from "./schemas-notes.js";
 
 const sci = (x, c = 3) => { const e = Math.floor(Math.log10(Math.abs(x))); return `${f(x / 10 ** e, c)}·10<sup>${String(e).replace("-", "−")}</sup>`; };
 
@@ -26,7 +27,9 @@ const majFaille = garde("faOut", () => {
     etapes: [
       { titre: "Profil des vitesses (Savage et Burford, 1973)", formule: "v(x) = (s/π)·arctan(x/D)", calcul: `à x = D : v = (${f(s, 3)}/π) × arctan 1 = s/4 = <b>${f(s / 4, 3)} mm/an</b> ; loin : ± s/2 = ± ${f(s / 2, 3)} mm/an` },
       { titre: "Taux de déformation sur la faille", formule: "dv/dx (x = 0) = s/(πD)", calcul: `${f(s, 3)}/(π × ${f(D, 3)}) = ${f(s / (Math.PI * D), 3)} mm/an/km = <b>${f((1000 * s) / (Math.PI * D), 3)} ns/an</b>` },
-      { titre: "Taux de moment à libérer", formule: "Ṁ<sub>0</sub> = μ·L·W·s, avec W = D", calcul: `Ṁ<sub>0</sub> = 3·10<sup>10</sup> × ${f(L * 1e3, 4)} × ${f(D * 1e3, 4)} × ${f(s / 1000, 3)} = <b>${sci(M0)} N·m/an</b>` },
+      { titre: "Taux de moment à libérer", formule: "Ṁ<sub>0</sub> = μ·L·W·s, avec W = D", calcul: `Ṁ<sub>0</sub> = 3·10<sup>10</sup> × ${f(L * 1e3, 4)} × ${f(D * 1e3, 4)} × ${f(s / 1000, 3)} = <b>${sci(M0)} N·m/an</b>`,
+        schema: failleBloquee({ s, D, L, M0 }),
+        legende: "Modèle de Savage et Burford : sous la profondeur D, la faille glisse sans cesse à la vitesse des plaques ; au-dessus, bloquée, elle accumule un déficit de glissement s par an sur la surface L × D, que les séismes devront rattraper." },
       { titre: "Moment d'un séisme de la magnitude choisie", formule: "M<sub>0</sub> = 10<sup>1,5·M + 9,05</sup>", calcul: `M<sub>0</sub> = 10<sup>1,5 × ${fd(M, 1)} + 9,05</sup> = <b>${sci(Mc)} N·m</b>` },
       { titre: "Période de retour si tout le moment part dans ces séismes", formule: "T<sub>R</sub> = M<sub>0</sub> / Ṁ<sub>0</sub>", calcul: `T<sub>R</sub> = ${sci(Mc)} / ${sci(M0)} = <b>${f(Mc / M0, 3)} ans</b>` },
     ],
@@ -59,7 +62,9 @@ const majKostrov = garde("koOut", () => {
     donnees: [["ε̇<sub>xx</sub>, ε̇<sub>yy</sub>, ε̇<sub>xy</sub>", `${fd(t.exx, 1)} ; ${fd(t.eyy, 1)} ; ${fd(t.exy, 1)} ns/an`], ["A", `${f(A, 4)} km²`], ["H", "15 km"], ["μ", "30 GPa"], ["χ", fd(chi, 2)], ["b", "1"], ["magnitudes", `de 4 à ${fd(mmax, 1)}`]],
     etapes: [
       { titre: "Taux de déformation principaux", formule: "c = (ε̇<sub>xx</sub> + ε̇<sub>yy</sub>)/2 ; r = √(((ε̇<sub>xx</sub> − ε̇<sub>yy</sub>)/2)² + ε̇<sub>xy</sub>²) ; ε̇<sub>1</sub> = c − r, ε̇<sub>2</sub> = c + r",
-        calcul: `c = ${fd(c0, 2)} ; r = ${fd(r0, 2)} → ε̇<sub>1</sub> = <b>${fd(P.e1h, 2)}</b>, ε̇<sub>2</sub> = <b>${fd(P.e2h, 2)} ns/an</b> ; raccourcissement maximal à l'azimut ${fd(P.azimutRaccourcissement, 0)}°` },
+        calcul: `c = ${fd(c0, 2)} ; r = ${fd(r0, 2)} → ε̇<sub>1</sub> = <b>${fd(P.e1h, 2)}</b>, ε̇<sub>2</sub> = <b>${fd(P.e2h, 2)} ns/an</b> ; raccourcissement maximal à l'azimut ${fd(P.azimutRaccourcissement, 0)}°`,
+        schema: mohrDeformation({ exx: t.exx, eyy: t.eyy, exy: t.exy, e1: P.e1h, e2: P.e2h, az: P.azimutRaccourcissement }),
+        legende: "Le cercle de Mohr passe par les deux points du tenseur ; son centre c et son rayon r donnent les taux principaux, aux bouts du diamètre horizontal. À droite, leurs directions sur la carte." },
       { titre: "Taux de moment géodésique (Kostrov, forme de Savage et Simpson 1997)", formule: "Ṁ<sub>0</sub> = 2μ·H·A·max(|ε̇<sub>1</sub>|, |ε̇<sub>2</sub>|, |ε̇<sub>1</sub> + ε̇<sub>2</sub>|)",
         calcul: `max = ${fd(emax, 2)} ns/an ; Ṁ<sub>0</sub> = 2 × 3·10<sup>10</sup> × 15 000 × ${f(A, 4)}·10<sup>6</sup> × ${fd(emax, 2)}·10<sup>−9</sup> = <b>${sci(M0)} N·m/an</b>` },
       { titre: "Part sismique", formule: "Ṁ<sub>s</sub> = χ·Ṁ<sub>0</sub>", calcul: `Ṁ<sub>s</sub> = ${fd(chi, 2)} × ${sci(M0)} = <b>${sci(z.momentSismique)} N·m/an</b>` },

@@ -6,6 +6,7 @@ import Isolation from "./sismo/isolation.js";
 import Spectre from "./sismo/spectre.js";
 import Oscillateur from "./sismo/oscillateur.js";
 import Accelero from "./sismo/accelerogramme.js";
+import { boucleIsolateur } from "./schemas-notes.js";
 
 const G = Spectre.G, TS = 0.4, XI_S = 0.05;
 let etat = null; // dernier dimensionnement, repris par le calcul temporel
@@ -43,7 +44,9 @@ const majIsolateur = garde("isOut", () => {
         calcul: `K<sub>2</sub> = ${f(M, 4)} × (2π/${f(Tiso, 3)})² = <b>${f(iso.K2, 4)} kN/m</b> ; Q = ${f(q, 3)} × ${f(M, 4)} × 9,81 = <b>${f(iso.Q, 4)} kN</b> ; K<sub>1</sub> = <b>${f(iso.K1, 4)} kN/m</b>` },
       { titre: "Première estimation", formule: "d<sub>0</sub> = S<sub>e</sub>(T<sub>iso</sub> ; 5 %)·(T<sub>iso</sub>/2π)²", calcul: `d<sub>0</sub> = <b>${f(e1.d * 1000, 4)} mm</b>` },
       { titre: "Linéarisation équivalente à l'amplitude d", formule: "F = Q + K<sub>2</sub>·d ; K<sub>eff</sub> = F/d ; T<sub>eff</sub> = 2π·√(M/K<sub>eff</sub>) ; E<sub>D</sub> = 4Q·(d − d<sub>y</sub>) ; ξ<sub>eff</sub> = E<sub>D</sub>/(2π·K<sub>eff</sub>·d²)",
-        calcul: `à d<sub>0</sub> : F = ${f(e1.F, 4)} kN, K<sub>eff</sub> = ${f(e1.Keff, 4)} kN/m, T<sub>eff</sub> = ${f(e1.Teff, 3)} s, ξ<sub>eff</sub> = ${fd(100 * e1.xi, 1)} % → d<sub>1</sub> = S<sub>e</sub>(T<sub>eff</sub> ; ξ<sub>eff</sub>)·(T<sub>eff</sub>/2π)² = ${f(e1.suivant * 1000, 4)} mm` },
+        calcul: `à d<sub>0</sub> : F = ${f(e1.F, 4)} kN, K<sub>eff</sub> = ${f(e1.Keff, 4)} kN/m, T<sub>eff</sub> = ${f(e1.Teff, 3)} s, ξ<sub>eff</sub> = ${fd(100 * e1.xi, 1)} % → d<sub>1</sub> = S<sub>e</sub>(T<sub>eff</sub> ; ξ<sub>eff</sub>)·(T<sub>eff</sub>/2π)² = ${f(e1.suivant * 1000, 4)} mm`,
+        schema: boucleIsolateur({ K1: iso.K1, K2: iso.K2, Q: iso.Q, dy: iso.dy, d: eq.d, F: eq.F }),
+        legende: "La boucle de l'isolateur au déplacement de calcul : la raideur effective est la sécante qui joint ses sommets, l'énergie dissipée par cycle son aire ; l'oscillateur linéaire équivalent a cette raideur et l'amortissement qui dissipe la même énergie." },
       { titre: "Point fixe (avec relaxation)", formule: "on recommence avec le nouveau d jusqu'à stabilité", calcul: `${eq.etapes.length} itérations → <b>d = ${f(d * 1000, 4)} mm</b>, T<sub>eff</sub> = <b>${f(eq.Teff, 3)} s</b>, ξ<sub>eff</sub> = <b>${fd(100 * eq.xi, 2)} %</b>` },
       { titre: "Réduction du spectre par l'amortissement", formule: "η = √(10/(5 + ξ)) ≥ 0,55", calcul: `η = √(10/(5 + ${fd(100 * eq.xi, 2)})) = <b>${fd(eta, 3)}</b>` },
       { titre: "Accélération transmise", formule: "a = F/M ; base fixe : S<sub>e</sub>(0,4 s)", calcul: `a = ${f(Fd, 4)} / ${f(M, 4)} = ${f(Fd / M, 4)} m/s² = <b>${f(aIso, 3)} g</b>, contre <b>${f(aFixe, 3)} g</b> sur base fixe (division par ${f(aFixe / aIso, 3)})` },

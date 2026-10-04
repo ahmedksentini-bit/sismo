@@ -3,6 +3,7 @@
 import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, echantillon, COULEURS } from "./figures.js";
 import Oscillateur from "./sismo/oscillateur.js";
+import { instrument } from "./schemas-notes.js";
 
 // ── Oscillations libres ──────────────────────────────────────────────────
 const majLibre = garde("liOut", () => {
@@ -108,7 +109,9 @@ const majSinus = garde("siOut", () => {
     donnees: [["instrument", `${inst.nom}, f<sub>0</sub> = ${f(inst.f0, 3)} Hz, ξ = ${f(inst.xi, 2)}`], ["mouvement du sol", `u<sub>g</sub> = 1 mm × sin(2π·${f(fs, 3)}·t), montée sur 3 périodes`]],
     etapes: [
       { titre: "Rapport des fréquences", formule: "r = f / f<sub>0</sub>", calcul: `r = ${f(fs, 3)} / ${f(inst.f0, 3)} = <b>${f(r, 3)}</b>` },
-      { titre: "Amplitude établie prévue", formule: "|X| = U<sub>g</sub>·r² / √((1 − r²)² + (2ξr)²)", calcul: `|X| = 1 × ${f(r * r, 4)} / ${f(Dr, 4)} = <b>${f(theo, 3)} mm</b>` },
+      { titre: "Amplitude établie prévue", formule: "|X| = U<sub>g</sub>·r² / √((1 − r²)² + (2ξr)²)", calcul: `|X| = 1 × ${f(r * r, 4)} / ${f(Dr, 4)} = <b>${f(theo, 3)} mm</b>`,
+        schema: instrument({ f0: inst.f0, xi: inst.xi, fs, theo, nom: inst.nom }),
+        legende: "x est le mouvement de la masse par rapport au bâti, qui suit le sol. Sur la courbe |X/Ug|(r), le point du calcul : au-dessus de f₀, x reproduit le déplacement du sol ; bien au-dessous, x est proportionnel à son accélération." },
       { titre: "Amplitude calculée pas à pas (Newmark)", formule: "ẍ + 2ξω<sub>0</sub>ẋ + ω<sub>0</sub>²x = −üg, üg par différences centrées", calcul: `maximum sur les 40 % finaux de l'enregistrement : <b>${f(amp, 3)} mm</b> (écart ${f((100 * (amp - theo)) / theo, 2)} %)` },
       { titre: "Accélération du sol", formule: "|üg| = (2πf)²·U<sub>g</sub>", calcul: `|üg| = (2π × ${f(fs, 3)})² × 1 = <b>${f(w ** 2, 4)} mm/s²</b> ; x·ω<sub>0</sub>² = ${f(amp, 3)} × ${f((2 * Math.PI * inst.f0) ** 2, 4)} = ${f(amp * (2 * Math.PI * inst.f0) ** 2, 4)} mm/s²` },
     ],

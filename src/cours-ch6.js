@@ -8,6 +8,7 @@ import Sismo from "./sismo/signal.js";
 import Refraction from "./sismo/refraction.js";
 import Globe from "./sismo/globe.js";
 import { globe, eventail, raisVers, foyer, subduction, COULEURS_PHASES } from "./globe-figure.js";
+import { raisCroute, pPgeometrie } from "./schemas-notes.js";
 
 // Moindres carrés t = ti + Δ/V sur des points [Δ, t].
 function droiteMC(pts) {
@@ -49,7 +50,9 @@ const majHodo = garde("hoOut", () => {
       { titre: "Temps d'intercept de Pn", formule: "t<sub>i</sub> = (2H − h)·cos i<sub>c</sub> / V<sub>1</sub>", calcul: `t<sub>i</sub> = (${fd(2 * H, 1)} − ${fd(h, 1)}) × ${fd(Math.cos(ic), 4)} / ${fd(V1, 2)} = <b>${fd(ti, 2)} s</b>` },
       { titre: "Distance critique : Pn apparaît", formule: "x<sub>crit</sub> = (2H − h)·tan i<sub>c</sub>", calcul: `x<sub>crit</sub> = ${fd(2 * H - h, 1)} × ${fd(Math.tan(ic), 4)} = <b>${fd(dcrit, 1)} km</b>` },
       { titre: "Distance de croisement : Pg et Pn arrivent ensemble", formule: "√(x² + h²)/V<sub>1</sub> = x/V<sub>2</sub> + t<sub>i</sub> (résolu par dichotomie ; pour h = 0 : x = t<sub>i</sub>/(1/V<sub>1</sub> − 1/V<sub>2</sub>))",
-        calcul: xc ? `x<sub>c</sub> = <b>${fd(xc, 1)} km</b> ; vérification : Pg = √(${fd(xc, 1)}² + ${fd(h, 1)}²)/${fd(V1, 2)} = ${fd(Math.hypot(xc, h) / V1, 2)} s, Pn = ${fd(xc, 1)}/${fd(V2, 2)} + ${fd(ti, 2)} = ${fd(xc / V2 + ti, 2)} s` : "pas de croisement avant 2 000 km" },
+        calcul: xc ? `x<sub>c</sub> = <b>${fd(xc, 1)} km</b> ; vérification : Pg = √(${fd(xc, 1)}² + ${fd(h, 1)}²)/${fd(V1, 2)} = ${fd(Math.hypot(xc, h) / V1, 2)} s, Pn = ${fd(xc, 1)}/${fd(V2, 2)} + ${fd(ti, 2)} = ${fd(xc / V2 + ti, 2)} s` : "pas de croisement avant 2 000 km",
+        schema: raisCroute({ V1, V2, H, h, delta: xc || 1.3 * dcrit, xc }),
+        legende: xc ? "Station placée à la distance de croisement : les deux rais y arrivent en même temps. Plus loin, Pn arrive le premier : son trajet est plus long, mais il en fait une grande part à la vitesse du manteau." : "Pn existe au-delà de la distance critique, mais n'y devance pas Pg." },
       { titre: `Exemple à Δ = ${d100} km`, formule: "t<sub>Pg</sub> = √(Δ² + h²)/V<sub>1</sub> ; t<sub>Pn</sub> = Δ/V<sub>2</sub> + t<sub>i</sub>",
         calcul: `t<sub>Pg</sub> = ${fd(Math.hypot(d100, h) / V1, 2)} s ; t<sub>Pn</sub> = ${fd(d100 / V2, 2)} + ${fd(ti, 2)} = ${fd(d100 / V2 + ti, 2)} s → première : <b>${Math.hypot(d100, h) / V1 <= d100 / V2 + ti ? "Pg" : "Pn"}</b>` },
     ],
@@ -91,7 +94,9 @@ const majProfil = garde("prResultat", () => {
       { titre: "Droite des derniers points (Pn)", calcul: `Δ̄ = ${fd(mxn, 1)} km, t̄ = ${fd(myn, 2)} s → pente = ${fd(1 / n.V, 4)} s/km, V<sub>2</sub> = <b>${fd(n.V, 2)} km/s</b>, t<sub>i</sub> = ${fd(myn, 2)} − ${fd(mxn, 1)}/${fd(n.V, 2)} = <b>${fd(n.ti, 2)} s</b>` },
       { titre: "Angle critique", formule: "cos i<sub>c</sub> = √(1 − (V<sub>1</sub>/V<sub>2</sub>)²)", calcul: `cos i<sub>c</sub> = √(1 − (${fd(g.V, 2)}/${fd(n.V, 2)})²) = <b>${fd(cosc, 4)}</b>` },
       { titre: "Épaisseur de la croûte", formule: "t<sub>i</sub> = (2H − h)·cos i<sub>c</sub>/V<sub>1</sub> ⇒ H = (t<sub>i</sub>·V<sub>1</sub>/cos i<sub>c</sub> + h)/2",
-        calcul: H ? `H = (${fd(n.ti, 2)} × ${fd(g.V, 2)} / ${fd(cosc, 4)} + ${fd(h, 1)}) / 2 = <b>${fd(H, 1)} km</b>` : "V<sub>2</sub> doit dépasser V<sub>1</sub>" },
+        calcul: H ? `H = (${fd(n.ti, 2)} × ${fd(g.V, 2)} / ${fd(cosc, 4)} + ${fd(h, 1)}) / 2 = <b>${fd(H, 1)} km</b>` : "V<sub>2</sub> doit dépasser V<sub>1</sub>",
+        schema: H ? raisCroute({ V1: g.V, V2: n.V, H, h, delta: Math.max(coupe, 1.2 * (2 * H - h) * Math.tan(Math.asin(g.V / n.V))) }) : null,
+        legende: H ? "La croûte retrouvée, avec les vitesses et l'épaisseur déduites des deux droites. Le temps d'intercept tᵢ est le temps « perdu » par Pn à descendre et remonter la croûte à l'angle critique." : null },
     ],
   });
   el("prResultat").innerHTML = `V<sub>1</sub> = ${fd(g.V, 2)} km/s · V<sub>2</sub> = ${fd(n.V, 2)} km/s · t<sub>i</sub> = ${fd(n.ti, 2)} s →
@@ -124,7 +129,9 @@ const majRefra = garde("rfOut", () => {
       { titre: "Angle critique", formule: "i<sub>c</sub> = arcsin(V<sub>1</sub>/V<sub>2</sub>)", calcul: `i<sub>c</sub> = arcsin(${f(V1 * 1000, 4)}/${f(V2 * 1000, 4)}) = <b>${fd((icr * 180) / Math.PI, 2)}°</b> ; cos i<sub>c</sub> = ${fd(Math.cos(icr), 4)}` },
       { titre: "Temps d'intercept (V en m/ms)", formule: "t<sub>i</sub> = 2H·cos i<sub>c</sub> / V<sub>1</sub>", calcul: `t<sub>i</sub> = 2 × ${f(H, 3)} × ${fd(Math.cos(icr), 4)} / ${fd(V1, 3)} = <b>${fd(ti, 2)} ms</b>` },
       { titre: "Distance critique", formule: "x<sub>crit</sub> = 2H·tan i<sub>c</sub>", calcul: `x<sub>crit</sub> = 2 × ${f(H, 3)} × ${fd(Math.tan(icr), 4)} = <b>${fd(dc, 2)} m</b>` },
-      { titre: "Distance de croisement", formule: "x/V<sub>1</sub> = x/V<sub>2</sub> + t<sub>i</sub> ⇒ x<sub>c</sub> = t<sub>i</sub> / (1/V<sub>1</sub> − 1/V<sub>2</sub>)", calcul: `x<sub>c</sub> = ${fd(ti, 2)} / (1/${fd(V1, 3)} − 1/${fd(V2, 3)}) = <b>${fd(xc, 1)} m</b>` },
+      { titre: "Distance de croisement", formule: "x/V<sub>1</sub> = x/V<sub>2</sub> + t<sub>i</sub> ⇒ x<sub>c</sub> = t<sub>i</sub> / (1/V<sub>1</sub> − 1/V<sub>2</sub>)", calcul: `x<sub>c</sub> = ${fd(ti, 2)} / (1/${fd(V1, 3)} − 1/${fd(V2, 3)}) = <b>${fd(xc, 1)} m</b>`,
+        schema: raisCroute({ V1, V2, H, h: 0, delta: xc, xc, unite: "m", uniteT: "ms", noms: ["directe", "réfractée"], vitesses: [`V₁ = ${f(V1 * 1000, 4)} m/s`, `V₂ = ${f(V2 * 1000, 4)} m/s`], interface: "toit du substratum" }),
+        legende: "Tir en surface, géophone à la distance de croisement : l'onde directe et l'onde réfractée y arrivent ensemble. Les géophones plus lointains reçoivent d'abord l'onde réfractée, dont la pente donne V₂." },
       { titre: "Lecture inverse sur le terrain", formule: "H = t<sub>i</sub>·V<sub>1</sub> / (2 cos i<sub>c</sub>)", calcul: `H = ${fd(ti, 2)} × ${fd(V1, 3)} / (2 × ${fd(Math.cos(icr), 4)}) = <b>${fd((ti * V1) / (2 * Math.cos(icr)), 2)} m</b>` },
     ],
   });
@@ -244,7 +251,9 @@ const majPP = garde("ppOut", () => {
       { titre: "Profondeur cherchée par dichotomie", formule: `on resserre [1 ; 700] km jusqu'à ce que ${ph} − P (h) = ${fd(lu, 1)} s`, calcul: `h = <b>${fd(h, 1)} km</b> ; vérification : ${ph} − P (${fd(h, 1)}) = ${fd(Globe.retard(ph, h, d), 2)} s` },
       { titre: "Ordre de grandeur à la main (pour pP)", formule: "pP − P ≈ 2h·cos i / v, v vitesse moyenne au-dessus du foyer, i angle du rai P au départ",
         calcul: `v = h / temps vertical = ${fd(h, 1)} / ${fd(tv, 2)} = ${fd(vm, 2)} km/s ; i = ${fd(aP0.depart, 1)}° ; 2 × ${fd(h, 1)} × ${fd(cosi, 3)} / ${fd(vm, 2)} = <b>${fd((2 * h * cosi) / vm, 1)} s</b> (calcul complet : ${fd(Globe.retard("pP", h, d), 1)} s)`,
-        note: "La formule plane ignore la courbure du rai : bonne pour les foyers peu profonds, elle s'écarte au-delà de quelques centaines de kilomètres." },
+        note: "La formule plane ignore la courbure du rai : bonne pour les foyers peu profonds, elle s'écarte au-delà de quelques centaines de kilomètres.",
+        schema: pPgeometrie({ h, i: aP0.depart, v: vm, retard: Globe.retard("pP", h, d) }),
+        legende: "Près du foyer, la Terre est plane : pP monte, se réfléchit sur la surface et repart parallèle à P. Tout se passe comme s'il partait de l'image du foyer, symétrique par rapport à la surface ; jusqu'au front d'onde commun, il parcourt 2h·cos i de plus." },
       { titre: `Phase compagne`, calcul: `${autre} − P (${fd(h, 1)} km, ${fd(d, 0)}°) = <b>${fd(Globe.retard(autre, h, d), 1)} s</b>` },
     ],
   });

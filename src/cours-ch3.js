@@ -4,6 +4,7 @@ import { el, num, fd, brancher, garde, noter } from "./ui.js";
 import { ballon } from "./ballon.js";
 import Me from "./sismo/mecanisme.js";
 import Sismo from "./sismo/signal.js";
+import { failleLocale, departs } from "./schemas-notes.js";
 
 const centre = (html) => `<div style="max-width:300px;margin:0 auto">${html}</div>`;
 const angle = (x) => `${fd(x, 0)}°`;
@@ -27,7 +28,9 @@ const majBallon = garde("meOut", () => {
     donnees: [["azimut φ", angle(mec.azimut)], ["pendage δ", angle(mec.pendage)], ["glissement λ", angle(mec.glissement)], ["repère", "x nord, y est, z bas"]],
     etapes: [
       { titre: "Normale au plan de faille (Aki et Richards)", formule: "n = (−sin δ·sin φ ; sin δ·cos φ ; −cos δ)", calcul: `n = <b>${vec(n)}</b>` },
-      { titre: "Vecteur glissement du toit", formule: "u = (cos λ·cos φ + cos δ·sin λ·sin φ ; cos λ·sin φ − cos δ·sin λ·cos φ ; −sin λ·sin δ)", calcul: `u = <b>${vec(g)}</b>` },
+      { titre: "Vecteur glissement du toit", formule: "u = (cos λ·cos φ + cos δ·sin λ·sin φ ; cos λ·sin φ − cos δ·sin λ·cos φ ; −sin λ·sin δ)", calcul: `u = <b>${vec(g)}</b>`,
+        schema: failleLocale({ phi: mec.azimut, delta: mec.pendage, lambda: mec.glissement }),
+        legende: "À gauche, la trace de la faille vue de dessus, à l'azimut φ ; le plan plonge à droite de la trace. À droite, le plan vu depuis le compartiment enlevé (le toit) : il plonge de δ, le toit glisse selon u, à l'angle λ compté depuis la trace ; n est la normale au plan, dirigée vers le toit." },
       { titre: "Plan auxiliaire : n et u échangent leurs rôles", formule: "normale n′ = u (ramenée vers le haut) ; pendage = arccos(−n′<sub>z</sub>) ; azimut = atan2(−n′<sub>x</sub>, n′<sub>y</sub>)",
         calcul: `n′ = ${vec(nh)} → pendage = arccos(${fd(-nh[2], 3)}) = ${angle(aux.pendage)} ; azimut = <b>${angle(aux.azimut)}</b> ; glissement (direction de n dans ce plan) = <b>${angle(aux.glissement)}</b>` },
       { titre: "Axes de tension T et de pression P", formule: "T = (n + u)/√2 ; P = (n − u)/√2 ; azimut = atan2(y, x), plongement = arcsin z (vecteur dirigé vers le bas)",
@@ -63,7 +66,9 @@ const majInv = garde("inOut", () => {
     donnees: [["mécanisme vrai", `${angle(a)} / ${angle(d)} / ${angle(r)}`], ["stations", `${n}`], ["polarités fausses", `${faux}`], ["foyer", "10 km"]],
     etapes: [
       { titre: "Angle d'émergence de chaque rai (modèle de croûte)", formule: "Pg montante : i = 180° − arctan(Δ/h) ; Pn descendante : i = arcsin(Vp/Vp₂)",
-        calcul: ex.map((st, k) => `station ${k + 1} : Δ = ${fd(st.delta, 0)} km, azimut ${angle(st.az)} → i = <b>${angle(st.i)}</b>`).join(" ; ") + "…" },
+        calcul: ex.map((st, k) => `station ${k + 1} : Δ = ${fd(st.delta, 0)} km, azimut ${angle(st.az)} → i = <b>${angle(st.i)}</b>`).join(" ; ") + "…",
+        schema: departs({ h: 10, H: Sismo.MODELE.H, rais: ex.map((st, k) => ({ nom: `station ${k + 1}`, delta: st.delta, i: st.i })) }),
+        legende: "Coupe verticale passant par le foyer : chaque rai quitte le foyer dans une direction repérée par l'angle i depuis la verticale descendante. C'est ce point de départ, et l'azimut de la station, que l'on place sur la sphère focale." },
       { titre: "Polarité prédite par un mécanisme", formule: "γ = (sin i·cos φ ; sin i·sin φ ; cos i) ; A = γᵀ·M·γ ; compression si A ≥ 0",
         calcul: ex.map((st, k) => { const A = Me.rayonnementP(Mb, st.i, st.az); return `station ${k + 1} : A = ${fd(A, 3)} → ${A >= 0 ? "compression" : "dilatation"} (lue : ${st.polarite > 0 ? "compression" : "dilatation"})`; }).join(" ; ") + ` — pour la solution ${angle(best.azimut)} / ${angle(best.pendage)} / ${angle(best.glissement)}` },
       { titre: "Recherche exhaustive", formule: "azimut 0 à 350°, pendage 10 à 90°, glissement −170 à 180°, pas de 10° ; on compte les désaccords",

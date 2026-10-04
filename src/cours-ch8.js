@@ -4,6 +4,7 @@
 import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Sismicite from "./sismo/sismicite.js";
+import { fenetresGK, poissonCourbe } from "./schemas-notes.js";
 
 // Taux de la loi tronquée à Mmax (forme continue, comme les sources d'aléa) : λ(≥m) = λ4·(10^(−b(m−4)) − 10^(−b(Mmax−4)))/(1 − 10^(−b(Mmax−4))).
 const tauxTronque = (l4, b, Mmax) => (m) => (m >= Mmax ? 0 : (l4 * (10 ** (-b * (m - 4)) - 10 ** (-b * (Mmax - 4)))) / (1 - 10 ** (-b * (Mmax - 4))));
@@ -71,10 +72,14 @@ const majCat = garde("caOut", () => {
   if (!r) { el("caOut").textContent = "Trop peu de séismes au-dessus de la complétude."; noter("calcCatalogueNote", null); return; }
   const sel2 = mags.filter((m) => m >= Mc - 1e-9), moy = sel2.reduce((a1, m) => a1 + m, 0) / sel2.length;
   const kMode = ks.reduce((a1, k1) => (classes.get(k1) > classes.get(a1) ? k1 : a1), ks[0]), Mx = Math.max(...mags), win = Sismicite.fenetreGK(Mx);
+  // voisins du plus fort séisme dans le catalogue complet (répliques comprises), pour le schéma des fenêtres
+  const e0 = sel.find((e) => e.M === Mx), voisins = cat.filter((e) => e !== e0 && e.t > e0.t).map((e) => ({ dt: (e.t - e0.t) * Sismicite.JOURS_GK, r: Math.hypot(e.x - e0.x, e.y - e0.y), M: e.M }));
   noter("calcCatalogueNote", {
     donnees: [["période", `${Math.round(debut)} à 2025 (${f(annees, 3)} ans)`], ["séismes", `${mags.length}`], ["déclusterage", decl === "tous" ? "non (répliques comprises)" : "Gardner et Knopoff"], ["classes", "0,1 en magnitude"]],
     etapes: [
-      decl !== "tous" && { titre: "Fenêtres de Gardner et Knopoff (exemple : le plus fort séisme)", formule: "L = 10<sup>0,1238·M + 0,983</sup> km ; T = 10<sup>0,5409·M − 0,547</sup> jours (M &lt; 6,5)", calcul: `M ${fd(Mx, 1)} : L = <b>${f(win.L, 3)} km</b>, T = <b>${f(win.T, 3)} jours</b> ; les séismes plus petits dans ces fenêtres sont retirés comme répliques` },
+      decl !== "tous" && { titre: "Fenêtres de Gardner et Knopoff (exemple : le plus fort séisme)", formule: "L = 10<sup>0,1238·M + 0,983</sup> km ; T = 10<sup>0,5409·M − 0,547</sup> jours (M &lt; 6,5)", calcul: `M ${fd(Mx, 1)} : L = <b>${f(win.L, 3)} km</b>, T = <b>${f(win.T, 3)} jours</b> ; les séismes plus petits dans ces fenêtres sont retirés comme répliques`,
+        schema: fenetresGK({ M: Mx, L: win.L, T: win.T, evenements: voisins }),
+        legende: "Les séismes qui suivent le plus fort, placés selon leur distance à son épicentre et le temps écoulé : ceux de la fenêtre L × T sont ses répliques. On recommence avec le séisme suivant par magnitude décroissante." },
       { titre: "Magnitude de complétude (courbure maximale)", formule: "Mc = classe la plus peuplée + 0,2", calcul: `classe la plus peuplée : M ${fd(kMode / 10, 1)} (${classes.get(kMode)} séismes) → Mc = <b>${fd(Mc, 1)}</b>` },
       { titre: "Valeur b (Aki 1965, correction d'Utsu)", formule: "b = log<sub>10</sub>e / (M̄ − (Mc − ΔM/2)), ΔM = 0,1", calcul: `${r.N} séismes ≥ Mc, M̄ = ${fd(moy, 3)} ; b = 0,4343 / (${fd(moy, 3)} − ${fd(Mc - 0.05, 2)}) = <b>${fd(r.b, 3)}</b>` },
       { titre: "Écart type (Shi et Bolt 1982)", formule: "σ<sub>b</sub> = 2,3·b²·√(Σ(M − M̄)² / (N(N − 1)))", calcul: `σ<sub>b</sub> = <b>${fd(r.sigma, 3)}</b>` },
@@ -98,7 +103,9 @@ const majPoisson = garde("poOut", () => {
     etapes: [
       { titre: "Taux annuel", formule: "λ = 1 / T<sub>R</sub>", calcul: `λ = 1/${f(TR, 4)} = <b>${f(1 / TR, 4)} / an</b>` },
       { titre: "Nombre moyen d'événements sur la durée", formule: "λ·t", calcul: `${f(1 / TR, 4)} × ${f(t, 3)} = <b>${f(lt, 4)}</b>` },
-      { titre: "Probabilité d'au moins un événement (Poisson)", formule: "P = 1 − e<sup>−λt</sup>", calcul: `P = 1 − e<sup>−${f(lt, 4)}</sup> = 1 − ${f(Math.exp(-lt), 4)} = <b>${fd(100 * P, 2)} %</b>` },
+      { titre: "Probabilité d'au moins un événement (Poisson)", formule: "P = 1 − e<sup>−λt</sup>", calcul: `P = 1 − e<sup>−${f(lt, 4)}</sup> = 1 − ${f(Math.exp(-lt), 4)} = <b>${fd(100 * P, 2)} %</b>`,
+        schema: poissonCourbe({ lt, P }),
+        legende: "Pour une durée courte devant la période de retour, P ≈ λt ; la probabilité sature ensuite : sur une durée égale à T<sub>R</sub> (λt = 1), elle ne vaut que 63 %." },
       { titre: "Au moins deux événements", formule: "P<sub>≥2</sub> = 1 − e<sup>−λt</sup>·(1 + λt)", calcul: `P<sub>≥2</sub> = 1 − ${f(Math.exp(-lt), 4)} × ${f(1 + lt, 4)} = <b>${fd(100 * (1 - Math.exp(-lt) * (1 + lt)), 2)} %</b>` },
       { titre: "Relation inverse", formule: "T<sub>R</sub> = −t / ln(1 − P)", calcul: `T<sub>R</sub> = −${f(t, 3)} / ln(1 − ${f(P, 4)}) = <b>${f(Sismicite.periodeRetour(P, t), 4)} ans</b>`, note: "10 % en 50 ans ↔ 475 ans ; 2 % en 50 ans ↔ 2 475 ans." },
     ],

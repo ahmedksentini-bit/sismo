@@ -3,6 +3,7 @@
 import { el, num, f, fd, brancher, garde, verdict, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import L from "./sismo/liquefaction.js";
+import { contraintesSPT } from "./schemas-notes.js";
 
 // ── Un essai SPT pas à pas ───────────────────────────────────────────────
 const majSPT = garde("lqOut", () => {
@@ -15,7 +16,9 @@ const majSPT = garde("lqOut", () => {
   noter("calcSPTNote", {
     donnees: [["z", `${f(z, 3)} m`], ["nappe", `${f(gwl, 3)} m`], ["N<sub>60</sub>", f(n60, 3)], ["fines FC", `${f(fc, 3)} %`], ["a<sub>max</sub>", `${f(amax, 3)} g`], ["M", fd(M, 1)], ["γ", "18 kN/m³"]],
     etapes: [
-      { titre: "Contraintes", formule: "σ<sub>v</sub> = γ·z ; u = 9,8·(z − z<sub>nappe</sub>) ; σ′<sub>v</sub> = σ<sub>v</sub> − u", calcul: `σ<sub>v</sub> = 18 × ${f(z, 3)} = ${f(sv, 4)} kPa ; u = 9,8 × ${f(z - gwl, 3)} = ${f(u, 4)} kPa ; σ′<sub>v</sub> = <b>${f(sve, 4)} kPa</b>` },
+      { titre: "Contraintes", formule: "σ<sub>v</sub> = γ·z ; u = 9,8·(z − z<sub>nappe</sub>) ; σ′<sub>v</sub> = σ<sub>v</sub> − u", calcul: `σ<sub>v</sub> = 18 × ${f(z, 3)} = ${f(sv, 4)} kPa ; u = 9,8 × ${f(z - gwl, 3)} = ${f(u, 4)} kPa ; σ′<sub>v</sub> = <b>${f(sve, 4)} kPa</b>`,
+        schema: contraintesSPT({ z, gwl, gamma: 18, gw: L.GW }),
+        legende: "Sous la nappe, l'eau porte une part du poids des terres : la contrainte effective σ′<sub>v</sub>, celle des grains, croît moins vite que la contrainte totale σ<sub>v</sub>." },
       { titre: "Coefficient de réduction des contraintes (Idriss 1999)", formule: "r<sub>d</sub> = exp(α + β·M), α = −1,012 − 1,126·sin(z/11,73 + 5,133), β = 0,106 + 0,118·sin(z/11,28 + 5,142)", calcul: `α = ${fd(al, 4)}, β = ${fd(be, 4)} → r<sub>d</sub> = exp(${fd(al, 4)} + ${fd(be, 4)} × ${fd(M, 1)}) = <b>${fd(p.rd, 4)}</b>` },
       { titre: "Sollicitation cyclique", formule: "CSR = 0,65·(σ<sub>v</sub>/σ′<sub>v</sub>)·a<sub>max</sub>·r<sub>d</sub>", calcul: `CSR = 0,65 × ${fd(sv / sve, 3)} × ${f(amax, 3)} × ${fd(p.rd, 4)} = <b>${fd(p.csr, 4)}</b>` },
       { titre: "Normalisation de N (itérée)", formule: "C<sub>N</sub> = (P<sub>a</sub>/σ′<sub>v</sub>)<sup>m</sup> ≤ 1,7, m = 0,784 − 0,0768·√(N<sub>1</sub>)<sub>60cs</sub>, P<sub>a</sub> = 101 kPa ; (N<sub>1</sub>)<sub>60</sub> = C<sub>N</sub>·N<sub>60</sub>",

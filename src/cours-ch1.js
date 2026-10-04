@@ -8,6 +8,7 @@ import { svg, texte, ligne, graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Accelero from "./sismo/accelerogramme.js";
 import { globe, eventail, COULEURS_PHASES } from "./globe-figure.js";
+import { raisCroute, heureOrigine } from "./schemas-notes.js";
 
 const VP = Sismo.MODELE.vp1, VS = Sismo.MODELE.vs1, K = Sismo.kmS;
 
@@ -65,9 +66,11 @@ const majSismo = garde("smOut", () => {
     etapes: [
       { titre: "Distance au foyer", formule: "R = √(Δ² + h²)", calcul: `R = √(${fd(delta, 0)}² + ${fd(h, 0)}²) = <b>${fd(tt.R, 1)} km</b>` },
       { titre: "Onde P directe (Pg), temps depuis l'origine", formule: "t<sub>Pg</sub> = R / Vp", calcul: `t<sub>Pg</sub> = ${fd(tt.R, 1)} / ${fd(m.vp1, 1)} = <b>${fd(tt.tPg, 2)} s</b>` },
-      { titre: "Onde P réfractée sur le Moho (Pn)", formule: "sin i<sub>c</sub> = Vp/Vp₂ ; x<sub>c</sub> = (2H − h)·tan i<sub>c</sub> ; t<sub>Pn</sub> = Δ/Vp₂ + (2H − h)·cos i<sub>c</sub>/Vp",
-        calcul: `i<sub>c</sub> = arcsin(${fd(m.vp1, 1)}/${fd(m.vp2, 1)}) = ${fd((ic * 180) / Math.PI, 1)}° ; x<sub>c</sub> = (${2 * m.H} − ${fd(h, 0)}) × ${fd(Math.tan(ic), 3)} = ${fd(xc, 0)} km${
-          tt.tPn === null ? ` > Δ : <b>pas encore d'onde réfractée</b>` : ` ; t<sub>Pn</sub> = ${fd(delta, 0)}/${fd(m.vp2, 1)} + ${fd(ti, 2)} = <b>${fd(tt.tPn, 2)} s</b>`}` },
+      { titre: "Onde P réfractée sur le Moho (Pn)", formule: "sin i<sub>c</sub> = Vp/Vp₂ ; x<sub>crit</sub> = (2H − h)·tan i<sub>c</sub> ; t<sub>Pn</sub> = Δ/Vp₂ + (2H − h)·cos i<sub>c</sub>/Vp",
+        calcul: `i<sub>c</sub> = arcsin(${fd(m.vp1, 1)}/${fd(m.vp2, 1)}) = ${fd((ic * 180) / Math.PI, 1)}° ; x<sub>crit</sub> = (${2 * m.H} − ${fd(h, 0)}) × ${fd(Math.tan(ic), 3)} = ${fd(xc, 0)} km${
+          tt.tPn === null ? ` > Δ : <b>pas encore d'onde réfractée</b>` : ` ; t<sub>Pn</sub> = ${fd(delta, 0)}/${fd(m.vp2, 1)} + ${fd(ti, 2)} = <b>${fd(tt.tPn, 2)} s</b>`}`,
+        schema: raisCroute({ V1: m.vp1, V2: m.vp2, H: m.H, h, delta }),
+        legende: "Coupe de la croûte du modèle : l'onde directe Pg va droit à la station ; Pn descend à l'angle critique, longe le Moho à la vitesse du manteau et remonte au même angle. Elle n'existe qu'au-delà de la distance critique." },
       { titre: "Première onde P", calcul: `t<sub>P</sub> = ${tt.tPn === null ? `t<sub>Pg</sub>` : `min(${fd(tt.tPg, 2)} ; ${fd(tt.tPn, 2)})`} = <b>${fd(tt.tP, 2)} s</b> (${pn ? "Pn" : "Pg"})` },
       { titre: "Onde S directe", formule: "t<sub>S</sub> = R / Vs", calcul: `t<sub>S</sub> = ${fd(tt.R, 1)} / ${fd(m.vs1, 1)} = <b>${fd(tt.tSg, 2)} s</b>` },
       { titre: "Distance lue sur l'écart S − P", formule: "R ≈ k·(t<sub>S</sub> − t<sub>P</sub>), avec k = Vp·Vs/(Vp − Vs)",
@@ -92,7 +95,9 @@ const majSP = garde("spOut", () => {
     donnees: [["t<sub>P</sub>", `${fd(tP, 1)} s`], ["t<sub>S</sub>", `${fd(tS, 1)} s`], ["h", `${fd(h, 0)} km`], ["Vp, Vs", `${fd(VP, 1)} et ${fd(VS, 1)} km/s`]],
     etapes: [
       { titre: "Écart des deux lectures", formule: "S − P = t<sub>S</sub> − t<sub>P</sub>", calcul: `S − P = ${fd(tS, 1)} − ${fd(tP, 1)} = <b>${fd(sp, 1)} s</b>` },
-      { titre: "Coefficient de la règle", formule: "k = Vp·Vs / (Vp − Vs)", calcul: `k = ${fd(VP, 1)} × ${fd(VS, 1)} / (${fd(VP, 1)} − ${fd(VS, 1)}) = <b>${fd(K, 2)} km/s</b>`, note: "Les deux ondes parcourent R : R/Vs − R/Vp = S − P." },
+      { titre: "Coefficient de la règle", formule: "k = Vp·Vs / (Vp − Vs)", calcul: `k = ${fd(VP, 1)} × ${fd(VS, 1)} / (${fd(VP, 1)} − ${fd(VS, 1)}) = <b>${fd(K, 2)} km/s</b>`, note: "Les deux ondes parcourent R : R/Vs − R/Vp = S − P.",
+        schema: heureOrigine({ tP, tS, Vp: VP, Vs: VS, t0, R }),
+        legende: "Les ondes P et S partent ensemble du foyer à l'heure d'origine t₀ ; la S, plus lente, prend du retard en proportion de la distance. À la station, l'écart S − P donne R ; en remontant la droite de P, on retrouve t₀." },
       { titre: "Distance au foyer", formule: "R = k·(S − P)", calcul: `R = ${fd(K, 2)} × ${fd(sp, 1)} = <b>${fd(R, 1)} km</b>` },
       { titre: "Distance à l'épicentre", formule: "Δ = √(R² − h²)", calcul: epi === null ? `R = ${fd(R, 1)} km &lt; h = ${fd(h, 0)} km : <b>lectures incohérentes</b>` : `Δ = √(${fd(R, 1)}² − ${fd(h, 0)}²) = <b>${fd(epi, 1)} km</b>` },
       { titre: "Heure d'origine", formule: "t<sub>0</sub> = t<sub>P</sub> − R/Vp", calcul: `t<sub>0</sub> = ${fd(tP, 1)} − ${fd(R, 1)}/${fd(VP, 1)} = ${fd(tP, 1)} − ${fd(R / VP, 2)} = <b>${fd(t0, 1)} s</b>` },
