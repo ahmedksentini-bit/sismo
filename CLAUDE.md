@@ -159,7 +159,11 @@ la virgule décimale.
     modèle (sans quoi des triplications échappent). Toutes les arrivées de TauP (10 phases, 4 profondeurs,
     28 distances, `tests/references/phases.json`) sont retrouvées, aucune de plus : temps à 0,02 s, angles à 0,05°.
     Le mode `rapide` (80 rais) n'est exact que là où Δ(p) est monotone : P, pP, sP de 40° à 95° (testé) ; il sert
-    à `retard` et `profondeur`. L'onde P diffractée n'est pas calculée.
+    à `retard` et `profondeur`. L'onde P diffractée n'est pas calculée. Les **tables de temps de trajet** du cours
+    (`src/sismo/tables.js`) en sortent : chaque case de la table télésismique est la première arrivée de TauP (testé
+    sur 4 profondeurs × 18 distances × 8 phases) ; la table régionale est `Sismo.temps` (S − P = Sg − première P) ;
+    la lecture interpole linéairement entre deux lignes et se contrôle par dichotomie sur les rais. Les en-têtes de
+    tableaux portant des noms de phases ou des unités gardent leur casse (classes `phases`, `coefficients`).
 31. **Schémas de principe** (`src/schemas.js`, rempli par `src/cours-schemas.js`) : une figure par notion physique,
     SVG pur, conteneur `<div class="figure-cours" id="schema…">` unique dans `cours.html`, légende dans `SCHEMAS`
     (testé) ; chaque chapitre rédigé en a au moins un (testé). Ce qui se chiffre sort des solveurs (aires de Wells et

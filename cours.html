@@ -130,7 +130,9 @@
   <p>La distance obtenue est la <strong>distance hypocentrale</strong> R, du foyer à la station. La
      distance à l'épicentre, point de la surface à l'aplomb du foyer, s'en déduit avec la profondeur h :
      Δ = √(R² − h²). Au-delà d'environ 150 km, la première onde P a voyagé en partie dans le manteau,
-     plus rapide (onde Pn, chapitre 6) : la règle surestime alors un peu la distance.</p>
+     plus rapide (onde Pn, chapitre 6) : la règle surestime alors un peu la distance. Une table de temps de
+     trajet, calculée avec Pn, n'a pas ce biais ; le chapitre 6 en donne une pour la croûte du cours, et celles
+     des séismes lointains.</p>
   <div class="a-retenir"><strong>Exemple</strong>
     <p>L'onde P arrive à 12,0 s et l'onde S à 19,5 s. L'écart vaut 7,5 s, d'où R ≈ 8,4 × 7,5 ≈
        <strong>63 km</strong>. Pour un foyer à 10 km de profondeur, l'épicentre est à √(63² − 10²) ≈
@@ -927,9 +929,59 @@
   </div>
 
   <h3>Les tables de temps de trajet</h3>
-  <p>Les temps de trajet de toutes ces phases, calculés dans un modèle de Terre moyen — Jeffreys et Bullen (1940),
-     puis iasp91 et ak135 —, servent aux agences internationales pour localiser les séismes lointains et pour
-     identifier les phases sur les enregistrements, comme l'écart S − P sert à la station locale.</p>
+  <p>Une <strong>table de temps de trajet</strong> donne, pour un modèle de Terre et une profondeur du foyer, le
+     temps que met chaque phase pour atteindre une station placée à la distance Δ, compté depuis l'heure d'origine.
+     Les premières, celles de Jeffreys et Bullen (1940), ont servi pendant un demi-siècle ; les modèles iasp91 (1991)
+     puis ak135 (1995) les ont remplacées, avec des écarts de quelques dixièmes de seconde à quelques secondes. Les
+     agences internationales s'en servent pour localiser les séismes lointains et pour nommer les phases d'un
+     enregistrement ; à l'échelle d'une région, une table calculée dans la croûte locale joue le même rôle.</p>
+  <p>On lit une table comme un abaque : on repère les deux lignes qui encadrent la valeur connue et l'on
+     <strong>interpole linéairement</strong> entre elles. Dans le sens direct, on cherche un temps à une distance
+     donnée ; dans le sens inverse, une distance d'après un écart lu sur l'enregistrement, S − P le plus souvent.</p>
+  <p class="method-note">Les tables ci-dessous sont calculées par le programme du cours, avec les valeurs du modèle,
+     sans rien recopier : la croûte du cours (H = 32 km, Vp = 6,0 et 8,0 km/s, Vs = 3,5 et 4,6 km/s) pour la table
+     régionale ; les rais dans ak135, vérifiés contre TauP au centième de seconde, pour les tables télésismiques.
+     Elles apparaissent quelques instants après le reste de la page.</p>
+
+  <h4>Table 1 · Séismes régionaux : la croûte du cours, foyer à 10 km</h4>
+  <p>Jusqu'à la distance critique, seules les ondes directes Pg et Sg existent ; au-delà apparaissent Pn et Sn,
+     réfractées sur le Moho, qui deviennent les premières après la distance de croisement (première P en gras).
+     La S pointée est Sg : passé le croisement, l'écart S − P grandit plus vite que la distance, et la règle
+     R ≈ 8,4 × (S − P) surestime la distance au foyer.</p>
+  <div class="table-large"><table class="resultats phases" id="tabTempsRegional"></table></div>
+
+  <h4>Table 2 · Séismes lointains : ak135, foyer à 10 km</h4>
+  <p>Temps en minutes et secondes ; en gras, la première onde. P disparaît dans la zone d'ombre du noyau, à partir de
+     100° environ, où ne parviennent que les phases qui traversent le noyau (PKiKP, PKIKP, PKP) ; S disparaît au même
+     endroit, relayée par SKS. Un tiret : la phase n'atteint pas cette distance.</p>
+  <div class="table-large"><table class="resultats phases" id="tabTempsTele"></table></div>
+
+  <h4>Table 3 · L'effet de la profondeur du foyer</h4>
+  <p>Plus le foyer est profond, plus P arrive tôt (le trajet est plus court et plus rapide), et plus les phases de
+     profondeur pP et sP, réfléchies à la surface au-dessus du foyer, la suivent de loin : leur retard est la mesure
+     la plus sûre de la profondeur d'un séisme lointain.</p>
+  <div class="table-large"><table class="resultats phases" id="tabTempsProf"></table></div>
+
+  <h4>Exemples d'application</h4>
+  <div id="exTables"></div>
+
+  <div class="calc" id="calcTable">
+    <h3>Distance et heure d'origine d'un séisme lointain, par la table</h3>
+    <p class="method-note">On lit l'écart S − P sur l'enregistrement et l'heure d'arrivée de P ; la table ak135 de la
+       profondeur choisie donne la distance (interpolation entre deux lignes), puis le temps de trajet de P, d'où l'heure
+       d'origine. Le calcul exact par les rais contrôle la lecture.</p>
+    <div class="data-grid">
+      <div class="field"><label for="tbSP">Écart S − P lu</label>
+        <div class="input-wrap"><input id="tbSP" type="text" inputmode="decimal" value="455" data-curseur="120 640 1"><span class="unit">s</span></div></div>
+      <div class="field"><label for="tbH">Profondeur du foyer</label>
+        <div class="input-wrap"><select id="tbH"><option value="10">10 km</option><option value="100">100 km</option><option value="300">300 km</option><option value="600">600 km</option></select></div></div>
+      <div class="field"><label for="tbP">Heure d'arrivée de P</label>
+        <div class="input-wrap"><input id="tbP" type="text" value="10:21:04"><span class="unit">h:min:s</span></div></div>
+    </div>
+    <div class="figure" id="tbFig"></div>
+    <p class="final-result" id="tbOut"></p>
+    <div id="calcTableNote"></div>
+  </div>
 
   <h3>Où naissent les séismes : plaques et profondeur</h3>
   <p>La croûte et le haut du manteau forment une coque rigide, la <strong>lithosphère</strong>, épaisse d'une

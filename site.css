@@ -10,6 +10,8 @@ select{min-width:0;width:100%;padding:11px;border:0;outline:0;background:#fff;fo
 
 table.resultats{width:100%;margin-top:16px;border-collapse:collapse;font-size:14px}
 table.resultats th{padding:9px 8px;border-bottom:2px solid var(--line);color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;text-align:left}
+/* noms de phases (pP, PKiKP) et unités (Sa(0,2 s)) : la casse porte le sens */
+table.resultats.phases th,table.resultats.coefficients th{text-transform:none;letter-spacing:0;font-size:12.5px}
 table.resultats td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 table.resultats td.q{font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;color:var(--blue)}
 table.resultats td.n{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}

@@ -2,11 +2,12 @@
 // subduction, profondeur d'un séisme lointain par pP et sP ; hodochrones
 // Pg et Pn d'une croûte sur manteau (temps vrais ou réduits), inversion d'un profil de premières arrivées (vitesses,
 // intercept, épaisseur), sismique réfraction de site.
-import { el, num, f, fd, brancher, garde, lireTableau, esc, noter } from "./ui.js";
+import { el, num, f, fd, brancher, garde, lireTableau, esc, noter, noteCalcul } from "./ui.js";
 import { graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Refraction from "./sismo/refraction.js";
 import Globe from "./sismo/globe.js";
+import Tables from "./sismo/tables.js";
 import { globe, eventail, raisVers, foyer, subduction, COULEURS_PHASES } from "./globe-figure.js";
 import { raisCroute, pPgeometrie } from "./schemas-notes.js";
 
@@ -266,3 +267,133 @@ const majPP = garde("ppOut", () => {
 });
 // une demi-seconde de calcul (courbes et dichotomie) : après le premier affichage de la page
 setTimeout(() => brancher(["ppD", "ppPh", "ppR"], majPP), 0);
+
+// ── Tables de temps de trajet ─────────────────────────────────────────────
+// Calculées après le premier affichage (une seconde environ) ; les exemples et le calculateur les relisent.
+
+const KM_DEG = (Globe.R * Math.PI) / 180;
+/** Temps en minutes et secondes, « 8:56,4 » ; tiret si la phase n'existe pas. */
+const minsec = (t) => {
+  if (t === null || !Number.isFinite(t)) return "—";
+  const q = Math.round(t * 10) / 10, m = Math.floor(q / 60);
+  return `${m}:${fd(q - 60 * m, 1).padStart(4, "0")}`;
+};
+/** Heure « 10:21:04 » ou « 10:21:04,5 » en secondes depuis minuit (NaN si illisible). */
+const lireHeure = (texte) => {
+  const m = String(texte).trim().replace(",", ".").match(/^(\d{1,2})[:h ](\d{1,2})[:min ]+(\d{1,2}(?:\.\d+)?)\s*s?$/);
+  return m ? 3600 * +m[1] + 60 * +m[2] + +m[3] : NaN;
+};
+/** Secondes depuis minuit en « 10 h 10 min 00,3 s ». */
+const heure = (t) => {
+  const q = Math.round(t * 10) / 10, h = Math.floor(q / 3600), m = Math.floor((q - 3600 * h) / 60);
+  return `${h} h ${String(m).padStart(2, "0")} min ${fd(q - 3600 * h - 60 * m, 1).padStart(4, "0")} s`;
+};
+const DIST_REG = Array.from({ length: 21 }, (_, i) => 20 * i), DIST_TELE = Array.from({ length: 18 }, (_, i) => 10 * (i + 1));
+const HS = [10, 100, 300, 600], DIST_PROF = [30, 40, 50, 60, 70, 80, 90], PH_TELE = ["P", "PcP", "PKiKP", "PKIKP", "PKP", "S", "ScS", "SKS"];
+const cacheTele = new Map();
+const tableTele = (h) => {
+  if (!cacheTele.has(h)) cacheTele.set(h, Tables.telesismique({ h, distances: DIST_TELE }));
+  return cacheTele.get(h);
+};
+let tableReg = null, tableProf = null;
+
+function remplirTables() {
+  tableReg = Tables.regionale({ h: 10, distances: DIST_REG });
+  const t1 = el("tabTempsRegional");
+  if (t1) t1.innerHTML = `<thead><tr><th class="num">Δ (km)</th><th class="num">Pg (s)</th><th class="num">Pn (s)</th><th class="num">Sg (s)</th><th class="num">Sn (s)</th><th class="num">Sg − P (s)</th><th class="num">8,4 × (S − P)</th><th class="num">R vrai</th></tr></thead><tbody>${
+    tableReg.map((r) => `<tr><td class="n">${r.d}</td><td class="n">${r.premiere === "Pg" ? "<strong>" : ""}${fd(r.Pg, 1)}${r.premiere === "Pg" ? "</strong>" : ""}</td><td class="n">${r.Pn === null ? "—" : `${r.premiere === "Pn" ? "<strong>" : ""}${fd(r.Pn, 1)}${r.premiere === "Pn" ? "</strong>" : ""}`}</td><td class="n">${fd(r.Sg, 1)}</td><td class="n">${r.Sn === null ? "—" : fd(r.Sn, 1)}</td><td class="n">${fd(r.SP, 2)}</td><td class="n">${fd(8.4 * r.SP, 0)} km</td><td class="n">${fd(Math.hypot(r.d, 10), 0)} km</td></tr>`).join("")
+  }</tbody>`;
+  const t2 = el("tabTempsTele"), rows = tableTele(10);
+  if (t2) t2.innerHTML = `<thead><tr><th class="num">Δ (°)</th><th class="num">Δ (km)</th>${PH_TELE.map((ph) => `<th class="num">${ph}</th>`).join("")}<th class="num">S − P</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td class="n">${r.d}</td><td class="n">${f(r.d * KM_DEG, 4)}</td>${PH_TELE.map((ph) => `<td class="n">${r[ph] !== null && ph === r.premiere ? `<strong>${minsec(r[ph])}</strong>` : minsec(r[ph])}</td>`).join("")}<td class="n">${minsec(r.SP)}</td></tr>`).join("")
+  }</tbody>`;
+  tableProf = Tables.profondeurs({ profondeurs: HS, distances: DIST_PROF });
+  const t3 = el("tabTempsProf");
+  if (t3) t3.innerHTML = `<thead><tr><th class="num" rowspan="2">Δ (°)</th>${HS.map((h) => `<th class="num" colspan="3">foyer à ${h} km</th>`).join("")}</tr><tr>${HS.map(() => '<th class="num">P</th><th class="num">pP − P</th><th class="num">sP − P</th>').join("")}</tr></thead><tbody>${
+    tableProf.map((r) => `<tr><td class="n">${r.d}</td>${HS.map((h) => `<td class="n">${minsec(r[h].P)}</td><td class="n">${r[h].pPP === null ? "—" : `${fd(r[h].pPP, 1)} s`}</td><td class="n">${r[h].sPP === null ? "—" : `${fd(r[h].sPP, 1)} s`}</td>`).join("")}</tr>`).join("")
+  }</tbody>`;
+  const ex = el("exTables");
+  if (ex) ex.innerHTML = exemplesTables().map(noteCalcul).join("");
+}
+
+/** Exemples d'application des trois tables (valeurs de départ tirées du modèle, puis lues comme sur le terrain). */
+function exemplesTables() {
+  // 1. Séisme régional : la station est à 187 km d'un foyer à 10 km
+  const t187 = Sismo.temps(187, 10), sp1 = Math.round((t187.tSg - t187.tP) * 10) / 10, l1 = Tables.inverser(tableReg, sp1, (r) => r.d, (r) => r.SP);
+  // 2. Séisme lointain : à 64°, foyer à 10 km, origine à 10 h 10 min 00 s
+  const rows = tableTele(10), TP64 = Tables.premiere("P", 10, 64), sp2 = Math.round(Tables.spTele(10, 64)), tP2 = Math.round(36600 + TP64);
+  const l2 = Tables.inverser(rows, sp2, (r) => r.d, (r) => r.SP), tp2 = Tables.interpoler(rows, l2.x, (r) => r.d, (r) => r.P);
+  const ex2 = Tables.dichotomie((d) => Tables.spTele(10, d), sp2, l2.a.d, l2.b.d, 16), TPex = Tables.premiere("P", 10, ex2);
+  // 3. Profondeur : pP − P lu à 50° pour un foyer à 200 km
+  const r50 = tableProf.find((r) => r.d === 50), pp3 = Math.round(10 * (Tables.premiere("pP", 200, 50) - Tables.premiere("P", 200, 50))) / 10, l3 = Tables.lireProfondeur(r50, pp3, HS);
+  // 4. Zone d'ombre : quelles ondes à 120° ?
+  const r120 = rows.find((r) => r.d === 120), presentes = PH_TELE.filter((ph) => r120[ph] !== null).sort((a, b) => r120[a] - r120[b]);
+  return [
+    { titre: `Exemple 1 · Séisme régional : S − P = ${fd(sp1, 1)} s, foyer à 10 km (table 1)`, etapes: [
+      { titre: "Lignes qui encadrent l'écart lu", calcul: `Δ = ${l1.a.d} km : Sg − P = ${fd(l1.a.SP, 2)} s ; Δ = ${l1.b.d} km : Sg − P = ${fd(l1.b.SP, 2)} s` },
+      { titre: "Interpolation linéaire", formule: "Δ = Δ<sub>1</sub> + (S − P − (S − P)<sub>1</sub>) / ((S − P)<sub>2</sub> − (S − P)<sub>1</sub>) × (Δ<sub>2</sub> − Δ<sub>1</sub>)",
+        calcul: `Δ = ${l1.a.d} + (${fd(sp1, 1)} − ${fd(l1.a.SP, 2)}) / (${fd(l1.b.SP, 2)} − ${fd(l1.a.SP, 2)}) × ${l1.b.d - l1.a.d} = <b>${fd(l1.x, 0)} km</b> (vrai : 187 km)` },
+      { titre: "La règle du chapitre 1 se trompe ici", formule: "R ≈ 8,4 × (S − P)", calcul: `8,4 × ${fd(sp1, 1)} = <b>${fd(8.4 * sp1, 0)} km</b>, soit ${fd(100 * (8.4 * sp1 / Math.hypot(187, 10) - 1), 0)} % de trop`,
+        note: "À cette distance, la première P est Pn, passée par le manteau : elle arrive plus tôt que Pg et allonge S − P. La table, calculée avec Pn, n'a pas ce biais." },
+    ] },
+    { titre: `Exemple 2 · Séisme lointain : P à ${heure(tP2)}, S − P = ${minsec(sp2)} (table 2)`, etapes: [
+      { titre: "Écart lu, en secondes", calcul: `S − P = ${minsec(sp2)} = <b>${sp2} s</b>` },
+      { titre: "Lignes qui encadrent l'écart", calcul: `Δ = ${l2.a.d}° : S − P = ${fd(l2.a.SP, 1)} s ; Δ = ${l2.b.d}° : S − P = ${fd(l2.b.SP, 1)} s` },
+      { titre: "Distance par interpolation", formule: "Δ = Δ<sub>1</sub> + r × (Δ<sub>2</sub> − Δ<sub>1</sub>), r = (S − P − (S − P)<sub>1</sub>) / ((S − P)<sub>2</sub> − (S − P)<sub>1</sub>)",
+        calcul: `r = (${sp2} − ${fd(l2.a.SP, 1)}) / (${fd(l2.b.SP, 1)} − ${fd(l2.a.SP, 1)}) = ${fd(l2.r, 3)} → Δ = <b>${fd(l2.x, 1)}°</b>, soit ${fd(l2.x, 1)} × ${fd(KM_DEG, 2)} = ${f(l2.x * KM_DEG, 4)} km` },
+      { titre: "Temps de trajet de P à cette distance (même interpolation, colonne P)", formule: "T<sub>P</sub> = T<sub>P,1</sub> + r × (T<sub>P,2</sub> − T<sub>P,1</sub>)",
+        calcul: `T<sub>P</sub> = ${fd(l2.a.P, 1)} + ${fd(tp2.r, 3)} × (${fd(l2.b.P, 1)} − ${fd(l2.a.P, 1)}) = <b>${fd(tp2.y, 1)} s</b> = ${minsec(tp2.y)}` },
+      { titre: "Heure d'origine", formule: "t<sub>0</sub> = t<sub>P</sub> − T<sub>P</sub>", calcul: `t<sub>0</sub> = ${heure(tP2)} − ${minsec(tp2.y)} = <b>${heure(tP2 - tp2.y)}</b>` },
+      { titre: "Contrôle par les rais", calcul: `Δ exact = ${fd(ex2, 2)}°, T<sub>P</sub> = ${fd(TPex, 1)} s → t<sub>0</sub> = ${heure(tP2 - TPex)} : la lecture de la table est juste à ${fd(Math.abs(l2.x - ex2), 2)}° près`,
+        note: "Entre deux lignes, la courbe réelle n'est pas une droite : l'interpolation linéaire laisse une petite erreur, d'autant plus faible que le pas de la table est fin." },
+    ] },
+    { titre: `Exemple 3 · Profondeur : pP − P = ${fd(pp3, 1)} s à 50° (table 3)`, etapes: [
+      { titre: "Ligne Δ = 50°, colonnes pP − P", calcul: HS.map((h) => `${h} km : ${fd(r50[h].pPP, 1)} s`).join(" ; ") },
+      { titre: "Interpolation entre les deux profondeurs qui encadrent le retard", formule: "h = h<sub>1</sub> + (r − r<sub>1</sub>) / (r<sub>2</sub> − r<sub>1</sub>) × (h<sub>2</sub> − h<sub>1</sub>)",
+        calcul: `h = ${l3.a.h} + (${fd(pp3, 1)} − ${fd(l3.a.r, 1)}) / (${fd(l3.b.r, 1)} − ${fd(l3.a.r, 1)}) × ${l3.b.h - l3.a.h} = <b>${fd(l3.x, 0)} km</b> (vrai : 200 km)`,
+        note: "Les colonnes sont espacées de 100 à 300 km : une table plus serrée, ou le calculateur de pP plus bas, donne la profondeur plus finement." },
+    ] },
+    { titre: "Exemple 4 · Quelles ondes arrivent à 120° ? (table 2)", etapes: [
+      { titre: "Ligne Δ = 120°", calcul: presentes.map((ph) => `${ph} : ${minsec(r120[ph])}`).join(" ; ") + " ; P, PcP, S et ScS : —" },
+      { titre: "Lecture", calcul: `La première onde est <b>${presentes[0]}</b>, à ${minsec(r120[presentes[0]])} : la station est dans la zone d'ombre de P, qui ne l'atteint pas. La première onde de cisaillement est SKS, à ${minsec(r120.SKS)}.`,
+        note: "Prendre la première onde pour P et lui appliquer la colonne P conduirait à une distance fausse : on identifie d'abord la phase, d'après les écarts entre ondes." },
+    ] },
+  ];
+}
+
+// ── Distance et heure d'origine d'un séisme lointain, par la table ────────
+const majTable = garde("tbOut", () => {
+  const sp = num("tbSP"), h = Number(el("tbH").value), tP = lireHeure(el("tbP").value), rows = tableTele(h);
+  const def = rows.filter((r) => r.SP !== null);
+  if (!(sp > 0) || !Number.isFinite(tP)) { el("tbOut").textContent = "Saisir S − P en secondes et l'heure de P sous la forme 10:21:04."; el("tbFig").innerHTML = ""; noter("calcTableNote", null); return; }
+  const l = Tables.inverser(rows, sp, (r) => r.d, (r) => r.SP);
+  if (!l) { el("tbOut").textContent = `Hors table : à cette profondeur, S − P va de ${fd(def[0].SP, 0)} s (${def[0].d}°) à ${fd(def.at(-1).SP, 0)} s (${def.at(-1).d}°).`; el("tbFig").innerHTML = ""; noter("calcTableNote", null); return; }
+  const tp = Tables.interpoler(rows, l.x, (r) => r.d, (r) => r.P), t0 = tP - tp.y;
+  const dEx = Tables.dichotomie((d) => Tables.spTele(h, d), sp, l.a.d, l.b.d, 16), TPex = Tables.premiere("P", h, dEx);
+  el("tbFig").innerHTML = graphe({
+    largeur: 560, hauteur: 290, xmin: 0, xmax: 100, ymin: 0, ymax: Math.ceil(Math.max(...def.map((r) => r.SP)) / 100) * 100, pasX: 10, pasY: 100,
+    xlabel: "distance Δ (°)", ylabel: "S − P (s)",
+    series: [
+      { points: def.map((r) => [r.d, r.SP]), couleur: COULEURS.bleu, epaisseur: 2, marqueurs: true, libelle: `table ak135, foyer à ${h} km (lignes tous les 10°)` },
+      { points: [[0, sp], [100, sp]], couleur: COULEURS.discret, epaisseur: 1, tirets: "4 3", libelle: `S − P lu : ${fd(sp, 0)} s` },
+    ],
+    marques: [{ x: l.x, y: sp, couleur: COULEURS.effort, guides: true, libelle: `Δ = ${fd(l.x, 1)}°` }],
+  });
+  noter("calcTableNote", {
+    donnees: [["S − P", `${fd(sp, 0)} s = ${minsec(sp)}`], ["heure de P", heure(tP)], ["foyer", `${h} km`], ["table", "ak135, lignes tous les 10°"]],
+    etapes: [
+      { titre: "Lignes qui encadrent l'écart lu (colonne S − P)", calcul: `Δ = ${l.a.d}° : ${fd(l.a.SP, 1)} s ; Δ = ${l.b.d}° : ${fd(l.b.SP, 1)} s` },
+      { titre: "Distance par interpolation linéaire", formule: "r = (S − P − (S − P)<sub>1</sub>) / ((S − P)<sub>2</sub> − (S − P)<sub>1</sub>) ; Δ = Δ<sub>1</sub> + r·(Δ<sub>2</sub> − Δ<sub>1</sub>)",
+        calcul: `r = (${fd(sp, 0)} − ${fd(l.a.SP, 1)}) / (${fd(l.b.SP, 1)} − ${fd(l.a.SP, 1)}) = ${fd(l.r, 3)} ; Δ = ${l.a.d} + ${fd(l.r, 3)} × 10 = <b>${fd(l.x, 2)}°</b> = ${f(l.x * KM_DEG, 4)} km` },
+      { titre: "Temps de trajet de P (colonne P, même r)", formule: "T<sub>P</sub> = T<sub>P,1</sub> + r·(T<sub>P,2</sub> − T<sub>P,1</sub>)",
+        calcul: `T<sub>P</sub> = ${fd(l.a.P, 1)} + ${fd(l.r, 3)} × (${fd(l.b.P, 1)} − ${fd(l.a.P, 1)}) = <b>${fd(tp.y, 1)} s</b> (${minsec(tp.y)})` },
+      { titre: "Heure d'origine", formule: "t<sub>0</sub> = t<sub>P</sub> − T<sub>P</sub>", calcul: `t<sub>0</sub> = ${heure(tP)} − ${minsec(tp.y)} = <b>${heure(t0)}</b>` },
+      { titre: "Contrôle par les rais (dichotomie entre les deux lignes)", calcul: `Δ = ${fd(dEx, 2)}°, T<sub>P</sub> = ${fd(TPex, 1)} s → t<sub>0</sub> = ${heure(tP - TPex)} ; écart de la lecture : ${fd(Math.abs(l.x - dEx), 2)}° et ${fd(Math.abs(tp.y - TPex), 1)} s` },
+    ],
+  });
+  el("tbOut").innerHTML = `Δ = <strong>${fd(l.x, 1)}°</strong> (${f(l.x * KM_DEG, 3)} km), T<sub>P</sub> = ${minsec(tp.y)} → <strong>origine à ${heure(t0)}</strong>
+    <small>Calcul exact par les rais : ${fd(dEx, 2)}°, origine à ${heure(tP - TPex)}.</small>`;
+});
+// une seconde de calcul (trois tables) : après le premier affichage de la page
+setTimeout(() => { remplirTables(); brancher(["tbSP", "tbH", "tbP"], majTable); }, 0);
+
