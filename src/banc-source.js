@@ -174,6 +174,8 @@ import Source from './sismo/source.js';
     $('#so-mode-explorer').setAttribute('aria-pressed', String(m === 'explorer'));
     $('#so-mode-exercice').setAttribute('aria-pressed', String(m === 'exercice'));
     $('#so-panneau-exercice').hidden = m !== 'exercice';
+    // en exercice, le générateur (Mw et Δσ vrais) reste caché : c'est la réponse demandée
+    $('#so-reglages-seisme').hidden = m === 'exercice';
     if (m === 'exercice') nouvelExercice();
     else { etat.r = reglagesDefaut(); etat.verifie = false; recalculer(); }
   }

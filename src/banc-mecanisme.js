@@ -161,7 +161,8 @@ import Mecanisme from './sismo/mecanisme.js';
     const inv = etat.inv && !enExercice() ? etat.inv : null;
     $('#me-afficheurs').innerHTML = [
       afficheur('Désaccords', `${nd} / ${etat.n}`, 'polarités contraires au modèle'),
-      afficheur('Type', Me.typeFaille(m.glissement), `glissement ${virg(m.glissement)}°`),
+      // en exercice, le type de faille est demandé : seul le glissement du plan réglé est rappelé
+      afficheur('Type', enExercice() ? '—' : Me.typeFaille(m.glissement), `glissement ${virg(m.glissement)}°`),
       afficheur('Plan auxiliaire', `${virg(aux.azimut)}/${virg(aux.pendage)}/${virg(aux.glissement)}`, 'azimut / pendage / glissement'),
       afficheur('Axes P et T', `P ${virg(ax.P.azimut)}°↓${virg(ax.P.plongement)}°`, `T ${virg(ax.T.azimut)}°↓${virg(ax.T.plongement)}°`),
       afficheur('Inversion', inv ? `${inv.desaccords} désaccord${inv.desaccords > 1 ? 's' : ''}` : '—', inv ? `${inv.solutions.length} solution${inv.solutions.length > 1 ? 's' : ''} au pas de 10°` : 'recherche exhaustive'),

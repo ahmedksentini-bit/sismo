@@ -113,7 +113,8 @@ import Batiment from './sismo/batiment.js';
     const lw = W / nm, haut = 70, bas = 22, Y = v => H - bas - (v / res.H) * (H - haut - bas);
     for (let j = 0; j < nm; j++) {
       const x0 = j * lw, xc = x0 + lw / 2, mo = md[j], amax = Math.max(...mo.phi.map(Math.abs)), A = (0.26 * lw) / amax, dalle = Math.min(0.2 * lw, 40);
-      const X = v => xc + v * A, retenu = j < res.ret.n;
+      // en exercice, le nombre de modes à retenir est demandé : tous les modes ont la même couleur
+      const X = v => xc + v * A, retenu = enExercice() || j < res.ret.n;
       if (j) { ctx.strokeStyle = COUL.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0 + 0.5, 8); ctx.lineTo(x0 + 0.5, H - 8); ctx.stroke(); }
       // sol et position au repos
       ctx.strokeStyle = COUL['grid-strong']; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xc - dalle - 10, Y(0)); ctx.lineTo(xc + dalle + 10, Y(0)); ctx.stroke();
@@ -142,8 +143,9 @@ import Batiment from './sismo/batiment.js';
     const Tmax = Math.max(3, res.T1 * 1.15), ymax = (res.Se(Sp.EC8_2004[res.sp.type][res.sp.sol].TC) / G) * 1.12;
     const X = T => m.g + (T / Tmax) * (W - m.g - m.d), Y = v => H - m.b - (v / ymax) * (H - m.h - m.b);
     axes(ctx, m, X, Y, 0, Tmax, 0, ymax, { fx: v => virg(v, 1), fy: v => virg(v, ymax < 0.2 ? 3 : 2) });
-    const lim = Math.min(4 * res.TC, 2);
-    ctx.fillStyle = COUL.soft; ctx.fillRect(X(0), m.h, X(lim) - X(0), H - m.h - m.b);
+    // en exercice, le domaine des forces latérales et les modes retenus sont des réponses : rien n'est distingué
+    const lim = Math.min(4 * res.TC, 2), cache = enExercice();
+    if (!cache) { ctx.fillStyle = COUL.soft; ctx.fillRect(X(0), m.h, X(lim) - X(0), H - m.h - m.b); }
     const courbe = (f, coul, w, tirets) => {
       ctx.strokeStyle = coul; ctx.lineWidth = w; ctx.setLineDash(tirets || []); ctx.beginPath();
       for (let i = 0; i <= 300; i++) { const T = (i / 300) * Tmax; (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(T), Y(f(T) / G)); }
@@ -155,7 +157,7 @@ import Batiment from './sismo/batiment.js';
     // modes
     res.md.forEach((mo, j) => {
       if (mo.T > Tmax) return;
-      const x = X(mo.T), y = Y(res.Sd(mo.T) / G), retenu = j < res.ret.n;
+      const x = X(mo.T), y = Y(res.Sd(mo.T) / G), retenu = cache || j < res.ret.n;
       ctx.strokeStyle = retenu ? COUL.blue : COUL['grid-strong']; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, Y(0)); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = retenu ? COUL.blue : COUL.muted; ctx.beginPath(); ctx.arc(x, y, 3 + 9 * Math.sqrt(mo.part), 0, 2 * Math.PI); ctx.fill();
       if (j < 2) texte(ctx, String(j + 1), x + 5 + 9 * Math.sqrt(mo.part), y - 10, COUL.ink, `700 11px ${MONO}`);
@@ -169,7 +171,7 @@ import Batiment from './sismo/batiment.js';
     };
     repere(res.Tct, COUL['pick-p']);
     repere(res.T2d, COUL.amp);
-    texte(ctx, `min(4·TC ; 2 s) = ${virg(lim, 2)} s`, X(lim) - 4, m.h + 10, COUL.muted, `10.5px ${MONO}`, 'right');
+    if (!cache) texte(ctx, `min(4·TC ; 2 s) = ${virg(lim, 2)} s`, X(lim) - 4, m.h + 10, COUL.muted, `10.5px ${MONO}`, 'right');
     texte(ctx, `Sd et Se (g) selon T (s) · q = ${virg(res.sp.q, 1)} · sol ${res.sp.sol} · type ${res.sp.type}`, m.g, 15, COUL.ink, `800 12px ${POLICE}`);
   }
 
@@ -248,7 +250,7 @@ import Batiment from './sismo/batiment.js';
     const res = etat.res, c = enExercice(), vb = res.retenue.V[0];
     $('#bt-afficheurs').innerHTML = [
       afficheur('T1', `${virg(res.T1, 2)} s`, `${res.md.length} étage${res.md.length > 1 ? 's' : ''}, H = ${virg(res.H, 0)} m, ${milliers(res.M)} t`),
-      afficheur('Périodes approchées', `${virg(res.Tct, 2)} · ${virg(res.T2d, 2)} s`, 'Ct·H^¾ (béton) · 2·√d'),
+      afficheur('Périodes approchées', `${virg(res.Tct, 2)} · ${virg(res.T2d, 2)} s`, 'Ct·H<sup>3/4</sup> (béton) · 2·√d'),
       afficheur('Forces latérales : Fb', c ? '—' : `${milliers(res.fl.Fb)} kN`, c ? 'à calculer' : `λ = ${virg(res.fl.lambda, 2)}${res.regulier && res.permis ? '' : ' · hors domaine'}`),
       afficheur('Modal : Vb', c ? '—' : `${milliers(vb)} kN`, c ? 'à calculer' : `${res.ret.n} mode${res.ret.n > 1 ? 's' : ''}, ${res.regle.toUpperCase()}`),
       afficheur('dr·ν / h max', c ? '—' : pc(res.ratio, 2), c ? '' : `étage ${res.iRatio + 1}, limite ${pc(LIMITES[etat.r.limite].a, 2)}`),

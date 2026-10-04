@@ -238,7 +238,7 @@ import Sismicite from './sismo/sismicite.js';
     $('#sc-poisson').innerHTML = [
       afficheur(`λ(M ≥ ${virg(etat.m, 1)})`, lam ? virg(lam, 4) + ' /an' : '—', 'loi ajustée'),
       afficheur('Période de retour', lam ? milliers(1 / lam) + ' ans' : '—', 'T = 1 / λ'),
-      afficheur(`P(au moins un en ${etat.duree} ans)`, lam ? virg(100 * Sc.probabilite(lam, etat.duree), 1) + ' %' : '—', 'P = 1 − e^(−λt)'),
+      afficheur(`P(au moins un en ${etat.duree} ans)`, lam ? virg(100 * Sc.probabilite(lam, etat.duree), 1) + ' %' : '—', 'P = 1 − e<sup>−λt</sup>'),
       afficheur('10 % en 50 ans', virg(Sc.periodeRetour(0.1, 50), 0) + ' ans', 'référence de l\'EC8 (non-effondrement)'),
     ].join('');
     $('#sc-m-v').textContent = 'M ≥ ' + virg(etat.m, 1); $('#sc-t-v').textContent = etat.duree + ' ans';

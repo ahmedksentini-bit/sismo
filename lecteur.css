@@ -78,6 +78,18 @@ a.brand-mark { text-decoration: none; }
 
 .poste { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .colonne { display: grid; gap: 16px; min-width: 0; }
+/* Consigne du TP : en tête du banc, sur toute la largeur, repliable */
+.poste > .consigne { grid-column: 1 / -1; border-color: #a5d8ee; background: linear-gradient(135deg, var(--paper), var(--soft)); }
+.consigne > details > summary { list-style: none; cursor: pointer; }
+.consigne > details > summary::-webkit-details-marker { display: none; }
+.consigne > details > summary h2 { display: inline-block; margin: 0; font-size: 17px; }
+.consigne > details > summary h2::before { content: "▸ "; color: var(--cyan); }
+.consigne > details[open] > summary h2::before { content: "▾ "; }
+.consigne > details > summary h2 small { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.consigne > details > summary h2 small a { color: var(--blue); }
+.consigne > details > p { margin: 10px 0 0; }
+.consigne .experiences { margin: 10px 0 0; }
+.consigne .a-rendre { padding: 8px 12px; border-left: 4px solid var(--cyan); border-radius: 8px; background: var(--soft); }
 .carte { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: var(--shadow); }
 .carte > h2 { margin: 0 0 12px; font-size: 17px; }
 .carte > h2 small { display: block; color: var(--muted); font-size: 13px; font-weight: 600; }
@@ -109,7 +121,7 @@ a.brand-mark { text-decoration: none; }
 .afficheurs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .afficheur { display: flex; flex-direction: column; min-width: 0; padding: 8px 10px; border-radius: 10px; background: var(--panel); color: var(--panel-ink); font-variant-numeric: tabular-nums; }
 .afficheur span { font-size: 11px; color: var(--panel-muted); }
-.afficheur strong { font-size: 18px; line-height: 1.3; color: var(--panel-value); font-family: var(--mono); overflow-wrap: anywhere; }
+.afficheur strong { font-size: 18px; line-height: 1.3; color: var(--panel-value); font-family: var(--mono); overflow-wrap: break-word; hyphens: auto; }
 .afficheur small { font-size: 11px; color: var(--panel-muted); }
 .afficheur.vide strong { color: var(--panel-muted); }
 .etapes { margin-top: 12px; }
@@ -152,7 +164,7 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 
 /* Corrigé */
 .resultats { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.resultats th { padding: 8px 6px; border-bottom: 2px solid var(--line); color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; text-align: left; }
+.resultats th { padding: 8px 6px; border-bottom: 2px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700; text-align: left; }
 .resultats td { padding: 8px 5px; border-bottom: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
 .resultats td.n { text-align: right; white-space: nowrap; font-family: var(--mono); }
 .resultats tr.ok td:first-child { box-shadow: inset 3px 0 0 var(--good); }
@@ -204,6 +216,9 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 /* Banc spectre de réponse */
 .segments.compact { display: inline-flex; }
 .segments.compact button { flex: 0 0 auto; white-space: nowrap; padding-inline: 12px; }
+/* sélecteur à plusieurs lignes (grandeurs du banc « aléa ») */
+.segments.en-grille { flex-wrap: wrap; }
+.segments.en-grille button { flex: 1 0 28%; white-space: nowrap; }
 #sp-table { display: block; width: 100%; height: 260px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 #sp-accelero { display: block; width: 100%; height: 110px; margin-top: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 #sp-spectre { display: block; width: 100%; height: 340px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
@@ -305,10 +320,21 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #p-section { display: block; width: 100%; height: 580px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: crosshair; }
 
 @media (max-width: 1100px) {
-  .poste { grid-template-columns: minmax(0, 1fr); }
+  /* Une seule colonne : les deux colonnes se dissolvent et chaque carte prend son rang (--o) : consigne, mode,
+     réglages, lectures, graphiques dans l'ordre du calcul, compléments, « À retenir ». Le bureau garde ses deux colonnes. */
+  .poste { display: flex; flex-direction: column; gap: 16px; }
+  .poste > .colonne { display: contents; }
+  .poste > .consigne { order: 0; }
+  .poste > .colonne > * { order: var(--o, 40); }
+  .poste > aside.colonne > * { --o: 20; }
+  .poste > aside.colonne > .mode-banc { --o: 10; }
+  .poste > aside.colonne > .lectures { --o: 25; }
+  .poste > aside.colonne > .retenir { --o: 90; }
   .reperes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
+  /* la barre des bancs passe à la ligne (dix-sept onglets) : sur téléphone, elle défile avec la page */
+  .topbar { position: static; }
   .afficheurs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #traces { height: 330px; }
   #p-section { height: 480px; }
@@ -351,3 +377,9 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
   .brand small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+/* invite au-dessus des tableaux dont une ligne pilote un graphique */
+.aide.indice-ligne { margin: 4px 0 6px; font-size: 12.5px; }
+/* colonne de droite (340 px) : tableaux resserrés ; données d'exercice sur deux lignes si besoin */
+aside.colonne .resultats { font-size: 12.5px; }
+aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; }
+[id$="-exo-donnees"] .resultats td.n { white-space: normal; overflow-wrap: anywhere; }
