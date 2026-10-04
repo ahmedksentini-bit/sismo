@@ -1,6 +1,6 @@
 // Calculateurs du chapitre 14 : oscillateur élastoplastique sous un accélérogramme (boucle, ductilité,
 // résiduel) ; ductilité demandée face aux règles R–μ–T ; spectre de calcul de l'EN 1998-1:2004.
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Inelastique from "./sismo/inelastique.js";
 import Accelero from "./sismo/accelerogramme.js";
@@ -30,6 +30,17 @@ const majBoucle = garde("boOut", () => {
     series: [{ points: Array.from(res.u, (u, i) => [i * dtc, u * 1000]).filter((_, i) => i % pas === 0), couleur: COULEURS.bleu, epaisseur: 1.4 },
       { points: [[0, res.residuel * 1000], [Math.ceil((n - 1) * dtc), res.residuel * 1000]], couleur: COULEURS.effort, epaisseur: 1, tirets: "4 3", libelle: "résiduel" }],
   })}</div>`;
+  const w = (2 * Math.PI) / T, n2 = Inelastique.regles.n2(R, T, 0.4);
+  noter("calcBoucleNote", {
+    donnees: [["T", `${f(T, 3)} s`], ["R", fd(R, 2)], ["écrouissage α", fd(alpha, 3)], ["ξ", "5 %"], ["séisme", "Mw 6,5 à 10 km (simulé)"]],
+    etapes: [
+      { titre: "Réponse élastique de l'oscillateur", formule: "Sa = ω²·max|x| (Newmark, oscillateur élastique)", calcul: `ω = 2π/${f(T, 3)} = ${f(w, 4)} rad/s ; Sa = <b>${f(sae / G, 3)} g</b> ; Sd = Sa/ω² = <b>${f(sdEl * 1000, 4)} mm</b>` },
+      { titre: "Résistance de l'oscillateur ductile", formule: "f<sub>y</sub>/m = Sa / R ; u<sub>y</sub> = (f<sub>y</sub>/m)/ω²", calcul: `f<sub>y</sub>/m = ${f(sae / G, 3)} / ${fd(R, 2)} = <b>${f(sae / G / R, 3)} g</b> ; u<sub>y</sub> = ${f(sae / R, 4)} / ${f(w * w, 4)} = <b>${f(res.uy * 1000, 4)} mm</b>` },
+      { titre: "Calcul temporel non linéaire", formule: "ü + 2ξωu̇ + f(u)/m = −a<sub>g</sub>(t), ressort bilinéaire, Newmark et Newton", calcul: `u<sub>max</sub> = <b>${f(res.umax * 1000, 4)} mm</b> ; déplacement résiduel ${f(res.residuel * 1000, 3)} mm` },
+      { titre: "Ductilité demandée", formule: "μ = u<sub>max</sub> / u<sub>y</sub>", calcul: `μ = ${f(res.umax * 1000, 4)} / ${f(res.uy * 1000, 4)} = <b>${fd(res.mu, 2)}</b>` },
+      { titre: "Comparaison aux règles", formule: "égaux déplacements : μ = R ; N2 : μ = 1 + (R − 1)·T<sub>C</sub>/T si T &lt; T<sub>C</sub>, sinon R", calcul: `μ = ${fd(R, 2)} (égaux déplacements) ; N2 avec T<sub>C</sub> = 0,4 s : ${T < 0.4 ? `1 + (${fd(R, 2)} − 1) × 0,4/${f(T, 3)} = ` : ""}<b>${fd(n2, 2)}</b> ; rapport u<sub>max</sub>/Sd élastique = ${f(res.umax / sdEl, 3)}` },
+    ],
+  });
   el("boOut").innerHTML = `S<sub>a</sub> élastique ${f(sae / G, 3)} g, résistance f<sub>y</sub>/m = ${f(sae / G / R, 3)} g · u<sub>y</sub> = ${f(res.uy * 1000, 3)} mm ·
     <strong>u<sub>max</sub> = ${f(res.umax * 1000, 3)} mm</strong> (élastique : ${f(sdEl * 1000, 3)} mm) · <strong>μ = ${fd(res.mu, 2)}</strong> · résiduel ${f(res.residuel * 1000, 2)} mm
     <small>Règles : égaux déplacements μ = ${fd(R, 1)} ; N2 avec T<sub>C</sub> = 0,4 s : μ = ${fd(Inelastique.regles.n2(R, T, 0.4), 2)}. Un seul accélérogramme : forte variabilité d'un séisme à l'autre.</small>`;
@@ -57,6 +68,18 @@ const majRegles = garde("rgOut", () => {
       { points: TS.map((t, i) => [t, mus[i]]), couleur: COULEURS.bleu, epaisseur: 2.4, marqueurs: true, libelle: "moyenne de 5 calculs temporels" },
     ],
   });
+  const lig = (T, i) => `T = ${f(T, 2)} s : égaux déplacements ${fd(R, 2)} ; égales énergies (R² + 1)/2 = ${fd((R * R + 1) / 2, 2)} ; N2 ${fd(Inelastique.regles.n2(R, T, TC), 2)} ; calculs temporels <b>${fd(mus[i], 2)}</b>`;
+  noter("calcReglesNote", {
+    donnees: [["R", fd(R, 2)], ["T<sub>C</sub>", `${fd(TC, 2)} s`], ["séismes", "5 accélérogrammes Mw 6,5 à 10 km"], ["ξ", "5 %"]],
+    etapes: [
+      { titre: "Les trois règles", formule: "égaux déplacements : μ = R ; égales énergies : μ = (R² + 1)/2 ; N2 : μ = 1 + (R − 1)·T<sub>C</sub>/T si T &lt; T<sub>C</sub>, sinon μ = R" },
+      { titre: "Calculs temporels", formule: "pour chaque période : f<sub>y</sub> = Sa élastique / R, puis μ = u<sub>max</sub>/u<sub>y</sub> ; moyenne des 5 accélérogrammes" },
+      { titre: "Courte période", calcul: lig(TS[0], 0) },
+      { titre: "Période moyenne", calcul: lig(TS[5], 5) },
+      { titre: "Longue période", calcul: lig(TS[9], 9) },
+    ],
+    conclusion: "Les égaux déplacements valent pour les périodes longues ; aux courtes périodes, la demande de ductilité dépasse R : il faut une résistance plus grande (q plus faible).",
+  });
   el("rgOut").innerHTML = `R = ${fd(R, 1)} : ductilité moyenne calculée <strong>${fd(mus[0], 1)} à ${f(TS[0], 2)} s</strong>, ${fd(mus[5], 1)} à 0,5 s, <strong>${fd(mus[9], 1)} à 2 s</strong>
     <small>Aux longues périodes, la règle des égaux déplacements (μ = R) tient en moyenne ; aux courtes, la demande de ductilité explose.</small>`;
 });
@@ -77,6 +100,19 @@ const majCalcul = garde("sdOut", () => {
       { points: [[0, 0.2 * ag], [4, 0.2 * ag]], couleur: COULEURS.effort, epaisseur: 1, tirets: "2 3", libelle: "β·ag" },
     ],
     marques: [{ x: T, y: sd, couleur: COULEURS.effort, guides: true, libelle: `${f(sd, 3)} g` }],
+  });
+  const fo = T <= p.TB ? ["S<sub>d</sub> = a<sub>g</sub>·S·(2/3 + T/T<sub>B</sub>·(2,5/q − 2/3))", `${fd(ag, 3)} × ${fd(p.S, 2)} × (2/3 + ${f(T, 3)}/${fd(p.TB, 2)} × (2,5/${fd(q, 2)} − 2/3))`]
+    : T <= p.TC ? ["S<sub>d</sub> = a<sub>g</sub>·S·2,5/q", `${fd(ag, 3)} × ${fd(p.S, 2)} × 2,5/${fd(q, 2)}`]
+      : T <= p.TD ? ["S<sub>d</sub> = max(a<sub>g</sub>·S·2,5/q·T<sub>C</sub>/T ; β·a<sub>g</sub>)", `max(${fd(ag, 3)} × ${fd(p.S, 2)} × 2,5/${fd(q, 2)} × ${fd(p.TC, 2)}/${f(T, 3)} ; 0,2 × ${fd(ag, 3)})`]
+        : ["S<sub>d</sub> = max(a<sub>g</sub>·S·2,5/q·T<sub>C</sub>T<sub>D</sub>/T² ; β·a<sub>g</sub>)", `max(${fd(ag, 3)} × ${fd(p.S, 2)} × 2,5/${fd(q, 2)} × ${fd(p.TC, 2)} × ${fd(p.TD, 1)}/${f(T, 3)}² ; 0,2 × ${fd(ag, 3)})`];
+  noter("calcCalculNote", {
+    donnees: [["a<sub>g</sub>", `${fd(ag, 3)} g`], ["sol", `${sol} (type 1)`], ["q", fd(q, 2)], ["T", `${f(T, 3)} s`], ["β", "0,2"]],
+    etapes: [
+      { titre: "Paramètres du sol", calcul: `S = ${fd(p.S, 2)} ; T<sub>B</sub> = ${fd(p.TB, 2)} s ; T<sub>C</sub> = ${fd(p.TC, 2)} s ; T<sub>D</sub> = ${fd(p.TD, 1)} s` },
+      { titre: "Spectre élastique (ξ = 5 %)", calcul: `S<sub>e</sub>(${f(T, 3)} s) = <b>${f(se, 3)} g</b>` },
+      { titre: "Spectre de calcul (EN 1998-1:2004, expressions 3.13 à 3.16)", formule: fo[0], calcul: `S<sub>d</sub> = ${fo[1]} = <b>${f(sd, 3)} g</b>` },
+      { titre: "Rapport élastique / calcul", formule: "S<sub>e</sub>/S<sub>d</sub> (vaut q sur le plateau)", calcul: `${f(se, 3)} / ${f(sd, 3)} = <b>${f(se / sd, 3)}</b>` },
+    ],
   });
   el("sdOut").innerHTML = `T = ${f(T, 3)} s : S<sub>e</sub> = ${f(se, 3)} g, <strong>S<sub>d</sub> = ${f(sd, 3)} g</strong> (rapport ${f(se / sd, 3)})
     <small>Au plateau, le rapport vaut exactement q ; à T = 0, S<sub>d</sub> = 2/3·a<sub>g</sub>S ; aux longues périodes, le plancher β·a<sub>g</sub> = ${f(0.2 * ag, 3)} g peut s'appliquer.</small>`;

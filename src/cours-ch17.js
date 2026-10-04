@@ -1,6 +1,6 @@
 // Calculateurs du chapitre 17 : isolateur bilinéaire et linéarisation équivalente par point fixe ; calcul
 // temporel non linéaire du bâtiment isolé face à la base fixe (module Isolation, vérifié contre OpenSeesPy).
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Isolation from "./sismo/isolation.js";
 import Spectre from "./sismo/spectre.js";
@@ -35,6 +35,20 @@ const majIsolateur = garde("isOut", () => {
     ],
     marques: [{ x: TS, y: aFixe, couleur: COULEURS.effort, libelle: `base fixe ${f(aFixe, 2)} g` }, { x: eq.Teff, y: se(eq.Teff, eq.xi) / G, couleur: COULEURS.bleu, libelle: `isolé ${f(aIso, 2)} g` }],
   })}</div>`;
+  const e1 = eq.etapes[0], eta = Spectre.eta(eq.xi);
+  noter("calcIsolateurNote", {
+    donnees: [["masse portée M", `${f(M, 4)} t`], ["T<sub>iso</sub>", `${f(Tiso, 3)} s`], ["q", f(q, 3)], ["d<sub>y</sub>", `${f(dy * 1000, 3)} mm`], ["a<sub>g</sub>", `${fd(ag, 3)} g`], ["sol", sol]],
+    etapes: [
+      { titre: "Isolateur bilinéaire", formule: "K<sub>2</sub> = M·(2π/T<sub>iso</sub>)² ; Q = q·M·g ; K<sub>1</sub> = K<sub>2</sub> + Q/d<sub>y</sub>",
+        calcul: `K<sub>2</sub> = ${f(M, 4)} × (2π/${f(Tiso, 3)})² = <b>${f(iso.K2, 4)} kN/m</b> ; Q = ${f(q, 3)} × ${f(M, 4)} × 9,81 = <b>${f(iso.Q, 4)} kN</b> ; K<sub>1</sub> = <b>${f(iso.K1, 4)} kN/m</b>` },
+      { titre: "Première estimation", formule: "d<sub>0</sub> = S<sub>e</sub>(T<sub>iso</sub> ; 5 %)·(T<sub>iso</sub>/2π)²", calcul: `d<sub>0</sub> = <b>${f(e1.d * 1000, 4)} mm</b>` },
+      { titre: "Linéarisation équivalente à l'amplitude d", formule: "F = Q + K<sub>2</sub>·d ; K<sub>eff</sub> = F/d ; T<sub>eff</sub> = 2π·√(M/K<sub>eff</sub>) ; E<sub>D</sub> = 4Q·(d − d<sub>y</sub>) ; ξ<sub>eff</sub> = E<sub>D</sub>/(2π·K<sub>eff</sub>·d²)",
+        calcul: `à d<sub>0</sub> : F = ${f(e1.F, 4)} kN, K<sub>eff</sub> = ${f(e1.Keff, 4)} kN/m, T<sub>eff</sub> = ${f(e1.Teff, 3)} s, ξ<sub>eff</sub> = ${fd(100 * e1.xi, 1)} % → d<sub>1</sub> = S<sub>e</sub>(T<sub>eff</sub> ; ξ<sub>eff</sub>)·(T<sub>eff</sub>/2π)² = ${f(e1.suivant * 1000, 4)} mm` },
+      { titre: "Point fixe (avec relaxation)", formule: "on recommence avec le nouveau d jusqu'à stabilité", calcul: `${eq.etapes.length} itérations → <b>d = ${f(d * 1000, 4)} mm</b>, T<sub>eff</sub> = <b>${f(eq.Teff, 3)} s</b>, ξ<sub>eff</sub> = <b>${fd(100 * eq.xi, 2)} %</b>` },
+      { titre: "Réduction du spectre par l'amortissement", formule: "η = √(10/(5 + ξ)) ≥ 0,55", calcul: `η = √(10/(5 + ${fd(100 * eq.xi, 2)})) = <b>${fd(eta, 3)}</b>` },
+      { titre: "Accélération transmise", formule: "a = F/M ; base fixe : S<sub>e</sub>(0,4 s)", calcul: `a = ${f(Fd, 4)} / ${f(M, 4)} = ${f(Fd / M, 4)} m/s² = <b>${f(aIso, 3)} g</b>, contre <b>${f(aFixe, 3)} g</b> sur base fixe (division par ${f(aFixe / aIso, 3)})` },
+    ],
+  });
   el("isOut").innerHTML = `K<sub>2</sub> = ${f(iso.K2, 4)} kN/m, Q = ${f(iso.Q, 4)} kN, K<sub>1</sub> = ${f(iso.K1, 4)} kN/m · après ${eq.etapes.length} itérations : <strong>d = ${f(d * 1000, 3)} mm</strong>,
     T<sub>eff</sub> = ${f(eq.Teff, 3)} s, ξ<sub>eff</sub> = ${fd(100 * eq.xi, 1)} % (η = ${fd(Spectre.eta(eq.xi), 3)}) · <strong>accélération transmise ${f(aIso, 3)} g</strong>, base fixe (T = ${fd(TS, 1)} s) ${f(aFixe, 3)} g
     <small>Énergie par cycle E<sub>D</sub> = 4Q(d − d<sub>y</sub>) = ${f(eq.ED, 4)} kJ. ${eq.converge ? "" : "Le point fixe n'a pas convergé."}</small>`;
@@ -68,6 +82,15 @@ const majTemps = garde("itOut", () => {
     xlabel: "déplacement de l'isolateur (mm)", ylabel: "force (kN)",
     series: [{ points: Array.from(r.dIso, (d, i) => [d * 1000, r.fIso[i]]).filter((_, i) => i % pas === 0), couleur: COULEURS.bleu, epaisseur: 1.2, libelle: "boucles de l'isolateur" }],
     marques: [{ x: eq.d * 1000, y: eq.F, couleur: COULEURS.effort, libelle: `calcul : ${f(eq.d * 1000, 3)} mm` }],
+  });
+  noter("calcIsoTempsNote", {
+    donnees: [["accélérogramme", `n° ${n}, Mw 7 à 10 km (simulé)`], ["superstructure", `m<sub>s</sub> = ${f(ms, 4)} t, T = ${fd(TS, 1)} s, ξ = 5 %`], ["dalle de base", `m<sub>b</sub> = ${f(mb, 4)} t`], ["isolateur", `K<sub>1</sub> = ${f(iso.K1, 4)}, K<sub>2</sub> = ${f(iso.K2, 4)} kN/m, Q = ${f(iso.Q, 4)} kN`]],
+    etapes: [
+      { titre: "Calage de l'accélérogramme autour de T<sub>eff</sub>", formule: "ln s = moyenne sur 0,75 à 1,25·T<sub>eff</sub> de (ln S<sub>e</sub> − ln Sa)", calcul: `5 périodes de ${f(T5[0], 3)} à ${f(T5[4], 3)} s → s = <b>${fd(s, 3)}</b>` },
+      { titre: "Base fixe", formule: "oscillateur T = 0,4 s, ξ = 5 % (Newmark) ; accélération absolue = −(2ξωẋ + ω²x)", calcul: `maximum : <b>${f(aFixe, 3)} g</b>` },
+      { titre: "Base isolée", formule: "deux degrés de liberté (dalle, superstructure), isolateur bilinéaire, Newmark et Newton", calcul: `déplacement maximal de l'isolateur <b>${f(r.dIsoMax * 1000, 4)} mm</b> ; accélération maximale de la superstructure <b>${f(aIso, 3)} g</b>` },
+      { titre: "Comparaison à la linéarisation équivalente", calcul: `d calculé pas à pas / d linéarisé = ${f(r.dIsoMax * 1000, 4)} / ${f(eq.d * 1000, 4)} = <b>${f(r.dIsoMax / eq.d, 3)}</b>` },
+    ],
   });
   el("itOut").innerHTML = `Facteur de calage ${fd(s, 2)} · <strong>déplacement maximal de l'isolateur ${f(r.dIsoMax * 1000, 3)} mm</strong> (linéarisation équivalente : ${f(eq.d * 1000, 3)} mm) ·
     <strong>accélération de la superstructure ${f(aIso, 3)} g</strong>, contre ${f(aFixe, 3)} g sur base fixe

@@ -1,7 +1,7 @@
 // Calculateurs du chapitre 11 : indicateurs d'un accélérogramme synthétique (Arias, Husid, D5–95, CAV) ;
 // calage de sept accélérogrammes sur le spectre de l'EN 1998-1:2004 et vérification des règles du
 // § 3.2.3.1.2 (4) (Selection.verifierEC8).
-import { el, num, f, fd, brancher, garde, verdict } from "./ui.js";
+import { el, num, f, fd, brancher, garde, verdict, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Accelero from "./sismo/accelerogramme.js";
 import Intensite from "./sismo/intensite.js";
@@ -26,6 +26,15 @@ const majAccelero = garde("acOut", () => {
     xlabel: "temps (s)", ylabel: "Arias cumulée / Ia",
     series: [{ points: Array.from(ind.husid, (v, i) => [i * rec.dt, v]).filter((_, i) => i % pas === 0), couleur: COULEURS.bleu, epaisseur: 2.4, libelle: "courbe de Husid" },
       { points: [[ind.t5, 0.05], [ind.t95, 0.95]], couleur: COULEURS.effort, nuage: true, rayon: 4.5, libelle: "5 % et 95 %" }],
+  });
+  noter("calcAcceleroNote", {
+    donnees: [["Mw", fd(M, 1)], ["R", `${fd(R, 0)} km`], ["accélérogramme", `simulé, Δt = ${fd(rec.dt * 1000, 0)} ms, ${f(duree, 3)} s`], ["g", "9,81 m/s²"]],
+    etapes: [
+      { titre: "Accélération et vitesse maximales", formule: "PGA = max |a(t)| ; v(t) = ∫a dt (trapèzes) ; PGV = max |v(t)|", calcul: `PGA = ${f(ind.pga, 3)} m/s² = <b>${f(pga, 3)} g</b> ; PGV = <b>${f(ind.pgv * 100, 3)} cm/s</b>` },
+      { titre: "Intensité d'Arias", formule: "I<sub>a</sub> = π/(2g)·∫a² dt", calcul: `I<sub>a</sub> = π/(2 × 9,81) × ∫a² dt = <b>${f(ind.arias, 3)} m/s</b>` },
+      { titre: "Courbe de Husid et durée significative", formule: "H(t) = ∫<sub>0</sub><sup>t</sup>a² dt / ∫a² dt ; D<sub>5–95</sub> = t(H = 95 %) − t(H = 5 %)", calcul: `t<sub>5</sub> = ${fd(ind.t5, 2)} s, t<sub>95</sub> = ${fd(ind.t95, 2)} s → D<sub>5–95</sub> = <b>${fd(ind.d595, 2)} s</b> ; D<sub>5–75</sub> = ${fd(ind.d575, 2)} s` },
+      { titre: "Vitesse absolue cumulée", formule: "CAV = ∫|a| dt", calcul: `CAV = <b>${f(ind.cav, 3)} m/s</b>` },
+    ],
   });
   el("acOut").innerHTML = `PGA ${f(pga, 3)} g · PGV ${f(ind.pgv * 100, 3)} cm/s · <strong>I<sub>a</sub> = ${f(ind.arias, 3)} m/s</strong> · <strong>D<sub>5–95</sub> = ${fd(ind.d595, 1)} s</strong> · CAV = ${f(ind.cav, 3)} m/s
     <small>La durée de la source (1/f<sub>a</sub>) et celle du trajet (0,05·R) s'ajoutent : D<sub>5–95</sub> s'allonge avec la magnitude et la distance.</small>`;
@@ -61,6 +70,20 @@ const majCalage = garde("caResultat", () => {
     <tr><td>PGA moyen ≥ a<sub>g</sub>·S = ${f(ag * p.S, 3)} g</td><td class="n">${f(v.pgaMoyen, 3)} g</td><td>${verdict(v.regles.pga.ok)}</td></tr>
     <tr><td>moyenne ≥ 0,9·S<sub>e</sub> de ${fd(0.2 * T1, 2)} à ${fd(2 * T1, 2)} s</td><td class="n">${fd(100 * 0.9 * v.regles.spectre.rapportMin, 0)} % de S<sub>e</sub> à ${fd(v.regles.spectre.Tpire, 2)} s</td><td>${verdict(v.regles.spectre.ok)}</td></tr>
   </tbody></table></div>`;
+  const r0s = indiv[0], ecartLn = idx.reduce((s0, kk) => s0 + ln[kk] - Math.log(recs[0].Sa[kk]), 0) / idx.length;
+  noter("calcCalageNote", {
+    donnees: [["scénario", `Mw ${fd(M, 1)} à ${fd(R, 0)} km`], ["a<sub>g</sub>", `${fd(ag, 3)} g`], ["sol", `${sol} (S = ${fd(p.S, 2)})`], ["T<sub>1</sub>", `${fd(T1, 2)} s`], ["jeu", "7 accélérogrammes simulés"]],
+    etapes: [
+      { titre: "Plage de contrôle", formule: "[0,2·T<sub>1</sub> ; 2·T<sub>1</sub>]", calcul: `[${fd(0.2 * T1, 2)} ; ${fd(2 * T1, 2)}] s, ${idx.length} périodes du calcul` },
+      { titre: "Facteur d'échelle de chaque enregistrement (moindres carrés en ln)", formule: "ln s = moyenne sur la plage de (ln Se − ln Sa)",
+        calcul: `enregistrement 1 : ln s = ${fd(ecartLn, 3)} → s = <b>${fd(r0s.s, 3)}</b> ; les sept : ${indiv.map((r) => fd(r.s, 2)).join(" ; ")}` },
+      { titre: "Règle a) nombre d'accélérogrammes", formule: "n ≥ 3", calcul: `n = 7 → ${v0.regles.nombre.ok ? "vérifiée" : "non vérifiée"}` },
+      { titre: "Règle b) accélération à période nulle", formule: "moyenne des PGA ≥ a<sub>g</sub>·S", calcul: `${f(v0.pgaMoyen, 3)} g face à ${fd(ag, 3)} × ${fd(p.S, 2)} = ${f(ag * p.S, 3)} g → rapport ${f(v0.pgaMoyen / (ag * p.S), 3)}` },
+      { titre: "Règle c) spectre moyen sur la plage", formule: "Sa moyen(T) ≥ 0,9·Se(T) ; rapport minimal r = min Sa moyen / (0,9·Se)", calcul: `r = ${f(v0.regles.spectre.rapportMin, 3)} à T = ${fd(v0.regles.spectre.Tpire, 2)} s` },
+      { titre: "Facteur commun minimal", formule: "k = max(a<sub>g</sub>·S / PGA moyen ; 1 / r)", calcul: `k = max(${f((ag * p.S) / v0.pgaMoyen, 3)} ; ${f(1 / v0.regles.spectre.rapportMin, 3)}) = <b>${fd(v0.facteurConformite, 3)}</b> ${commun ? "(appliqué)" : "(non appliqué)"}` },
+      { titre: "Réponse à retenir (§ 4.3.3.4.3 (3))", calcul: "7 calculs ou plus : <b>la moyenne</b> des réponses (moins de 7 : la plus défavorable)" },
+    ],
+  });
   el("caResultat").innerHTML = `Facteurs individuels ${jeu.map((r) => fd(r.s, 2)).join(" ; ")}${commun ? ` (dont le facteur commun ${fd(k, 3)})` : ""} ·
     <strong>${v.conforme ? "jeu conforme" : `jeu non conforme : facteur commun nécessaire ${fd(v0.facteurConformite, 3)}`}</strong> · réponse à retenir : ${v.reponse} (7 calculs)
     <small>${jeu.some((r) => r.s > 4 || r.s < 0.25) ? "Un facteur sort de 0,25 à 4 : mieux vaudrait un autre enregistrement." : "Tous les facteurs restent entre 0,25 et 4."}</small>`;

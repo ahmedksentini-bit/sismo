@@ -1,7 +1,7 @@
 // Calculateurs du chapitre 10 : loi d'atténuation (médiane, dispersion, probabilité de dépassement) ;
 // aléa d'un site par le moteur du banc « aléa » (Psha.modeleSimple) : courbe d'aléa, UHS face au spectre de
 // l'EN 1998-1:2004, désagrégation.
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { svg, texte, graphe, echantillon, COULEURS } from "./figures.js";
 import Gmpe from "./sismo/gmpe.js";
 import Psha from "./sismo/psha.js";
@@ -24,6 +24,18 @@ const majGMPE = garde("gmOut", () => {
       { points: [[1, y], [300, y]], couleur: COULEURS.effort, epaisseur: 1.2, tirets: "2 3", libelle: `seuil ${f(y, 3)} g` },
     ],
     marques: [{ x: R, y: Math.exp(c.ln), couleur: COULEURS.bleu, libelle: `${f(Math.exp(c.ln), 3)} g` }],
+  });
+  const Phi = Psha.Phi;
+  noter("calcGMPENote", {
+    donnees: [["loi", loi.nom], ["Mw", fd(M, 1)], ["R<sub>jb</sub>", `${fd(R, 0)} km`], ["V<sub>s30</sub>", "800 m/s"], ["seuil y", `${f(y, 3)} g`]],
+    etapes: [
+      { titre: "Médiane de la loi", formule: "ln PGA<sub>méd</sub> = f(Mw, R<sub>jb</sub>, V<sub>s30</sub>) (coefficients publiés)", calcul: `ln PGA<sub>méd</sub> = ${fd(c.ln, 3)} → PGA<sub>méd</sub> = <b>${f(Math.exp(c.ln), 3)} g</b>` },
+      { titre: "Dispersion totale", formule: "σ = √(τ² + φ²)", calcul: `σ = √(${fd(c.tau, 3)}² + ${fd(c.phi, 3)}²) = <b>${fd(c.sigma, 3)}</b>` },
+      { titre: "Écart réduit du seuil", formule: "ε = (ln y − ln PGA<sub>méd</sub>) / σ", calcul: `ε = (${fd(Math.log(y), 3)} − ${fd(c.ln, 3)}) / ${fd(c.sigma, 3)} = <b>${fd(z, 3)}</b>` },
+      { titre: "Probabilité de dépassement (loi normale tronquée à ± 3σ)", formule: "P = (Φ(3) − Φ(ε)) / (Φ(3) − Φ(−3))",
+        calcul: z >= 3 ? "ε ≥ 3 : P = 0" : z <= -3 ? "ε ≤ −3 : P = 1" : `Φ(ε) = ${fd(Phi(z), 4)} ; P = (${fd(Phi(3), 5)} − ${fd(Phi(z), 4)}) / ${fd(Phi(3) - Phi(-3), 5)} = <b>${fd(100 * P, 2)} %</b>` },
+      { titre: "Fractile à 84 %", formule: "PGA<sub>84</sub> = PGA<sub>méd</sub>·e<sup>σ</sup>", calcul: `${f(Math.exp(c.ln), 3)} × ${f(Math.exp(c.sigma), 3)} = <b>${f(Math.exp(c.ln + c.sigma), 3)} g</b>` },
+    ],
   });
   el("gmOut").innerHTML = `Médiane <strong>${f(Math.exp(c.ln), 3)} g</strong>, σ = ${fd(c.sigma, 2)} (τ = ${fd(c.tau, 2)} entre séismes, φ = ${fd(c.phi, 2)} d'un site à l'autre) ·
     ε = (ln ${f(y, 3)} − ln ${f(Math.exp(c.ln), 3)})/σ = ${fd(z, 2)} → <strong>P(PGA &gt; ${f(y, 3)} g) = ${fd(100 * P, 1)} %</strong>
@@ -86,6 +98,27 @@ const majPSHA = garde("psOut", () => {
       { points: uhs, couleur: COULEURS.bleu, epaisseur: 2.6, marqueurs: true, libelle: "UHS à 475 ans" },
     ],
   }) + grilleDesag(desag);
+  // note : récurrence, discrétisation, un terme de la somme, lecture de la courbe
+  const zone = modele.zones[0], aGR = Math.log10(taux4) + 4 * b, mfd = Psha.mfdGR({ a: aGR, b, mmin: 4, mmax }), pts = Psha.discretiser(zone.polygone, modele.pasGrille);
+  // terme d'exemple : la classe et le point les plus proches du scénario moyen de la désagrégation
+  const lamTot = mfd.reduce((s0, x) => s0 + x.taux, 0), cl = mfd.reduce((q, x) => (Math.abs(x.M - desag.mMoy) < Math.abs(q.M - desag.mMoy) ? x : q), mfd[0]);
+  const dist = (x) => Math.hypot(x.x, x.y), pt = pts.reduce((q, x) => (Math.abs(dist(x) - desag.rMoy) < Math.abs(dist(q) - desag.rMoy) ? x : q), pts[0]), Rex = dist(pt);
+  const sci = (x) => { const e = Math.floor(Math.log10(x)); return `${f(x / 10 ** e, 3)}·10<sup>${String(e).replace("-", "−")}</sup>`; };
+  const lois3 = ["akkar2014", "bindi2014", "boore2014"].map((id) => { const q = Gmpe.LOIS[id].calculer({ M: cl.M, Rjb: Rex, vs30: 800, rake: 0 }, "PGA"); return Psha.survie((Math.log(a475) - q.ln) / q.sigma, 3); });
+  const pMoy = lois3.reduce((s0, x) => s0 + x, 0) / 3, lam475 = -Math.log(0.9) / 50;
+  noter("calcPSHANote", {
+    donnees: [["λ(≥ 4)", `${f(taux4, 3)} / an`], ["b", f(b, 3)], ["Mmax", fd(mmax, 1)], ["zone", `cercle de ${f(rayon, 3)} km, à ${f(distance, 3)} km du site`], ["lois", "Akkar, Bindi, Boore (2014), poids 1/3"], ["V<sub>s30</sub>", "800 m/s"]],
+    etapes: [
+      { titre: "Récurrence par classes de 0,1 (Gutenberg-Richter tronquée)", formule: "a = log<sub>10</sub> λ(≥ 4) + 4b ; λ<sub>i</sub> = 10<sup>a − b(M<sub>i</sub> − 0,05)</sup> − 10<sup>a − b(M<sub>i</sub> + 0,05)</sup>",
+        calcul: `a = ${fd(aGR, 3)} ; ${mfd.length} classes de M ${fd(mfd[0].M, 2)} à ${fd(mfd[mfd.length - 1].M, 2)} ; première : ${f(mfd[0].taux, 3)} /an ; total <b>${f(lamTot, 4)} /an</b>` },
+      { titre: "Répartition dans la zone", formule: `grille de ${modele.pasGrille} km : N points ; chaque point reçoit λ<sub>i</sub>/N`, calcul: `N = <b>${pts.length}</b> points` },
+      { titre: `Un terme de la somme : classe M ${fd(cl.M, 2)}, point de la grille à ${fd(Rex, 1)} km du site`, formule: "λ<sub>i</sub>/N × P(PGA &gt; y | M, R), P moyennée sur les trois lois (arbre logique)",
+        calcul: `pour y = ${f(a475, 3)} g : P = (${lois3.map((x) => fd(x, 4)).join(" + ")}) / 3 = ${fd(pMoy, 4)} ; terme = ${f(cl.taux, 3)} / ${pts.length} × ${fd(pMoy, 4)} = <b>${sci((cl.taux / pts.length) * pMoy)} /an</b>`,
+        note: "Choisi près du scénario moyen de la désagrégation ; la courbe somme tous les points et toutes les classes." },
+      { titre: "Courbe d'aléa et lecture à 10 % en 50 ans", formule: "λ(y) = Σ des termes ; P<sub>50</sub> = 1 − e<sup>−50·λ(y)</sup> ; 10 % ↔ λ = −ln(0,9)/50", calcul: `λ = ${f(lam475, 4)} /an (1/475) → interpolation log-log entre niveaux : <b>PGA = ${f(a475, 3)} g</b> ; à 2 % en 50 ans : <b>${f(a2475, 3)} g</b>` },
+      { titre: "Désagrégation", formule: "part de chaque case (M, R) dans λ(PGA &gt; a<sub>475</sub>) ; M̄ = Σ part·M, R̄ = Σ part·R", calcul: `M̄ = <b>${fd(desag.mMoy, 2)}</b>, R̄ = <b>${fd(desag.rMoy, 1)} km</b>` },
+    ],
+  });
   el("psOut").innerHTML = `<strong>PGA à 475 ans : ${f(a475, 3)} g</strong> · à 2 475 ans : ${f(a2475, 3)} g · Sa(0,2 s) = ${f(uhs[2][1], 3)} g, Sa(1 s) = ${f(uhs[5][1], 3)} g à 475 ans ·
     désagrégation : <strong>M̄ = ${fd(desag.mMoy, 1)}, R̄ = ${fd(desag.rMoy, 0)} km</strong>
     <small>Le rapport 2 475 / 475 ans vaut ${f(a2475 / a475, 3)} pour le PGA. Type de spectre suggéré par M̄ : ${type}.</small>`;

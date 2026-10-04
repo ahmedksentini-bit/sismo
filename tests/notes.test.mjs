@@ -8,7 +8,7 @@ import { noteCalcul } from '../src/ui.js';
 const lire = f => readFileSync(new URL(`../${f}`, import.meta.url), 'utf-8');
 const cours = lire('cours.html');
 
-test('chaque conteneur de note de calcul est rempli par son chapitre, une fois', () => {
+test('chaque calculateur a sa note de calcul, remplie par son chapitre', () => {
   const sections = cours.split(/<section id="ch(\d+)" class="card">/);
   let n = 0;
   for (let i = 1; i < sections.length; i += 2) {
@@ -19,7 +19,8 @@ test('chaque conteneur de note de calcul est rempli par son chapitre, une fois',
       n++;
     }
   }
-  assert.ok(n >= 20, `${n} notes`);
+  // chaque calculateur du cours a sa note
+  assert.equal(n, (cours.match(/<div class="calc" id="calc\w+">/g) || []).length);
 });
 
 test('mise en forme : données, étapes numérotées, conclusion', () => {
