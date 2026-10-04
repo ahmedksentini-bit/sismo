@@ -1,7 +1,7 @@
 // Calculateurs du chapitre 8 : loi de Gutenberg-Richter tronquée (taux, périodes de retour, probabilités),
 // catalogue simulé (complétude par courbure maximale, valeur b d'Aki-Utsu, déclusterage de Gardner et
 // Knopoff), probabilité de Poisson.
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Sismicite from "./sismo/sismicite.js";
 
@@ -26,6 +26,17 @@ const majGR = garde("grOut", () => {
   el("grTab").innerHTML = `<div class="table-large"><table class="resultats"><thead><tr><th>M ≥</th><th class="num">λ (/an)</th><th class="num">période de retour</th><th class="num">P en ${f(t, 3)} ans</th></tr></thead><tbody>${
     lignes.map((m) => { const l = lam(m); return `<tr><td>${fd(m, 1)}</td><td class="n">${f(l, 3)}</td><td class="n">${f(1 / l, 3)} ans</td><td class="n">${fd(100 * Sismicite.probabilite(l, t), 1)} %</td></tr>`; }).join("")
   }</tbody></table></div>`;
+  const q = 10 ** (-b * (Mmax - 4)), l6 = lam(6);
+  noter("calcGRNote", {
+    donnees: [["λ(≥ 4)", `${f(l4, 3)} / an`], ["b", f(b, 3)], ["Mmax", fd(Mmax, 1)], ["durée t", `${f(t, 3)} ans`]],
+    etapes: [
+      { titre: "Paramètre a de la loi", formule: "log<sub>10</sub> λ(≥ M) = a − b·M ⇒ a = log<sub>10</sub> λ(≥ 4) + 4b", calcul: `a = log<sub>10</sub> ${f(l4, 3)} + 4 × ${f(b, 3)} = ${fd(Math.log10(l4), 3)} + ${fd(4 * b, 3)} = <b>${fd(Math.log10(l4) + 4 * b, 3)}</b>` },
+      { titre: "Loi non tronquée à M 6", formule: "λ(≥ 6) = λ(≥ 4)·10<sup>−b(6 − 4)</sup>", calcul: `λ = ${f(l4, 3)} × 10<sup>−${fd(2 * b, 2)}</sup> = <b>${f(illimite(6), 3)} / an</b>` },
+      Mmax > 6 && { titre: "Loi tronquée à Mmax", formule: "λ(≥ M) = λ(≥ 4)·(10<sup>−b(M − 4)</sup> − 10<sup>−b(Mmax − 4)</sup>) / (1 − 10<sup>−b(Mmax − 4)</sup>)",
+        calcul: `10<sup>−b(Mmax − 4)</sup> = ${f(q, 3)} ; λ(≥ 6) = ${f(l4, 3)} × (${f(10 ** (-2 * b), 3)} − ${f(q, 3)}) / (1 − ${f(q, 3)}) = <b>${f(l6, 3)} / an</b>` },
+      Mmax > 6 && { titre: "Période de retour et probabilité sur la durée", formule: "T<sub>R</sub> = 1/λ ; P = 1 − e<sup>−λt</sup> (Poisson)", calcul: `T<sub>R</sub> = 1/${f(l6, 3)} = ${f(1 / l6, 3)} ans ; P = 1 − e<sup>−${f(l6, 3)} × ${f(t, 3)}</sup> = <b>${fd(100 * Sismicite.probabilite(l6, t), 1)} %</b>` },
+    ],
+  });
   el("grOut").innerHTML = `a = log<sub>10</sub> ${f(l4, 3)} + ${f(b, 3)} × 4 = <strong>${fd(Math.log10(l4) + 4 * b, 2)}</strong> · M ≥ 6 : <strong>λ = ${f(lam(6), 3)} / an</strong>, une fois tous les ${f(1 / lam(6), 3)} ans en moyenne
     <small>La troncature n'agit que près de Mmax : à M 6, la loi non tronquée donnerait ${f(illimite(6), 3)} / an.</small>`;
 });
@@ -57,7 +68,19 @@ const majCat = garde("caOut", () => {
     ].filter(Boolean),
     zones: [{ x0: 2, x1: Mc - 0.05, y0: 10 ** Math.floor(Math.log10(1 / annees)), y1: 10 ** Math.ceil(Math.log10(cum[0][1])), couleur: COULEURS.f62, opacite: 0.08, libelle: "incomplet" }],
   });
-  if (!r) { el("caOut").textContent = "Trop peu de séismes au-dessus de la complétude."; return; }
+  if (!r) { el("caOut").textContent = "Trop peu de séismes au-dessus de la complétude."; noter("calcCatalogueNote", null); return; }
+  const sel2 = mags.filter((m) => m >= Mc - 1e-9), moy = sel2.reduce((a1, m) => a1 + m, 0) / sel2.length;
+  const kMode = ks.reduce((a1, k1) => (classes.get(k1) > classes.get(a1) ? k1 : a1), ks[0]), Mx = Math.max(...mags), win = Sismicite.fenetreGK(Mx);
+  noter("calcCatalogueNote", {
+    donnees: [["période", `${Math.round(debut)} à 2025 (${f(annees, 3)} ans)`], ["séismes", `${mags.length}`], ["déclusterage", decl === "tous" ? "non (répliques comprises)" : "Gardner et Knopoff"], ["classes", "0,1 en magnitude"]],
+    etapes: [
+      decl !== "tous" && { titre: "Fenêtres de Gardner et Knopoff (exemple : le plus fort séisme)", formule: "L = 10<sup>0,1238·M + 0,983</sup> km ; T = 10<sup>0,5409·M − 0,547</sup> jours (M &lt; 6,5)", calcul: `M ${fd(Mx, 1)} : L = <b>${f(win.L, 3)} km</b>, T = <b>${f(win.T, 3)} jours</b> ; les séismes plus petits dans ces fenêtres sont retirés comme répliques` },
+      { titre: "Magnitude de complétude (courbure maximale)", formule: "Mc = classe la plus peuplée + 0,2", calcul: `classe la plus peuplée : M ${fd(kMode / 10, 1)} (${classes.get(kMode)} séismes) → Mc = <b>${fd(Mc, 1)}</b>` },
+      { titre: "Valeur b (Aki 1965, correction d'Utsu)", formule: "b = log<sub>10</sub>e / (M̄ − (Mc − ΔM/2)), ΔM = 0,1", calcul: `${r.N} séismes ≥ Mc, M̄ = ${fd(moy, 3)} ; b = 0,4343 / (${fd(moy, 3)} − ${fd(Mc - 0.05, 2)}) = <b>${fd(r.b, 3)}</b>` },
+      { titre: "Écart type (Shi et Bolt 1982)", formule: "σ<sub>b</sub> = 2,3·b²·√(Σ(M − M̄)² / (N(N − 1)))", calcul: `σ<sub>b</sub> = <b>${fd(r.sigma, 3)}</b>` },
+      { titre: "Taux annuels", formule: "λ(≥ Mc) = N / années ; a = log<sub>10</sub> λ(≥ Mc) + b·Mc ; λ(≥ 4) = λ(≥ Mc)·10<sup>−b(4 − Mc)</sup>", calcul: `λ(≥ ${fd(Mc, 1)}) = ${r.N} / ${f(annees, 3)} = ${f(r.lamMc, 3)} / an ; a = <b>${fd(r.a, 2)}</b> ; λ(≥ 4) = <b>${f(r.taux(4), 3)} / an</b>` },
+    ],
+  });
   el("caOut").innerHTML = `${mags.length} séismes depuis ${Math.round(debut)} · Mc (courbure maximale + 0,2) = <strong>${fd(Mc, 1)}</strong> ·
     <strong>b = ${fd(r.b, 2)} ± ${fd(r.sigma, 2)}</strong> (N = ${r.N}, vraie ${fd(b, 2)}) · a = ${fd(r.a, 2)} · λ(≥ 4) = ${f(r.taux(4), 3)} / an
     <small>${decl === "tous" ? "Répliques comprises : le taux des petits séismes est gonflé, et Poisson ne s'applique pas." : "Chocs principaux : le catalogue convient au calcul de l'aléa."} ${debut < 1960 ? "Sur une période longue, Mc est celle des années anciennes : on perd les petits séismes récents ; d'où l'estimateur de Weichert." : ""}</small>`;
@@ -69,6 +92,17 @@ const majPoisson = garde("poOut", () => {
   const TR = num("poTR"), t = num("poT");
   if (!(TR > 0 && t > 0)) { el("poOut").textContent = "Saisir une période de retour et une durée positives."; return; }
   const P = Sismicite.probabilite(1 / TR, t);
+  const lt = t / TR;
+  noter("calcPoissonNote", {
+    donnees: [["T<sub>R</sub>", `${f(TR, 4)} ans`], ["t", `${f(t, 3)} ans`]],
+    etapes: [
+      { titre: "Taux annuel", formule: "λ = 1 / T<sub>R</sub>", calcul: `λ = 1/${f(TR, 4)} = <b>${f(1 / TR, 4)} / an</b>` },
+      { titre: "Nombre moyen d'événements sur la durée", formule: "λ·t", calcul: `${f(1 / TR, 4)} × ${f(t, 3)} = <b>${f(lt, 4)}</b>` },
+      { titre: "Probabilité d'au moins un événement (Poisson)", formule: "P = 1 − e<sup>−λt</sup>", calcul: `P = 1 − e<sup>−${f(lt, 4)}</sup> = 1 − ${f(Math.exp(-lt), 4)} = <b>${fd(100 * P, 2)} %</b>` },
+      { titre: "Au moins deux événements", formule: "P<sub>≥2</sub> = 1 − e<sup>−λt</sup>·(1 + λt)", calcul: `P<sub>≥2</sub> = 1 − ${f(Math.exp(-lt), 4)} × ${f(1 + lt, 4)} = <b>${fd(100 * (1 - Math.exp(-lt) * (1 + lt)), 2)} %</b>` },
+      { titre: "Relation inverse", formule: "T<sub>R</sub> = −t / ln(1 − P)", calcul: `T<sub>R</sub> = −${f(t, 3)} / ln(1 − ${f(P, 4)}) = <b>${f(Sismicite.periodeRetour(P, t), 4)} ans</b>`, note: "10 % en 50 ans ↔ 475 ans ; 2 % en 50 ans ↔ 2 475 ans." },
+    ],
+  });
   el("poOut").innerHTML = `λ = 1/${f(TR, 4)} = ${f(1 / TR, 3)} / an → <strong>P = 1 − e<sup>−λt</sup> = ${fd(100 * P, 1)} %</strong> en ${f(t, 3)} ans
     <small>Inversement : ${fd(100 * P, 1)} % en ${f(t, 3)} ans ↔ T<sub>R</sub> = −t / ln(1 − P) = ${f(Sismicite.periodeRetour(P, t), 4)} ans. Probabilité d'au moins deux événements : ${fd(100 * (1 - Math.exp(-t / TR) * (1 + t / TR)), 1)} %.</small>`;
 });

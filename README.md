@@ -10,7 +10,7 @@ routière de ksr-infra : application web **statique**, aucun framework, aucune c
 | Page | Rôle |
 |---|---|
 | `index.html` | accueil : ressources du cours, puis les dix-sept chapitres rangés en quatre parties (A Lire les sismogrammes, B Mouvement du sol et aléa, C Du site au mouvement de projet, D Réponse des ouvrages) ; page de chapitre (`index.html#ch1`) avec notions, exercices corrigés et liens |
-| `cours.html` | le cours au fil du texte, un chapitre par section (`#chN`), avec ses calculateurs (champs à curseur), encadrés « à retenir » et « piège fréquent », sommaire latéral |
+| `cours.html` | le cours au fil du texte, un chapitre par section (`#chN`), avec ses calculateurs (champs à curseur) et leur note de calcul (formule, application numérique, résultat), encadrés « à retenir » et « piège fréquent », sommaire latéral |
 | `exerciseur.html` | exercices à données tirées au hasard (`#chN/modèle/graine`), modes apprentissage, entraînement et examen |
 | `labo.html` | travaux pratiques : les dix-sept bancs ; le banc de rang n est le TP du chapitre n |
 | `polycopie/sismologie-polycopie.pdf` | le polycopié : couverture, sommaire paginé, `cours.html` imprimé (les calculateurs deviennent des exemples chiffrés) |

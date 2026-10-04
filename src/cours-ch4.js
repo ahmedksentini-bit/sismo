@@ -9,7 +9,7 @@ import Faille from "./sismo/faille.js";
 const BETA = Sismo.MODELE.vs1 * 1000;
 const moment = (Mw) => 10 ** (1.5 * Mw + 9.05);
 const fcBrune = (M0, ds) => 0.4906 * BETA * Math.cbrt((ds * 1e6) / M0); // Δσ en MPa
-const sci = (x, c = 3) => { const e = Math.floor(Math.log10(x)); return `${f(x / 10 ** e, c)}·10<sup>${e}</sup>`; };
+const sci = (x, c = 3) => { const e = Math.floor(Math.log10(x)); return `${f(x / 10 ** e, c)}·10<sup>${String(e).replace("-", "−")}</sup>`; };
 
 // ── Du glissement à la magnitude ─────────────────────────────────────────
 const majMoment = garde("moOut", () => {

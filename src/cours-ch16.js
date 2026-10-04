@@ -1,7 +1,7 @@
 // Calculateur du chapitre 16 : poussée progressive d'une console de cisaillement à étages élastiques
 // parfaitement plastiques (profils modal et uniforme), méthode N2 de l'annexe B de l'EN 1998-1:2004, format
 // accélération–déplacement (module Poussee, vérifié contre OpenSeesPy).
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, COULEURS } from "./figures.js";
 import Poussee from "./sismo/poussee.js";
 import Batiment from "./sismo/batiment.js";
@@ -54,6 +54,21 @@ const majPoussee = garde("puOut", () => {
     ${ligne("d*<sub>t</sub> ; d<sub>t</sub> = Γ·d*<sub>t</sub>", (c) => `${f(c.dtEtoile * 1000, 3)} ; <strong>${f(c.dt * 1000, 3)} mm</strong>`)}
     ${ligne("glissements d'étage à d<sub>t</sub> (mm, du bas vers le haut)", (c) => c.glissements.map((g) => f(g * 1000, 2)).join(" · "))}
   </tbody></table></div>`;
+  const c0 = cas[0], phi = md[0].phi, smp = bat.m.reduce((a1, x, i) => a1 + x * phi[i], 0), smp2 = bat.m.reduce((a1, x, i) => a1 + x * phi[i] ** 2, 0);
+  const de = c0.se * (c0.T / (2 * Math.PI)) ** 2;
+  noter("calcPousseeNote", {
+    donnees: [["étages", `${r.n} de 3 m, 200 t, 2·10⁵ kN/m`], ["profil", el("puProfil").selectedOptions[0]?.textContent || r.profil], ["a<sub>g</sub>", `${fd(r.ag, 3)} g`], ["sol", `${r.sol} (T<sub>C</sub> = ${fd(TC, 2)} s)`], ["q, ω", `${fd(r.q, 2)} ; ${fd(r.omega, 2)}`]],
+    etapes: [
+      { titre: "Système équivalent (répartition modale, φ normée au sommet)", formule: "m* = Σ m<sub>i</sub>φ<sub>i</sub> ; Γ = m* / Σ m<sub>i</sub>φ<sub>i</sub>²", calcul: `m* = <b>${f(smp, 4)} t</b> ; Γ = ${f(smp, 4)} / ${f(smp2, 4)} = <b>${fd(c0.gamma, 4)}</b>` },
+      { titre: "Courbe de capacité du bâtiment", formule: "mécanisme à l'étage où V<sub>y,i</sub>/S<sub>i</sub> est minimal ; F<sub>b,y</sub> et d<sub>y</sub> au sommet", calcul: `étage critique ${c0.cap.critique + 1} ; F<sub>b,y</sub> = <b>${f(c0.cap.Fb, 4)} kN</b> à d<sub>y</sub> = ${f(c0.cap.dy * 1000, 3)} mm` },
+      { titre: "Capacité du système équivalent (idéalisation à aires égales, exacte ici)", formule: "F*<sub>y</sub> = F<sub>b,y</sub>/Γ ; d*<sub>y</sub> = d<sub>y</sub>/Γ", calcul: `F*<sub>y</sub> = ${f(c0.cap.Fb, 4)} / ${fd(c0.gamma, 4)} = <b>${f(c0.Fy, 4)} kN</b> ; d*<sub>y</sub> = <b>${f(c0.dy * 1000, 4)} mm</b>` },
+      { titre: "Période du système équivalent", formule: "T* = 2π·√(m*·d*<sub>y</sub> / F*<sub>y</sub>)", calcul: `T* = 2π × √(${f(c0.mEtoile, 4)} × ${f(c0.dy, 4)} / ${f(c0.Fy, 4)}) = <b>${f(c0.T, 3)} s</b>` },
+      { titre: "Déplacement élastique demandé", formule: "d*<sub>et</sub> = S<sub>e</sub>(T*)·(T*/2π)²", calcul: `S<sub>e</sub>(T*) = ${f(c0.se / G, 3)} g ; d*<sub>et</sub> = ${f(c0.se, 4)} × (${f(c0.T, 3)}/2π)² = <b>${f(de * 1000, 4)} mm</b>` },
+      { titre: "Déplacement cible du système équivalent (annexe B)", formule: "q<sub>u</sub> = S<sub>e</sub>(T*)·m*/F*<sub>y</sub> ; si T* ≥ T<sub>C</sub> : d*<sub>t</sub> = d*<sub>et</sub> ; sinon d*<sub>t</sub> = d*<sub>et</sub>/q<sub>u</sub>·(1 + (q<sub>u</sub> − 1)·T<sub>C</sub>/T*) ≥ d*<sub>et</sub>",
+        calcul: `q<sub>u</sub> = <b>${fd(c0.qu, 3)}</b> (${c0.regle}) → d*<sub>t</sub> = <b>${f(c0.dtEtoile * 1000, 4)} mm</b>` },
+      { titre: "Déplacement cible du bâtiment", formule: "d<sub>t</sub> = Γ·d*<sub>t</sub>", calcul: `d<sub>t</sub> = ${fd(c0.gamma, 4)} × ${f(c0.dtEtoile * 1000, 4)} = <b>${f(c0.dt * 1000, 4)} mm</b> ; répartition uniforme : ${f(cas[1].dt * 1000, 4)} mm` },
+    ],
+  });
   const pire = cas.reduce((a, c) => (Math.max(...c.glissements) > Math.max(...a.glissements) ? c : a));
   const g = Math.max(...pire.glissements), i = pire.glissements.indexOf(g);
   el("puOut").innerHTML = `Déplacements cibles : <strong>${f(cas[0].dt * 1000, 3)} mm</strong> (modal) et <strong>${f(cas[1].dt * 1000, 3)} mm</strong> (uniforme) ·
