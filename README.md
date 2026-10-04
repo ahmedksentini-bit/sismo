@@ -112,6 +112,10 @@ src/sismo/tables.js       tables de temps de trajet : régionale (Pg, Pn, Sg, Sn
 src/sismo/teleseisme.js   sismogrammes d'un téléséisme : phases ak135, amplitudes de la théorie des rais (double couple,
                           expansion géométrique, t*), codas, ondes de surface calées sur Ms ; lectures Δ, h, t₀, Ms
 src/sismo/propagation.js  fronts d'onde dans le globe (faisceaux de rais P et S, réflexions, zone d'ombre) pour l'animation
+src/sismo/miniseed.js     décodage miniSEED 2 (Steim 1 et 2, entiers, réels), vérifié contre ObsPy
+src/sismo/seedlink.js     protocole SeedLink 3 : poignée de main, paquets, validation des flux demandés au relais
+src/sismo/fdsn.js         services FDSN : validation des requêtes du relais, lecture des voies et des séismes (format texte)
+src/sismo/direct.js       Butterworth (comme scipy), STA/LTA (comme ObsPy), tampons des voies, arrivées prévues
 src/sismo/coefficients/   coefficients exportés de hazardlib, modèle ak135 d'ObsPy et calage des accélérogrammes (fichiers produits)
 src/schemas.js          schémas de principe, au moins un par chapitre (ondes, failles, ruptures, sismomètre, spectre,
                         Gutenberg-Richter, rebond élastique, étapes de Cornell, effets de site, liquéfaction, ductilité,
@@ -127,6 +131,11 @@ src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide,
                         du foyer (P, pP, sP), coupe d'une zone de subduction, en SVG
 src/lecteur-station.js  banc « une station » (séisme local ou lointain)
 src/propagation-anim.js animation en boucle de la propagation : coupe du globe (téléséisme) ou de la croûte (séisme local)
+direct.html             stations GEOFON de la Méditerranée en direct (carte, traces, séismes, arrivées prévues)
+src/direct-page.js      page « En direct » : relais SeedLink, sinon FDSN toutes les 20 s, sinon démonstration simulée
+functions/api/          fonctions Cloudflare Pages : seedlink.js (relais SeedLink → WebSocket), geofon.js (relais FDSN)
+tools/carte/cotes.py    côtes et frontières Natural Earth découpées à la Méditerranée (data/cotes-mediterranee.json)
+tools/direct/           serveurs SeedLink et FDSN d'essai, pour essayer les fonctions sans réseau (wrangler pages dev)
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
 src/banc-profil.js      banc « profil par distance »
@@ -148,7 +157,7 @@ src/onglets.js          onglets et fil du parcours (partie, banc précédent et 
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde (177 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct (189 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
