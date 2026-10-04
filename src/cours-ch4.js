@@ -1,6 +1,6 @@
 // Calculateurs du chapitre 4 : moment et magnitude d'une rupture, spectre de Brune et fréquence coin
 // (saturation de ML), analyse du spectre des ondes S d'un enregistrement du générateur.
-import { el, num, f, fd, brancher, garde } from "./ui.js";
+import { el, num, f, fd, brancher, garde, noter } from "./ui.js";
 import { graphe, echantillon, COULEURS } from "./figures.js";
 import Sismo from "./sismo/signal.js";
 import Source from "./sismo/source.js";
@@ -17,6 +17,15 @@ const majMoment = garde("moOut", () => {
   if (!(L > 0 && W > 0 && D > 0 && mu > 0)) { el("moOut").textContent = "Saisir des valeurs positives."; return; }
   const M0 = mu * 1e9 * L * 1e3 * W * 1e3 * D, Mw = (Math.log10(M0) - 9.05) / 1.5, Mw91 = (Math.log10(M0) - 9.1) / 1.5;
   const Awc = Faille.aireWC1994(Mw), Dwc = M0 / (mu * 1e9 * Awc * 1e6);
+  noter("calcMomentNote", {
+    donnees: [["L", `${f(L, 4)} km`], ["W", `${f(W, 4)} km`], ["D", `${f(D, 3)} m`], ["μ", `${fd(mu, 0)} GPa`]],
+    etapes: [
+      { titre: "Surface rompue (en m²)", formule: "A = L × W", calcul: `A = ${f(L * 1e3, 4)} × ${f(W * 1e3, 4)} = <b>${sci(L * W * 1e6)} m²</b>` },
+      { titre: "Moment sismique", formule: "M<sub>0</sub> = μ·A·D", calcul: `M<sub>0</sub> = ${fd(mu, 0)}·10<sup>9</sup> × ${sci(L * W * 1e6)} × ${f(D, 3)} = <b>${sci(M0)} N·m</b>` },
+      { titre: "Magnitude de moment", formule: "Mw = (log<sub>10</sub> M<sub>0</sub> − 9,05) / 1,5", calcul: `log<sub>10</sub> M<sub>0</sub> = ${fd(Math.log10(M0), 3)} ; Mw = (${fd(Math.log10(M0), 3)} − 9,05) / 1,5 = <b>${fd(Mw, 2)}</b>`, note: `Avec la constante 9,1 de l'IASPEI : ${fd(Mw91, 2)}.` },
+      { titre: "Comparaison à Wells et Coppersmith (1994)", formule: "log<sub>10</sub> A = −3,49 + 0,91·Mw (km²) ; D = M<sub>0</sub>/(μA)", calcul: `A = 10<sup>−3,49 + 0,91 × ${fd(Mw, 2)}</sup> = ${f(Awc, 3)} km² ; D = ${sci(M0)} / (${fd(mu, 0)}·10<sup>9</sup> × ${f(Awc * 1e6, 3)}) = <b>${f(Dwc, 2)} m</b>` },
+    ],
+  });
   el("moOut").innerHTML = `M<sub>0</sub> = ${fd(mu, 0)}·10<sup>9</sup> × ${f(L * 1e3, 4)} × ${f(W * 1e3, 4)} × ${f(D, 3)} = ${sci(M0)} N·m →
     <strong>Mw = (${fd(Math.log10(M0), 2)} − 9,05) / 1,5 = ${fd(Mw, 2)}</strong> (IASPEI, 9,1 : ${fd(Mw91, 2)})
     <small>Pour cette magnitude, la loi médiane de Wells et Coppersmith (1994) donne A ≈ ${f(Awc, 3)} km² (ici ${f(L * W, 3)} km²) et un glissement moyen de ${f(Dwc, 2)} m.</small>`;
@@ -39,7 +48,16 @@ const majBrune = garde("brOut", () => {
     textes: [{ x: 1.25, y: ymin * 3, texte: "Wood-Anderson", couleur: COULEURS.f62 }],
     marques: cas.map((c) => ({ x: c.fc, y: c.s(c.fc) / U, couleur: c.couleur, rayon: 4 })),
   });
-  const r125 = cas[2].s(1.25) / cas[1].s(1.25);
+  const r125 = cas[2].s(1.25) / cas[1].s(1.25), c = cas[1];
+  noter("calcBruneNote", {
+    donnees: [["Mw", fd(Mw, 1)], ["Δσ", `${f(ds, 3)} MPa`], ["β", `${f(BETA, 4)} m/s`]],
+    etapes: [
+      { titre: "Moment sismique", formule: "M<sub>0</sub> = 10<sup>1,5·Mw + 9,05</sup>", calcul: `M<sub>0</sub> = 10<sup>1,5 × ${fd(Mw, 1)} + 9,05</sup> = <b>${sci(c.M0)} N·m</b>` },
+      { titre: "Fréquence coin de Brune (1970)", formule: "f<sub>c</sub> = 0,4906·β·(Δσ/M<sub>0</sub>)<sup>1/3</sup>", calcul: `f<sub>c</sub> = 0,4906 × ${f(BETA, 4)} × (${f(ds, 3)}·10<sup>6</sup> / ${sci(c.M0)})<sup>1/3</sup> = <b>${f(c.fc, 3)} Hz</b>` },
+      { titre: "Spectre de déplacement de la source", formule: "Ω(f) = M<sub>0</sub> / (1 + (f/f<sub>c</sub>)²)", calcul: `à 1,25 Hz (Wood-Anderson) : Ω = ${sci(c.M0)} / (1 + (1,25/${f(c.fc, 3)})²) = <b>${sci(c.s(1.25))} N·m·s</b>` },
+      { titre: "Saturation de ML", formule: "rapport des spectres de Mw + 1 et Mw à 1,25 Hz", calcul: `${sci(cas[2].s(1.25))} / ${sci(c.s(1.25))} = <b>${f(r125, 3)}</b> (contre 10<sup>1,5</sup> = 31,6 sur le plateau)`, note: r125 < 10 ? "Moins de 10 : une magnitude de plus ne multiplie plus l'amplitude par 10, ML sature." : "Encore près de 10 ou plus : ML suit Mw." },
+    ],
+  });
   el("brOut").innerHTML = `Mw ${fd(Mw, 1)} : M<sub>0</sub> = ${sci(cas[1].M0)} N·m, <strong>f<sub>c</sub> = 0,49 × ${f(BETA, 4)} × (${f(ds, 3)}·10<sup>6</sup> / M<sub>0</sub>)<sup>1/3</sup> = ${f(cas[1].fc, 3)} Hz</strong>
     <small>D'une magnitude à la suivante, le plateau est multiplié par 31,6 ; à 1,25 Hz (Wood-Anderson), le spectre l'est par ${f(r125, 2)}${r125 < 10 ? " : ML commence à saturer" : ""}.</small>`;
 });
@@ -70,6 +88,16 @@ const majSource = garde("soOut", () => {
     marques: [{ x: res.fc, y: brune(res.fc), couleur: COULEURS.effort, libelle: `fc = ${f(res.fc, 2)} Hz` }],
   });
   const fcVrai = fcBrune(moment(Mw), ds);
+  noter("calcSourceNote", {
+    donnees: [["Mw vraie", fd(Mw, 1)], ["Δσ vraie", `${f(ds, 3)} MPa`], ["Δ", `${fd(d, 0)} km`], ["h", "10 km"], ["β", `${f(BETA, 4)} m/s`]],
+    etapes: [
+      { titre: "Spectre corrigé", formule: "Ω(f) = spectre de la fenêtre S / (expansion géométrique × e<sup>−πfR/(Qβ)</sup> × e<sup>−πκf</sup> × amplification du site)", calcul: `fenêtre S de ${fd(res.n * 0.01, 1)} s ; distance au foyer R = ${fd(res.R, 0)} km` },
+      { titre: "Ajustement du modèle de Brune", formule: "min Σ [ln Ω(f) − ln(Ω<sub>0</sub>/(1 + (f/f<sub>c</sub>)²))]²", calcul: `Ω<sub>0</sub> = <b>${sci(res.omega0)} m·s</b>, f<sub>c</sub> = <b>${f(res.fc, 3)} Hz</b>, écart ${fd(res.rms, 2)} en ln` },
+      { titre: "Moment sismique depuis le plateau", formule: "M<sub>0</sub> = 4π·ρ·β³·Ω<sub>0</sub> / (R<sub>θφ</sub>·F)  (R<sub>θφ</sub> = 0,63 rayonnement moyen des ondes S, F = 2 surface libre)", calcul: `M<sub>0</sub> = <b>${sci(res.M0)} N·m</b>` },
+      { titre: "Magnitude de moment", formule: "Mw = (log<sub>10</sub> M<sub>0</sub> − 9,05)/1,5", calcul: `Mw = (${fd(Math.log10(res.M0), 3)} − 9,05)/1,5 = <b>${fd(res.Mw, 2)}</b> (vraie ${fd(Mw, 1)})` },
+      { titre: "Chute de contrainte", formule: "Δσ = M<sub>0</sub>·(f<sub>c</sub> / (0,4906·β))³ (en Pa)", calcul: `Δσ = ${sci(res.M0)} × (${f(res.fc, 3)} / (0,4906 × ${f(BETA, 4)}))³ = <b>${f(res.dsigma, 3)} MPa</b> (vraie ${f(ds, 3)})`, note: "Δσ dépend du cube de f<sub>c</sub> : 10 % d'erreur sur f<sub>c</sub> en font 33 % sur Δσ." },
+    ],
+  });
   el("soOut").innerHTML = `Ω<sub>0</sub> = ${sci(res.omega0)} m·s → M<sub>0</sub> = ${sci(res.M0)} N·m, <strong>Mw = ${fd(res.Mw, 2)}</strong> (vraie ${fd(Mw, 1)}) ·
     <strong>f<sub>c</sub> = ${f(res.fc, 2)} Hz</strong> (vraie ${f(fcVrai, 2)}) · Δσ = ${f(res.dsigma, 2)} MPa (vraie ${f(ds, 2)})
     <small>Fenêtre S de ${fd(res.n * 0.01, 1)} s, distance au foyer ${fd(res.R, 0)} km, écart du modèle ${fd(res.rms, 2)} en ln. Δσ, qui dépend du cube de f<sub>c</sub>, est la grandeur la moins précise.</small>`;
