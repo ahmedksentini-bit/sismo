@@ -3,7 +3,8 @@
 // de tests/references/miniseed/steim2.mseed réétiquetés (réseau, station, voie) et redatés à partir de 5 minutes avant
 // la connexion ; il refuse les stations du réseau IV et la station NOPE, pour essayer le repli vers le service FDSN. Un
 // serveur FDSN (HTTP, port 8090) sert, sous /<centre>/fdsnws/…, des voies et des réseaux propres à chaque centre (GEOFON,
-// INGV, et un réseau tunisien fictif chez EarthScope), des séismes et des enregistrements redatés.
+// INGV, et un réseau tunisien fictif chez EarthScope), des séismes et des enregistrements redatés ; PANNE_GEOFON=lent ou
+// panne simule un GEOFON lent (inventaire complet en 40 s) ou en panne.
 // Usage : node tools/direct/serveurs-essai.mjs, puis
 //   npx wrangler pages dev . --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding FDSN_ESSAI=http://127.0.0.1:8090/{centre}
 import net from 'node:net';
@@ -15,7 +16,7 @@ import MiniSeed from '../../src/sismo/miniseed.js';
 const mseed = readFileSync(new URL('../../tests/references/miniseed/steim2.mseed', import.meta.url));
 const enregs = [];
 for (let i = 0; i + 512 <= mseed.length; i += 512) enregs.push(new Uint8Array(mseed.subarray(i, i + 512)));
-const PORT_SL = +(process.env.PORT_SL || 18000), PORT_FDSN = +(process.env.PORT_FDSN || 8090);
+const PORT_SL = +(process.env.PORT_SL || 18000), PORT_FDSN = +(process.env.PORT_FDSN || 8090), PANNE = process.env.PANNE_GEOFON || '';
 
 // Copie d'un enregistrement avec un autre identifiant et une autre heure de début (en-tête fixe du SEED 2.4).
 function etiqueter(enr, { reseau, station, emplacement, voie }, t) {
@@ -78,6 +79,9 @@ http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x'), centre = u.pathname.split('/')[1], c = CENTRES[centre], q = u.searchParams;
   const texte = t => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end(t); };
   if (u.pathname.includes('/station/')) {
+    // PANNE_GEOFON=lent : GEOFON met 40 s à répondre sans nom de réseau ; =panne : GEOFON répond 500 à tout
+    if (centre === 'geofon' && PANNE === 'panne') { res.writeHead(500); res.end('panne d\'essai'); return; }
+    if (centre === 'geofon' && PANNE === 'lent' && !q.get('network')) { setTimeout(() => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end(`${ENTETE}\n${c.voies.join('\n')}\n`); }, 40000); return; }
     if (!c) { res.writeHead(204); res.end(); return; }
     if (q.get('level') === 'network') texte(`#Network | Description | StartTime | EndTime | TotalStations\n${c.reseaux.join('\n')}\n`);
     else texte(`${ENTETE}\n${c.voies.join('\n')}\n`);
