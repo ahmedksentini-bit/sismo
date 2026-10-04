@@ -26,7 +26,7 @@ test('double couple : trace nulle, valeurs propres 1, 0, −1, M = u·nᵀ + n·
 
 const modele = lire('modele_mecanisme.json'), ref = lire('mecanisme.json');
 
-test('ObsPy : plans nodaux (mt2plane), axes P, T, N (mt2axes) et rayonnement P (farfield)', () => {
+test('ObsPy : plans nodaux (mt2plane), axes P, T, N (mt2axes), rayonnements P et S (farfield)', () => {
   ref.mecanismes.forEach((o, k) => {
     const nom = `${o.azimut}/${o.pendage}/${o.glissement}`, M = Me.tenseur(o.azimut, o.pendage, o.glissement);
     assert.ok(egaux(M, modele.mecanismes[k].M, 1e-15));
@@ -47,6 +47,13 @@ test('ObsPy : plans nodaux (mt2plane), axes P, T, N (mt2axes) et rayonnement P (
       assert.ok(Math.acos(Math.min(1, Math.abs(u[0] * v[0] + u[1] * v[1] + u[2] * v[2]))) * 180 / Math.PI < 1e-5, `${nom} : axe ${a}`);
     }
     modele.rais.forEach(([i, p], j) => proche(Me.rayonnementP(M, i, p), o.rayonnement[j], 1e-12, `${nom} rai ${i}/${p}`));
+    // rayonnement S : vecteur de farfield 'S' au signe près (ObsPy calcule (γγᵀ − I)·M·γ, sans le signe moins
+    // d'Aki et Richards, éq. 4.29, que le site garde : M·γ − (γ·M·γ)·γ), et |M·γ|² = P² + SV² + SH²
+    modele.rais.forEach(([i, p], j) => {
+      const s = Me.rayonnementS(M, i, p), g = Me.direction(i, p), Mg = M.map(l => l[0] * g[0] + l[1] * g[1] + l[2] * g[2]);
+      s.vecteur.forEach((x, a) => proche(x, -o.rayonnementS[j][a], 1e-12, `${nom} rai S ${i}/${p}`));
+      proche(Mg[0] ** 2 + Mg[1] ** 2 + Mg[2] ** 2, Me.rayonnementP(M, i, p) ** 2 + s.SV ** 2 + s.SH ** 2, 1e-12, `${nom} énergie ${i}/${p}`);
+    });
   });
 });
 

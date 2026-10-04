@@ -50,6 +50,14 @@ const Mecanisme = (() => {
     for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) s += g[a] * M[a][b] * g[b];
     return s;
   }
+  // Rayonnement S pour la même direction : vecteur M·γ − (γ·M·γ)·γ, perpendiculaire au rai, et ses composantes SV
+  // (selon e_i = ∂γ/∂i, vers les émergences croissantes) et SH (selon e_φ, vers les azimuts croissants).
+  function rayonnementS(M, i, phi) {
+    const g = direction(i, phi), Mg = M.map(l => l[0] * g[0] + l[1] * g[1] + l[2] * g[2]);
+    const p = g[0] * Mg[0] + g[1] * Mg[1] + g[2] * Mg[2], v = Mg.map((x, a) => x - p * g[a]);
+    const ci = Math.cos(i * RAD), si = Math.sin(i * RAD), cf = Math.cos(phi * RAD), sf = Math.sin(phi * RAD);
+    return { vecteur: v, SV: v[0] * ci * cf + v[1] * ci * sf - v[2] * si, SH: -v[0] * sf + v[1] * cf };
+  }
   // Valeurs et vecteurs propres d'une matrice symétrique 3×3 (Jacobi) ; axes T (valeur max), N, P (min).
   function propres(M) {
     const A = M.map(r => r.slice()), V = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
@@ -128,6 +136,6 @@ const Mecanisme = (() => {
     return Math.max(ang(A.P, B.P), ang(A.T, B.T));
   }
 
-  return { tenseur, vecteurs, planDepuis, planAuxiliaire, direction, rayonnementP, propres, axes, typeFaille, emergence, projection, projectionInverse, polarites, desaccords, inverser, ecartAxes };
+  return { tenseur, vecteurs, planDepuis, planAuxiliaire, direction, rayonnementP, rayonnementS, propres, axes, typeFaille, emergence, projection, projectionInverse, polarites, desaccords, inverser, ecartAxes };
 })();
 export default Mecanisme;

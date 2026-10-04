@@ -1,9 +1,13 @@
 import Sismo from './sismo/signal.js';
+import Teleseisme from './sismo/teleseisme.js';
+import { creerAnimation } from './propagation-anim.js';
 
-// src/lecteur-station.js — banc « une station » : état, tracés (canvas), pointés, lectures, exercice.
+// src/lecteur-station.js — banc « une station » : état, tracés (canvas), pointés, lectures, exercice ; séisme local
+// (croûte du générateur, ML) ou lointain (téléséisme : phases ak135, distance par S − P, profondeur par pP − P, Ms),
+// et animation en boucle de la propagation (src/propagation-anim.js).
 (() => {
   'use strict';
-  const SM = Sismo;
+  const SM = Sismo, TL = Teleseisme;
   const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
   const virg = (x, d = 1) => Number.isFinite(x) ? x.toFixed(d).replace('.', ',').replace(/^-/, '−') : '—';
   const milliers = (x, d = 0) => {
@@ -13,7 +17,7 @@ import Sismo from './sismo/signal.js';
     return (x < 0 ? '−' : '') + s.join(',');
   };
   const STATION = 'XX.SIM1.00';
-  const FILTRES = { aucun: null, large: [0.5, 20], local: [1, 10], etroit: [2, 8], surface: [0.05, 0.2] };
+  const FILTRES = { aucun: null, large: [0.5, 20], local: [1, 10], etroit: [2, 8], tele: [0.5, 2], surface: [0.05, 0.2], ms: TL.FILTRE_MS };
   const NOM_GRANDEUR = { vitesse: 'vitesse', acceleration: 'accélération', deplacement: 'déplacement', wa: 'Wood-Anderson (gain 1)' };
   const distDepuis = v => 5 * Math.pow(120, v / 1000);
   const versCurseurDist = d => Math.round(1000 * Math.log(d / 5) / Math.log(120));
@@ -23,15 +27,19 @@ import Sismo from './sismo/signal.js';
   const cardinal = a => ROSE[Math.round((((a % 360) + 360) % 360) / 22.5) % 16];
 
   const etat = {
-    mode: 'explorer',
+    mode: 'explorer', type: 'local',
     explo: { Mw: 3.8, delta: 85, h: 10, baz: 235, bruit: 'standard', graine: 17 },
+    exploTele: { Mw: 6.8, delta: 62, h: 35, baz: 235, bruit: 'standard', graine: 17 },
     exo: null,
     capteur: 'HH', grandeur: 'vitesse', filtre: 'aucun', compo: 'ZNE', echelle: 'commune', phases: true,
-    outil: null, vue: [0, 1], pointes: { P: null, S: null, A: null }, polarite: null, verifie: false,
-    ev: null, mlv: null, rec: null, aff: null, hodo: null, az: null, sature: null, debutUTC: 0, curseurX: null,
+    outil: null, vue: [0, 1], pointes: { P: null, S: null, pP: null, A: null }, polarite: null, verifie: false,
+    ev: null, mlv: null, msv: null, rec: null, aff: null, hodo: null, az: null, sature: null, debutUTC: 0, curseurX: null, lecture: null,
   };
-  const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
-  const bruitCourant = () => (etat.mode === 'explorer' ? etat.explo.bruit : etat.exo.bruit);
+  const tele = () => etat.type === 'tele';
+  const explo = () => (tele() ? etat.exploTele : etat.explo);
+  const parametres = () => (etat.mode === 'explorer' ? explo() : etat.exo.p);
+  const bruitCourant = () => (etat.mode === 'explorer' ? explo().bruit : etat.exo.bruit);
+  const vides = () => ({ P: null, S: null, pP: null, A: null });
   const pasEch = () => etat.ev.dt;
   const duree = () => etat.ev.n * etat.ev.dt;
 
@@ -61,15 +69,16 @@ import Sismo from './sismo/signal.js';
 
   // ── Chaîne de calcul : événement → enregistrement → affichage ──────────
   function regenerer() {
-    const p = parametres();
-    etat.ev = SM.generer({ Mw: p.Mw, delta: p.delta, h: p.h, baz: p.baz, graine: p.graine });
-    etat.mlv = SM.mlVraie(etat.ev);
+    const p = parametres(), q = { Mw: p.Mw, delta: p.delta, h: p.h, baz: p.baz, graine: p.graine };
+    if (tele()) { etat.ev = TL.generer(q); etat.mlv = null; etat.msv = TL.msVraie(etat.ev); }
+    else { etat.ev = SM.generer(q); etat.mlv = SM.mlVraie(etat.ev); etat.msv = null; }
     const u = SM.aleatoire(p.graine * 13 + 5);
     etat.debutUTC = 3600 * Math.floor(u() * 24) + 60 * Math.floor(u() * 60) + Math.floor(u() * 60);
     etat.vue = [0, duree()];
-    etat.pointes = { P: null, S: null, A: null };
+    etat.pointes = vides();
     etat.az = null; etat.verifie = false;
     if (etat.mode === 'exercice') { etat.polarite = null; majPolarites(); $('#corrige').innerHTML = ''; }
+    anim.charger(etat.ev); majAnimation();
     reenregistrer();
   }
   function reenregistrer() {
@@ -117,7 +126,7 @@ import Sismo from './sismo/signal.js';
     const { rec, ev } = etat;
     if (!etat.hodo) {
       etat.hodo = {};
-      for (const c of ['Z', 'N', 'E']) etat.hodo[c] = SM.convertir(rec.series[c], ev.dt, etat.capteur, 'vitesse', [1, 10]);
+      for (const c of ['Z', 'N', 'E']) etat.hodo[c] = SM.convertir(rec.series[c], ev.dt, etat.capteur, 'vitesse', ev.tele ? [0.5, 2] : [1, 10]);
     }
     const i0 = Math.max(0, Math.round(etat.pointes.P / ev.dt) - 3), i1 = Math.min(ev.n, i0 + 63);
     const z = etat.hodo.Z.subarray(i0, i1), n = etat.hodo.N.subarray(i0, i1), e = etat.hodo.E.subarray(i0, i1);
@@ -149,8 +158,8 @@ import Sismo from './sismo/signal.js';
   const xVersT = (x, g) => etat.vue[0] + ((x - g.x0) / (g.x1 - g.x0)) * (etat.vue[1] - etat.vue[0]);
   function pasTemps(d, largeur) {
     const cible = d / Math.max(2, largeur / 90);
-    for (const p of [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30, 60, 120]) if (p >= cible) return p;
-    return 300;
+    for (const p of [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30, 60, 120, 300, 600]) if (p >= cible) return p;
+    return 1200;
   }
   function amplitudeVisible(x) {
     const i0 = Math.max(0, Math.floor(etat.vue[0] / pasEch())), i1 = Math.min(x.length, Math.ceil(etat.vue[1] / pasEch()) + 1);
@@ -196,6 +205,11 @@ import Sismo from './sismo/signal.js';
   function phasesVisibles() {
     if (!(etat.mode === 'explorer' ? etat.phases : etat.verifie)) return [];
     const { tt, t0, p } = etat.ev, L = [];
+    if (etat.ev.tele) {
+      for (const a of tt.phases) L.push([a.phase, a.temps]);
+      L.push(['LQ', tt.tLQ], ['LR', tt.tLR]);
+      return L.map(([n, t]) => [n, t - t0]).filter(([, t]) => t < duree()).sort((a, b) => a[1] - b[1]);
+    }
     if (tt.tPn !== null) L.push(['Pn', tt.tPn]);
     L.push(['Pg', tt.tPg]);
     if (tt.tSn !== null) L.push(['Sn', tt.tSn]);
@@ -258,7 +272,7 @@ import Sismo from './sismo/signal.js';
       // Étiquettes de voie et d'amplitude
       const u = unite(amps[k]);
       ctx.font = `700 12px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      const code = `${etat.capteur}${nom}`;
+      const code = `${voieCode()}${nom}`;
       texteHalo(ctx, code, g.x0 + 6, yc - g.hT / 2 + 5, COUL.ink);
       if (sat.length) { ctx.font = `800 11px ${POLICE}`; texteHalo(ctx, 'saturé', g.x0 + 6 + ctx.measureText(code).width + 22, yc - g.hT / 2 + 6, COUL.sature); }
       ctx.font = `11px ${MONO}`; ctx.textAlign = 'right';
@@ -276,8 +290,11 @@ import Sismo from './sismo/signal.js';
       etiquette(ctx, nom, x, placer(x), COUL.phase, false);
     }
     if (etat.verifie) {
-      const { tt, t0 } = etat.ev;
-      for (const [nom, t] of [['P vrai', tt.tPg - t0], ['S vrai', tt.tSg - t0]]) {
+      const { tt, t0 } = etat.ev, vrais = etat.ev.tele ? [['P vrai', tt.tP - t0], ['S vrai', tt.tS - t0]] : [['P vrai', tt.tPg - t0], ['S vrai', tt.tSg - t0]];
+      const pP = etat.ev.tele && tt.phases.find(a => a.phase === 'pP');
+      if (pP && etat.exo && etat.exo.profond) vrais.push(['pP vrai', pP.temps - t0]);
+      for (const [nom, t] of vrais) {
+        if (!Number.isFinite(t)) continue;
         const x = tVersX(t, g);
         if (x < g.x0 || x > g.x1) continue;
         ligneVerticale(ctx, Math.round(x) + 0.5, g, COUL.vrai, 1.5, [2, 3]);
@@ -285,7 +302,7 @@ import Sismo from './sismo/signal.js';
       }
     }
     // Pointés de l'utilisateur
-    for (const [cle, coul] of [['P', COUL['pick-p']], ['S', COUL['pick-s']]]) {
+    for (const [cle, coul] of [['P', COUL['pick-p']], ['S', COUL['pick-s']], ['pP', COUL.cyan]]) {
       const t = etat.pointes[cle];
       if (t === null) continue;
       const x = tVersX(t, g);
@@ -294,7 +311,7 @@ import Sismo from './sismo/signal.js';
       etiquette(ctx, cle, x, placer(x), coul, true);
     }
     const A = etat.pointes.A;
-    if (A && etat.grandeur === 'wa') {
+    if (A && etat.grandeur === (etat.ev.tele ? 'deplacement' : 'wa')) {
       const k = etat.aff.noms.indexOf(A.nom);
       if (k >= 0) {
         const x = tVersX(A.t, g), { yc, ech } = etat.aff.ech[k], y = yc - A.val * ech;
@@ -303,7 +320,7 @@ import Sismo from './sismo/signal.js';
           ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI); ctx.stroke();
           ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x, yc); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
           ctx.font = `800 12px ${MONO}`; ctx.textAlign = x > (g.x0 + g.x1) / 2 ? 'right' : 'left'; ctx.textBaseline = 'middle';
-          texteHalo(ctx, `A = ${milliers(A.Anm)} nm`, x + (ctx.textAlign === 'right' ? -10 : 10), y, COUL.amp);
+          texteHalo(ctx, `A = ${milliers(A.Anm)} nm${A.T ? `, T = ${virg(A.T, 1)} s` : ''}`, x + (ctx.textAlign === 'right' ? -10 : 10), y, COUL.amp);
         }
       }
     }
@@ -335,7 +352,7 @@ import Sismo from './sismo/signal.js';
     ctx.fillRect(0, 0, xa, H); ctx.fillRect(xb, 0, W - xb, H);
     ctx.globalAlpha = 1; ctx.strokeStyle = COUL.blue; ctx.lineWidth = 2;
     ctx.strokeRect(xa + 1, 1, Math.max(2, xb - xa - 2), H - 2);
-    for (const [cle, coul] of [['P', COUL['pick-p']], ['S', COUL['pick-s']]]) {
+    for (const [cle, coul] of [['P', COUL['pick-p']], ['S', COUL['pick-s']], ['pP', COUL.cyan]]) {
       const t = etat.pointes[cle];
       if (t === null) continue;
       ctx.fillStyle = coul; ctx.fillRect((t / T) * W - 1, 0, 2, H);
@@ -356,11 +373,14 @@ import Sismo from './sismo/signal.js';
 
   // ── Outils de lecture ───────────────────────────────────────────────────
   function choisirOutil(o) {
+    if (o === 'pP' && !etat.ev.tele) return;
     etat.outil = etat.outil === o ? null : o;
-    if (etat.outil === 'A' && (etat.grandeur !== 'wa' || etat.filtre !== 'aucun')) {
-      etat.grandeur = 'wa'; etat.filtre = 'aucun';
-      $('#grandeur').value = 'wa'; $('#filtre').value = 'aucun'; $('#perso').hidden = true;
-      toast('Affichage Wood-Anderson sans filtre : ML se mesure sur cette trace.');
+    // ML se mesure sur le Wood-Anderson sans filtre ; Ms sur le déplacement vertical filtré de 18 à 22 s
+    const [g, f, msg] = etat.ev.tele ? ['deplacement', 'ms', 'Déplacement filtré de 18 à 22 s : Ms se mesure sur la verticale (Z).'] : ['wa', 'aucun', 'Affichage Wood-Anderson sans filtre : ML se mesure sur cette trace.'];
+    if (etat.outil === 'A' && (etat.grandeur !== g || etat.filtre !== f)) {
+      etat.grandeur = g; etat.filtre = f;
+      $('#grandeur').value = g; $('#filtre').value = f; $('#perso').hidden = true;
+      toast(msg);
       reconvertir();
     }
     majOutils(); majAide();
@@ -378,15 +398,21 @@ import Sismo from './sismo/signal.js';
         etat.outil = null;
       }
       if (etat.pointes.P !== null && etat.pointes.S !== null && etat.pointes.S <= etat.pointes.P) toast('S doit arriver après P : vérifiez vos pointés.');
+    } else if (etat.outil === 'pP') {
+      etat.pointes.pP = Math.max(0, Math.min(duree(), t));
+      etat.outil = null;
+      if (etat.pointes.P !== null && etat.pointes.pP <= etat.pointes.P) toast('pP arrive après P : vérifiez vos pointés.');
     } else if (etat.outil === 'A') {
       const k = Math.max(0, Math.min(2, Math.floor((y - g.y0) / g.hT)));
-      const nom = etat.aff.noms[k];
-      if (nom === 'Z') { toast('ML se mesure sur une composante horizontale (N, E, R ou T).'); return; }
-      const xs = etat.aff.series[k], d = pasEch();
-      const i0 = Math.max(0, Math.round((t - 0.5) / d)), i1 = Math.min(xs.length - 1, Math.round((t + 0.5) / d));
+      const nom = etat.aff.noms[k], loin = etat.ev.tele;
+      if (!loin && nom === 'Z') { toast('ML se mesure sur une composante horizontale (N, E, R ou T).'); return; }
+      if (loin && nom !== 'Z') { toast('Ms se mesure sur la composante verticale (Z), sur l\'onde de Rayleigh.'); return; }
+      // ±0,5 s autour du clic pour ML ; ±10 s (une demi-période) pour Ms
+      const xs = etat.aff.series[k], d = pasEch(), w = loin ? 10 : 0.5;
+      const i0 = Math.max(0, Math.round((t - w) / d)), i1 = Math.min(xs.length - 1, Math.round((t + w) / d));
       let im = i0;
       for (let i = i0; i <= i1; i++) if (Math.abs(xs[i]) > Math.abs(xs[im])) im = i;
-      etat.pointes.A = { t: im * d, nom, val: xs[im], Anm: Math.abs(xs[im]) * 1e9 };
+      etat.pointes.A = { t: im * d, nom, val: xs[im], Anm: Math.abs(xs[im]) * 1e9, T: loin ? TL.periodeAutour(xs, im, d) : null };
     }
     if (etat.mode === 'exercice' && etat.verifie) { etat.verifie = false; $('#corrige').innerHTML = ''; }
     majTout();
@@ -394,19 +420,30 @@ import Sismo from './sismo/signal.js';
 
   // ── Panneaux : lectures, hodogramme, aide, vérité ───────────────────────
   function lectures() {
-    const { P: tP, S: tS, A } = etat.pointes, r = { tP, tS, A };
+    const { P: tP, S: tS, pP: tpP, A } = etat.pointes, r = { tP, tS, tpP, A };
     if (tP !== null && tS !== null && tS > tP) {
-      r.dts = tS - tP; r.R = SM.distanceSP(r.dts); r.t0 = SM.origineDepuis(tP, r.dts);
-      if (A) r.ML = SM.ML(A.Anm, r.R);
+      r.dts = tS - tP;
+      if (etat.ev.tele) {
+        // Δ dans les tables ak135 (S − P), h par pP − P, t0 = tP − T_P(Δ, h) ; lecture mémorisée (rais coûteux)
+        const cle = `${tP}|${tS}|${tpP}`;
+        if (!etat.lecture || etat.lecture.cle !== cle) etat.lecture = { cle, ...TL.lire({ tP, tS, tpP }) };
+        Object.assign(r, { distance: etat.lecture.distance, h: etat.lecture.h, hLu: etat.lecture.hLu, t0: etat.lecture.t0 });
+        if (A && A.T && Number.isFinite(r.distance)) r.Ms = TL.Ms(A.Anm, A.T, r.distance);
+      } else {
+        r.R = SM.distanceSP(r.dts); r.t0 = SM.origineDepuis(tP, r.dts);
+        if (A) r.ML = SM.ML(A.Anm, r.R);
+      }
     }
     return r;
   }
+  const minsec = t => { const m = Math.floor(t / 60); return m ? `${m} min ${virg(t - 60 * m, 1)} s` : `${virg(t, 1)} s`; };
   function afficheur(titre, valeur, detail) {
     const vide = valeur === '—';
     return `<div class="afficheur${vide ? ' vide' : ''}"><span>${titre}</span><strong>${valeur}</strong><small>${detail || '&nbsp;'}</small></div>`;
   }
   function majLectures() {
     const r = lectures(), az = etat.az;
+    if (etat.ev.tele) return majLecturesTele(r, az);
     $('#afficheurs').innerHTML = [
       afficheur('Arrivée P', r.tP !== null ? virg(r.tP, 2) + ' s' : '—', r.tP !== null ? horloge(r.tP) + ' UTC' : 'outil « Pointer P »'),
       afficheur('Arrivée S', r.tS !== null ? virg(r.tS, 2) + ' s' : '—', r.tS !== null ? horloge(r.tS) + ' UTC' : 'outil « Pointer S »'),
@@ -429,6 +466,35 @@ import Sismo from './sismo/signal.js';
       r.ML !== undefined ? `ML = log A + 1,11 log R + 0,00189 R − 2,09 = log ${milliers(r.A.Anm)} + 1,11 log ${virg(r.R, 1)} + 0,00189 × ${virg(r.R, 1)} − 2,09 = <b>${virg(r.ML, 2)}</b>` : 'ML = log A + 1,11 log R + 0,00189 R − 2,09']);
     $('#etapes').innerHTML = e.map(([n, h, p, f]) => `<div class="etape"><span>${n}</span><div><h4>${h}</h4><p>${p}</p><div class="formule">${f}</div></div></div>`).join('');
   }
+  // Téléséisme : distance en degrés par les tables ak135, origine, profondeur par pP − P, Ms.
+  function majLecturesTele(r, az) {
+    const ok = Number.isFinite(r.distance), km = d => milliers(d * Math.PI / 180 * 6371);
+    $('#afficheurs').innerHTML = [
+      afficheur('Arrivée P', r.tP !== null ? virg(r.tP, 2) + ' s' : '—', r.tP !== null ? horloge(r.tP) + ' UTC' : 'outil « Pointer P »'),
+      afficheur('Arrivée S', r.tS !== null ? virg(r.tS, 2) + ' s' : '—', r.tS !== null ? horloge(r.tS) + ' UTC' : 'outil « Pointer S »'),
+      afficheur('Écart S − P', r.dts ? minsec(r.dts) : '—', ''),
+      afficheur('Distance épicentrale', ok ? virg(r.distance, 1) + '°' : '—', ok ? `${km(r.distance)} km · table ak135` : r.dts ? 'hors des tables (10° à 95°)' : ''),
+      afficheur("Heure d'origine", Number.isFinite(r.t0) ? horloge(r.t0) : '—', Number.isFinite(r.t0) ? 'UTC · t₀ = tP − T_P(Δ, h)' : ''),
+      afficheur('Profondeur du foyer', r.hLu ? virg(r.hLu, 0) + ' km' : '—', r.tpP !== null && r.tP !== null ? `pP − P = ${virg(r.tpP - r.tP, 1)} s` : 'outil « Pointer pP »'),
+      afficheur('Amplitude A (Z, 18 – 22 s)', r.A ? milliers(r.A.Anm) + ' nm' : '—', r.A ? `période T = ${virg(r.A.T, 1)} s` : 'outil « Mesurer A »'),
+      afficheur('Magnitude des ondes de surface', r.Ms !== undefined ? 'Ms ' + virg(r.Ms, 1) : '—', r.Ms !== undefined ? 'IASPEI 2013' : (r.A ? 'pointez P et S' : '')),
+      afficheur('Azimut de la source', az ? Math.round(az.baz) + '° ' + cardinal(az.baz) : '—', az ? 'rectilinéarité ' + virg(az.rectilinearite, 2) : 'après le pointé P'),
+    ].join('');
+    const e = [], TP = ok ? r.tP - r.t0 : null;
+    e.push(['1', 'Distance par l\'écart S − P',
+      'Les rais P et S plongent dans le manteau, où les vitesses croissent avec la profondeur : la règle 8,4 km/s × (tS − tP) ne vaut plus. On lit Δ dans la table de temps de trajet ak135 (chapitre 6), à la profondeur du foyer.',
+      ok ? `S − P = ${minsec(r.dts)} → Δ = <b>${virg(r.distance, 1)}°</b> = ${km(r.distance)} km (foyer à ${virg(r.h, 0)} km${r.hLu ? ', lu par pP' : ', supposé'})` : 'S − P → Δ lue dans la table ak135 (foyer supposé à 33 km tant que pP n\'est pas pointée)']);
+    e.push(['2', "Heure d'origine",
+      'La P a mis T_P(Δ, h) pour arriver ; on le lit dans la même table et on remonte le temps depuis tP.',
+      ok ? `t₀ = tP − T_P = ${horloge(r.tP)} − ${minsec(TP)} = <b>${horloge(r.t0)} UTC</b>` : 't₀ = tP − T_P(Δ, h)']);
+    e.push(['3', 'Profondeur par pP − P',
+      'pP part vers le haut, se réfléchit sous la surface au-dessus du foyer, puis suit presque le chemin de P : son retard sur P croît avec la profondeur, presque sans dépendre de la distance.',
+      r.hLu ? `pP − P = ${virg(r.tpP - r.tP, 1)} s à Δ = ${virg(r.distance, 1)}° → h = <b>${virg(r.hLu, 0)} km</b>` : 'pP − P (s) et Δ → h, rais ak135 (valable de 40° à 95°)']);
+    e.push(['4', 'Magnitude Ms',
+      'Amplitude zéro-crête A (nm) du déplacement vertical de l\'onde de Rayleigh, de période T entre 18 et 22 s ; foyer à moins de 60 km, 20° ≤ Δ ≤ 160°.',
+      r.Ms !== undefined ? `Ms = log(A/T) + 1,66 log Δ + 0,3 = log(${milliers(r.A.Anm)}/${virg(r.A.T, 1)}) + 1,66 log ${virg(r.distance, 1)} + 0,3 = <b>${virg(r.Ms, 2)}</b>` : 'Ms = log(A/T) + 1,66 log Δ + 0,3']);
+    $('#etapes').innerHTML = e.map(([n, h, p, f]) => `<div class="etape"><span>${n}</span><div><h4>${h}</h4><p>${p}</p><div class="formule">${f}</div></div></div>`).join('');
+  }
   function majHodo() {
     lireCouleurs();
     const cv = $('#hodo');
@@ -442,7 +508,7 @@ import Sismo from './sismo/signal.js';
     ctx.fillText('N', cx, 9); ctx.fillText('S', cx, H - 9); ctx.fillText('E', W - 9, cy); ctx.fillText('O', 9, cy);
     const az = etat.az, txt = $('#hodo-texte');
     if (!az) {
-      txt.innerHTML = '<p>Pointez l\'arrivée P : le mouvement du sol des 0,6 premières secondes s\'affiche ici.</p><p>Une onde P fait vibrer le sol dans la direction de propagation : le tracé N-E est alors une ellipse très aplatie, alignée sur l\'axe station-source.</p>';
+      txt.innerHTML = `<p>Pointez l'arrivée P : le mouvement du sol des ${etat.ev.tele ? '3' : '0,6'} premières secondes s'affiche ici.</p><p>Une onde P fait vibrer le sol dans la direction de propagation : le tracé N-E est alors une ellipse très aplatie, alignée sur l'axe station-source${etat.ev.tele ? ' (pour un téléséisme, la P arrive presque à la verticale : la composante horizontale est faible)' : ''}.</p>`;
       return;
     }
     let m = 0;
@@ -472,7 +538,12 @@ import Sismo from './sismo/signal.js';
   }
   function majAide() {
     const sat = etat.sature && (etat.sature.Z.length || etat.sature.N.length || etat.sature.E.length);
-    const textes = {
+    const textes = etat.ev && etat.ev.tele ? {
+      P: '<strong>Pointer P.</strong> Cliquez au début de la première arrivée sur Z. Filtrez 0,5 – 2 Hz pour sortir la P du bruit de la houle (microséisme, 0,1 – 0,3 Hz), puis zoomez (double-clic).',
+      S: '<strong>Pointer S.</strong> Sur les horizontales (T de préférence), cherchez l\'arrivée de plus longue période, plusieurs minutes après P. Au-delà de 85°, SKS peut la précéder sur R.',
+      pP: '<strong>Pointer pP.</strong> Seconde impulsion sur Z après P, souvent de signe opposé : de quelques secondes (foyer superficiel) à plus de deux minutes (foyer à 600 km) après P.',
+      A: '<strong>Mesurer A.</strong> Cliquez près du plus grand pic de l\'onde de Rayleigh sur Z : le lecteur retient le maximum à ±10 s et mesure sa période entre deux passages par zéro.',
+    } : {
       P: '<strong>Pointer P.</strong> Cliquez au début du premier mouvement net, de préférence sur Z. Double-cliquez pour zoomer et viser au centième de seconde.',
       S: '<strong>Pointer S.</strong> Sur les horizontales, cherchez la reprise d\'amplitude, souvent à plus basse fréquence, qui suit la coda de la P.',
       A: '<strong>Mesurer A.</strong> Cliquez près du plus grand pic d\'une horizontale : le lecteur retient le maximum à ±0,5 s du clic.',
@@ -487,20 +558,43 @@ import Sismo from './sismo/signal.js';
     for (const c of ['Z', 'N', 'E']) for (const v of etat.ev.acc[c]) a = Math.max(a, Math.abs(v));
     return a;
   }
+  // Code de voie : HH/HN à 100 Hz (local), BH/BN à 20 Hz (téléséisme, large bande).
+  const voieCode = () => (etat.ev && etat.ev.tele ? { HH: 'BH', HN: 'BN' }[etat.capteur] : etat.capteur);
   function majVoie() {
     const f = etat.aff.filtre, cap = SM.CAPTEURS[etat.capteur].nom.toLowerCase();
-    $('#voie').innerHTML = `<span><b>${STATION}.${etat.capteur}${etat.aff.noms.join('/')}</b></span><span>${cap}, 100 Hz</span>`
-      + `<span>${NOM_GRANDEUR[etat.grandeur]}</span><span>${f ? `filtre ${virg(f[0], f[0] < 0.1 ? 2 : 1)}–${virg(f[1], 1)} Hz` : 'sans filtre'}</span>`
+    const filtre = !f ? 'sans filtre' : f[1] < 0.1 ? `filtre ${virg(1 / f[1], 0)}–${virg(1 / f[0], 0)} s` : `filtre ${virg(f[0], f[0] < 0.1 ? 2 : 1)}–${virg(f[1], 1)} Hz`;
+    $('#voie').innerHTML = `<span><b>${STATION}.${voieCode()}${etat.aff.noms.join('/')}</b></span><span>${cap}, ${Math.round(1 / etat.ev.dt)} Hz</span>`
+      + `<span>${NOM_GRANDEUR[etat.grandeur]}</span><span>${filtre}</span>`
       + `<span>début ${horloge(0)} UTC</span>`;
   }
   function majVeriteExplo() {
     if (etat.mode !== 'explorer') return;
+    if (etat.ev.tele) return majVeriteTele();
     const { tt, t0, p } = etat.ev, v = etat.ev.verite, m = etat.mlv;
     let h = `<b>Vérité terrain.</b> P à <b>${virg(tt.tP - t0, 2)} s</b>, S à <b>${virg(tt.tS - t0, 2)} s</b>, R = <b>${virg(tt.R, 1)} km</b>. `
       + `ML sans bruit : <b>${virg(m.mN, 1)}</b> (N) / <b>${virg(m.mE, 1)}</b> (E) pour Mw ${virg(p.Mw, 1)}. `
       + `Premier mouvement ${v.sP > 0 ? 'vers le haut (compression)' : 'vers le bas (dilatation)'}${v.polariteLisible ? '' : ', faible : station proche d\'un plan nodal'}.`;
     if (tt.tPn !== null && tt.tPn < tt.tPg) h += ` <br><b>Attention :</b> à cette distance la première P est <b>Pn</b> (réfractée sous le Moho). Avec Sg, l'écart S − P donne ${virg(SM.distanceSP(tt.tSg - tt.tPn), 0)} km au lieu de ${virg(tt.R, 0)} km.`;
     $('#verite-explo').innerHTML = h;
+  }
+  function majVeriteTele() {
+    const { tt, t0, p } = etat.ev, v = etat.ev.verite, ms = etat.msv, prem = tt.phases.find(a => Math.abs(a.temps - tt.tP) < 1e-6);
+    const pP = tt.phases.find(a => a.phase === 'pP');
+    let h = `<b>Vérité terrain.</b> ${prem ? prem.phase : 'P'} à <b>${virg(tt.tP - t0, 1)} s</b>${tt.tS !== null ? `, S à <b>${virg(tt.tS - t0, 1)} s</b>` : ''}`
+      + `${pP ? `, pP à <b>${virg(pP.temps - t0, 1)} s</b> (pP − P = ${virg(pP.temps - tt.tP, 1)} s)` : ''} ; Δ = <b>${p.delta}°</b> (${milliers(tt.x)} km), h = <b>${p.h} km</b>, origine à ${horloge(-t0)} UTC. `
+      + `Ms sans bruit : <b>${virg(ms.Ms, 1)}</b> (T = ${virg(ms.T, 1)} s) pour Mw ${virg(p.Mw, 1)}. `
+      + `Premier mouvement ${v.sP > 0 ? 'vers le haut (compression)' : 'vers le bas (dilatation)'}${v.polariteLisible ? '' : ', faible : rai proche d\'un plan nodal'}.`;
+    if (tt.tS === null) h += ' <br><b>Zone d\'ombre :</b> au-delà de 100°, P et S directes n\'arrivent plus (le noyau les dévie) ; seules les phases du noyau (PKIKP, PKP, SKS) atteignent la station.';
+    if (p.h > 60) h += ' <br><b>Foyer profond :</b> ondes de surface faibles, Ms ne s\'applique pas (h ≤ 60 km) ; la profondeur se lit par pP − P.';
+    if (p.Mw >= 7.6) h += ' <br><b>Saturation :</b> au-delà de Mw 7,5, la fréquence coin passe sous 0,05 Hz : Ms, mesurée à 20 s, sous-estime la taille du séisme.';
+    $('#verite-explo').innerHTML = h;
+  }
+  function majAnimation() {
+    const cache = etat.mode === 'exercice' && !etat.verifie;
+    anim.masquer(cache, cache ? 'La propagation s\'affiche après « Vérifier » : elle donnerait la distance et la profondeur.' : '');
+    $('#propagation-sous-titre').textContent = tele()
+      ? 'Coupe du globe (ak135) : fronts P (orangés) et S (bleus) ; en trait fin, les fronts pP et sS réfléchis sous la surface au-dessus du foyer ; en tirets, PcP et ScS réfléchis sur le noyau. Rais vers la station avec leur point mobile, ondes de surface en brun le long de la surface ; en bas, le sismogramme s\'écrit à mesure que les ondes arrivent. Animation en boucle.'
+      : 'Coupe de la croûte : fronts P (orangés) et S (bleus) directs, réfléchis sur le Moho (tirets), transmis dans le manteau, ondes coniques Pn et Sn au-delà du point critique ; en bas, le sismogramme s\'écrit à mesure que les ondes arrivent. Animation en boucle.';
   }
   function majOutils() {
     $$('[data-outil]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.outil === etat.outil)));
@@ -521,10 +615,22 @@ import Sismo from './sismo/signal.js';
   }
 
   // ── Exercice ────────────────────────────────────────────────────────────
+  function majEnonce() {
+    $('#enonce-station').innerHTML = tele()
+      ? 'Un séisme lointain est enregistré à la station <b>XX.SIM1</b> (large bande, 20 Hz). Pointez P puis S ; lisez la distance dans les tables. Si les ondes de surface sont fortes (foyer superficiel), mesurez Ms sur la verticale ; si elles manquent (foyer profond), pointez pP pour la profondeur. Indiquez enfin la polarité de la P sur la verticale.'
+      : 'Un séisme local est enregistré à la station <b>XX.SIM1</b>. Pointez l\'arrivée P puis l\'arrivée S, mesurez l\'amplitude maximale du Wood-Anderson sur une composante horizontale, puis indiquez la polarité de la P sur la verticale.';
+  }
   function nouvelExercice() {
     const numero = 1000 + Math.floor(Math.random() * 9000), u = SM.aleatoire(numero * 7919 + 1);
-    etat.exo = {
-      numero, bruit: ['calme', 'standard', 'standard', 'urbain'][Math.floor(u() * 4)],
+    if (tele()) {
+      // un foyer sur deux est profond (profondeur demandée par pP − P, de 40° à 90°), l'autre superficiel (Ms demandée)
+      const profond = u() < 0.5;
+      etat.exo = {
+        numero, type: 'tele', profond, bruit: ['calme', 'standard'][Math.floor(u() * 2)],
+        p: { Mw: Math.round(u.entre(profond ? 6.2 : 6.0, 7.4) * 10) / 10, delta: Math.round(u.entre(profond ? 40 : 30, 90)), h: profond ? 5 * Math.round(u.entre(80, 600) / 5) : Math.round(u.entre(10, 40)), baz: Math.floor(u() * 360), graine: numero },
+      };
+    } else etat.exo = {
+      numero, type: 'local', bruit: ['calme', 'standard', 'standard', 'urbain'][Math.floor(u() * 4)],
       p: { Mw: Math.round(u.entre(2.6, 4.8) * 10) / 10, delta: Math.round(u.entre(18, 135)), h: Math.round(u.entre(4, 20)), baz: Math.floor(u() * 360), graine: numero },
     };
     etat.capteur = 'HH'; etat.grandeur = 'vitesse'; etat.filtre = 'aucun'; etat.compo = 'ZNE'; etat.outil = 'P';
@@ -534,6 +640,7 @@ import Sismo from './sismo/signal.js';
     plusTard(regenerer);
   }
   function verifier() {
+    if (etat.ev.tele) return verifierTele();
     const ev = etat.ev, { tt, t0, p, verite } = ev, r = lectures(), m = etat.mlv;
     const vrai = { tP: tt.tPg - t0, tS: tt.tSg - t0 };
     const ecartAz = etat.az ? Math.abs(((etat.az.baz - p.baz + 540) % 360) - 180) : null;
@@ -557,27 +664,81 @@ import Sismo from './sismo/signal.js';
       <p class="verite"><b>Le séisme :</b> Mw ${virg(p.Mw, 1)}, Δ = ${p.delta} km, h = ${p.h} km, origine à ${horloge(-t0)} UTC.
       La vraie ML vient du Wood-Anderson calculé sans bruit ; ML et Mw ne coïncident pas forcément.
       Les arrivées vraies et les phases théoriques sont maintenant tracées en vert et en cyan.</p>`;
-    majTout();
+    majTout(); majAnimation();
+  }
+  function verifierTele() {
+    const ev = etat.ev, { tt, t0, p, verite } = ev, r = lectures(), ms = etat.msv, profond = etat.exo.profond;
+    const vrai = { tP: tt.tP - t0, tS: tt.tS - t0, t0: -t0 }, pP = tt.phases.find(a => a.phase === 'pP');
+    const ecartAz = etat.az ? Math.abs(((etat.az.baz - p.baz + 540) % 360) - 180) : null, polVraie = verite.sP > 0 ? 'haut' : 'bas';
+    const NOM_POL = { haut: '↑ haut', bas: '↓ bas', indet: 'indécis' }, ok = Number.isFinite(r.distance);
+    const lignes = [
+      ['Arrivée P', r.tP !== null ? virg(r.tP, 1) + ' s' : '—', virg(vrai.tP, 1) + ' s', r.tP !== null && Math.abs(r.tP - vrai.tP) <= 1, '± 1 s'],
+      ['Arrivée S', r.tS !== null ? virg(r.tS, 1) + ' s' : '—', virg(vrai.tS, 1) + ' s', r.tS !== null && Math.abs(r.tS - vrai.tS) <= 3, '± 3 s'],
+      ['Distance épicentrale', ok ? virg(r.distance, 1) + '°' : '—', p.delta + '°', ok && Math.abs(r.distance - p.delta) <= 2, '± 2°'],
+      ["Heure d'origine", Number.isFinite(r.t0) ? horloge(r.t0) : '—', horloge(vrai.t0), Number.isFinite(r.t0) && Math.abs(r.t0 - vrai.t0) <= 8, '± 8 s'],
+      profond
+        ? ['Profondeur (pP − P)', r.hLu ? virg(r.hLu, 0) + ' km' : '—', `${p.h} km`, !!r.hLu && Math.abs(r.hLu - p.h) <= Math.max(20, 0.15 * p.h), `± 15 % ; pP − P vrai : ${virg(pP.temps - tt.tP, 1)} s`]
+        : ['Magnitude Ms', r.Ms !== undefined ? virg(r.Ms, 1) : '—', virg(ms.Ms, 1), r.Ms !== undefined && Math.abs(r.Ms - ms.Ms) <= 0.3, '± 0,3'],
+      ['Polarité de P', etat.polarite ? NOM_POL[etat.polarite] : '—', NOM_POL[polVraie] + (verite.polariteLisible ? '' : ' (faible)'), etat.polarite === polVraie || (!verite.polariteLisible && etat.polarite === 'indet'), ''],
+      ['Azimut de la source', etat.az ? Math.round(etat.az.baz) + '°' : '—', p.baz + '°', ecartAz !== null && ecartAz <= 20, '± 20°'],
+    ];
+    etat.verifie = true;
+    $('#corrige').innerHTML = `<div class="separateur"></div><p class="sous-titre">Corrigé</p>
+      <div class="table-defile"><table class="resultats"><thead><tr><th>Lecture</th><th>Vous</th><th>Vrai</th></tr></thead><tbody>
+      ${lignes.map(([n, v, w, okL, tol]) => `<tr class="${okL ? 'ok' : 'ko'}"><td><span class="verdict ${okL ? 'ok' : 'ko'}">${okL ? '✓' : '✗'}</span> ${n}${tol ? `<br><small style="color:var(--muted)">tolérance ${tol}</small>` : ''}</td><td class="n">${v}</td><td class="n">${w}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="score">${lignes.filter(l => l[3]).length} / ${lignes.length} lectures justes</p>
+      <p class="verite"><b>Le séisme :</b> Mw ${virg(p.Mw, 1)}, Δ = ${p.delta}° (${milliers(tt.x)} km), h = ${p.h} km, origine à ${horloge(vrai.t0)} UTC.
+      ${profond ? 'Foyer profond : les ondes de surface sont faibles et Ms ne s\'applique pas ; la profondeur se lit par pP − P.' : `Ms mesurée sans bruit : ${virg(ms.Ms, 1)} (A = ${milliers(ms.A)} nm, T = ${virg(ms.T, 1)} s) ; Ms et Mw ne coïncident pas forcément.`}
+      Les arrivées vraies et les phases théoriques sont maintenant tracées, et l'animation de la propagation est affichée.</p>`;
+    majTout(); majAnimation();
   }
 
   // ── Événements ──────────────────────────────────────────────────────────
   let attente = 0;
   function planifier() { clearTimeout(attente); attente = setTimeout(() => plusTard(regenerer), 250); }
   function majCurseursExplo() {
-    const e = etat.explo;
+    const e = etat.explo, t = etat.exploTele, c = explo();
     $('#mw').value = e.Mw; $('#mw-v').textContent = virg(e.Mw, 1);
     $('#dist').value = versCurseurDist(e.delta); $('#dist-v').textContent = Math.round(e.delta) + ' km';
     $('#prof').value = e.h; $('#prof-v').textContent = e.h + ' km';
-    $('#baz').value = e.baz; $('#baz-v').textContent = e.baz + '° ' + cardinal(e.baz);
-    $('#bruit').value = e.bruit;
+    $('#mw-t').value = t.Mw; $('#mw-t-v').textContent = virg(t.Mw, 1);
+    $('#dist-t').value = t.delta; $('#dist-t-v').textContent = `${t.delta}° (${milliers(t.delta * Math.PI / 180 * 6371)} km)`;
+    $('#prof-t').value = t.h; $('#prof-t-v').textContent = t.h + ' km';
+    $('#baz').value = c.baz; $('#baz-v').textContent = c.baz + '° ' + cardinal(c.baz);
+    $('#bruit').value = c.bruit;
+  }
+  // Type de séisme : local (croûte du générateur) ou lointain (téléséisme) ; vaut pour les deux modes.
+  function changerType(t) {
+    if (etat.type === t) return;
+    etat.type = t;
+    $$('[data-type-seisme]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.typeSeisme === t)));
+    $('#reglages-local').hidden = t !== 'local'; $('#reglages-tele').hidden = t !== 'tele';
+    $('[data-outil="pP"]').hidden = t !== 'tele';
+    $('#phases-liste').textContent = t === 'tele' ? 'P, pP, sP, PcP, PKP, S, ScS, SKS, ondes de surface' : 'Pn, Pg, Sn, Sg, ondes de surface';
+    majTypeAide();
+    etat.capteur = 'HH'; etat.grandeur = 'vitesse'; etat.filtre = 'aucun'; etat.compo = 'ZNE'; etat.outil = null; etat.lecture = null;
+    $('#grandeur').value = 'vitesse'; $('#filtre').value = 'aucun'; $('#perso').hidden = true;
+    majCurseursExplo(); majEnonce();
+    if (etat.mode === 'exercice') nouvelExercice(); else plusTard(regenerer);
+  }
+  function majTypeAide() {
+    $('#type-aide').textContent = tele()
+      ? 'Station à 15° – 160° du foyer (1° ≈ 111 km) : rais dans le globe (ak135), distance par les tables, profondeur par pP − P, magnitude Ms. Enregistrement de 30 à 90 minutes.'
+      : 'Station à moins de 600 km : ondes dans la croûte (Pg, Sg) et sous le Moho (Pn, Sn), distance par 8,4 km/s × (tS − tP), magnitude locale ML.';
+    $('#hodo-sous-titre').textContent = tele() ? 'Composantes N et E filtrées 0,5 – 2 Hz, 3 s après votre pointé P' : 'Composantes N et E filtrées 1–10 Hz, 0,6 s après votre pointé P';
   }
   function brancher() {
     $('#mw').addEventListener('input', e => { etat.explo.Mw = parseFloat(e.target.value); majCurseursExplo(); planifier(); });
     $('#dist').addEventListener('input', e => { etat.explo.delta = Math.round(distDepuis(parseFloat(e.target.value))); majCurseursExplo(); planifier(); });
     $('#prof').addEventListener('input', e => { etat.explo.h = parseInt(e.target.value, 10); majCurseursExplo(); planifier(); });
-    $('#baz').addEventListener('input', e => { etat.explo.baz = parseInt(e.target.value, 10); majCurseursExplo(); planifier(); });
-    $('#bruit').addEventListener('change', e => { etat.explo.bruit = e.target.value; plusTard(reenregistrer); });
-    $('#tirage').addEventListener('click', () => { etat.explo.graine = 1 + Math.floor(Math.random() * 1e6); plusTard(regenerer); });
+    $('#mw-t').addEventListener('input', e => { etat.exploTele.Mw = parseFloat(e.target.value); majCurseursExplo(); planifier(); });
+    $('#dist-t').addEventListener('input', e => { etat.exploTele.delta = parseInt(e.target.value, 10); majCurseursExplo(); planifier(); });
+    $('#prof-t').addEventListener('input', e => { etat.exploTele.h = parseInt(e.target.value, 10); majCurseursExplo(); planifier(); });
+    $('#baz').addEventListener('input', e => { explo().baz = parseInt(e.target.value, 10); majCurseursExplo(); planifier(); });
+    $('#bruit').addEventListener('change', e => { explo().bruit = e.target.value; plusTard(reenregistrer); });
+    $('#tirage').addEventListener('click', () => { explo().graine = 1 + Math.floor(Math.random() * 1e6); plusTard(regenerer); });
+    $$('[data-type-seisme]').forEach(b => b.addEventListener('click', () => changerType(b.dataset.typeSeisme)));
 
     $('#mode-explorer').addEventListener('click', () => changerMode('explorer'));
     $('#mode-exercice').addEventListener('click', () => changerMode('exercice'));
@@ -598,7 +759,7 @@ import Sismo from './sismo/signal.js';
     $('#zoom-moins').addEventListener('click', () => zoomer(2));
     $('#zoom-tout').addEventListener('click', () => { etat.vue = [0, duree()]; dessiner(); dessinerApercu(); });
     $('#effacer').addEventListener('click', () => {
-      etat.pointes = { P: null, S: null, A: null }; etat.az = null;
+      etat.pointes = vides(); etat.az = null;
       if (etat.compo === 'ZRT' && etat.mode === 'exercice') etat.compo = 'ZNE';
       if (etat.verifie) { etat.verifie = false; $('#corrige').innerHTML = ''; }
       plusTard(reconvertir);
@@ -649,6 +810,7 @@ import Sismo from './sismo/signal.js';
       if (k === 'p') choisirOutil('P');
       else if (k === 's') choisirOutil('S');
       else if (k === 'a') choisirOutil('A');
+      else if (k === 'd' && etat.ev.tele) choisirOutil('pP');
       else if (k === 'escape') { etat.outil = null; majOutils(); majAide(); }
       else if (k === 'arrowleft' || k === 'arrowright') { const s = (k === 'arrowleft' ? -0.2 : 0.2) * d; fixerVue(etat.vue[0] + s, etat.vue[1] + s); dessiner(); dessinerApercu(); }
       else if (k === '+' || k === '=') zoomer(0.5);
@@ -684,9 +846,11 @@ import Sismo from './sismo/signal.js';
     etat.compo = 'ZNE';
     if (m === 'exercice') nouvelExercice();
     else { etat.outil = null; plusTard(regenerer); }
+    majAnimation();
   }
 
+  const anim = creerAnimation({ canvas: $('#propagation'), bouton: $('#anim-lecture'), vitesse: $('#anim-vitesse'), legende: $('#anim-legende') });
   brancher();
-  majCurseursExplo();
+  majCurseursExplo(); majEnonce(); majTypeAide();
   plusTard(regenerer);
 })();
