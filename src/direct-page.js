@@ -1,15 +1,18 @@
 import MiniSeed from './sismo/miniseed.js';
 import Fdsn from './sismo/fdsn.js';
+import Centres from './sismo/centres.js';
 import Direct from './sismo/direct.js';
 import Globe from './sismo/globe.js';
 import Teleseisme from './sismo/teleseisme.js';
 import Sismo from './sismo/signal.js';
 
-// src/direct-page.js — page « En direct » : stations GEOFON autour de la Méditerranée, comme un centre de surveillance
-// (SeisComP : carte scmv, traces scrttv). Données par le relais SeedLink du site (functions/api/seedlink.js, temps
-// réel), sinon par le service FDSN de GEOFON interrogé toutes les 20 s (functions/api/geofon.js), sinon démonstration
-// (séisme fictif, signaux du générateur de téléséismes, signalée comme telle). Calculs dans src/sismo/ (miniSEED,
-// filtres, STA/LTA, tampons, arrivées ak135).
+// src/direct-page.js — page « En direct » : stations sismologiques autour de la Méditerranée, comme un centre de
+// surveillance (SeisComP : carte scmv, traces scrttv). Stations des centres de données de src/sismo/centres.js (GEOFON,
+// INGV, Epos-France, NOA, KOERI…), choisies par réseau. Chaque station suivie reçoit ses données par le relais SeedLink du
+// site (functions/api/seedlink.js, temps réel) depuis le serveur de son centre, sinon celui de GEOFON, sinon par le
+// service FDSN de son centre interrogé toutes les 20 s (functions/api/fdsn.js) ; sans réseau, démonstration (séisme
+// fictif, signaux du générateur de téléséismes, signalée comme telle). Calculs dans src/sismo/ (miniSEED, filtres,
+// STA/LTA, tampons, arrivées ak135, pays).
 (() => {
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
@@ -20,13 +23,14 @@ import Sismo from './sismo/signal.js';
   const ZONE = { minlatitude: 25, maxlatitude: 50, minlongitude: -15, maxlongitude: 45 };
   const MAX_SUIVIES = 12, DEFAUT_SUIVIES = 8, INTERVALLE_FDSN = 20000;
   // au-delà de cette latence (s), une station est grise : le service FDSN publie avec plusieurs minutes de retard
-  const latenceGrise = () => (etat.mode === 'fdsn' ? 900 : 180);
+  const viaFdsn = s => etat.mode === 'fdsn' || (etat.mode === 'seedlink' && !serveurDe(s));
+  const latenceGrise = s => (viaFdsn(s) ? 900 : 180);
   const FILTRES = { aucun: null, large: [2, 0.5, 5], proche: [2, 1, 8], tele: [2, 0.5, 2], ms: [4, 1 / 22, 1 / 18], detecteur: [4, 0.7, 2] };
   // Détecteur : STA de 2 s sur LTA de 80 s, voie filtrée de 0,7 à 2 Hz (ordre 4), déclenchement au-dessus de 4, fin sous 1,5.
   const DETECTEUR = { sta: 2, lta: 80, on: 4, off: 1.5 };
   // stations fictives du mode démonstration quand la liste de GEOFON est inaccessible
   const STATIONS_DEMO = [['DEMO1', 36.8, 10.2], ['DEMO2', 41.9, 12.5], ['DEMO3', 38.0, 23.7], ['DEMO4', 41.0, 29.0], ['DEMO5', 40.4, -3.7], ['DEMO6', 35.2, 33.4]]
-    .map(([s, lat, lon]) => ({ reseau: 'XX', station: s, emplacement: '', voie: 'BHZ', lat, lon, sensibilite: 6e8, cadence: 20, site: 'station fictive' }));
+    .map(([s, lat, lon]) => ({ reseau: 'XX', station: s, emplacement: '', voie: 'BHZ', lat, lon, sensibilite: 6e8, cadence: 20, centre: 'démonstration', pays: null }));
   const ident = s => `${s.reseau}.${s.station}.${s.emplacement}.${s.voie}`;
   const dansVue = o => o.lon >= VUE.lon[0] && o.lon <= VUE.lon[1] && o.lat >= VUE.lat[0] && o.lat <= VUE.lat[1];
   const hms = t => new Date(t).toISOString().slice(11, 19);
@@ -34,8 +38,9 @@ import Sismo from './sismo/signal.js';
 
   const etat = {
     mode: 'seedlink', stations: [], suivies: [], voies: new Map(), seismes: [], catalogue: 'med', choisi: null,
-    fenetre: 15, filtre: 'large', pause: null, cotes: null, demo: null, mesures: new Map(), arrivees: new Map(),
-    cx: { ws: null, etat: 'arret', paquets: 0, dernier: null, echecs: 0, minuteur: 0, message: '', diagnostic: false }, listeOk: false, journal: [],
+    fenetre: 15, filtre: 'large', pause: null, cotes: null, pays: [], demo: null, mesures: new Map(), arrivees: new Map(),
+    reseaux: new Map(), actifs: null, centres: new Map(), sources: new Map(), listeOk: false, journal: [],
+    cx: { groupes: new Map(), fdsn: 0, demo: 0, echecsFdsn: 0, paquets: 0, dernier: null, diagnostics: new Set() },
   };
   // Journal de connexion (les 8 derniers événements), affiché sous la source des données : il dit ce qui se passe quand
   // le temps réel ne vient pas.
@@ -43,9 +48,13 @@ import Sismo from './sismo/signal.js';
     etat.journal.unshift(`${new Date().toISOString().slice(11, 19)} ${msg}`);
     etat.journal.length = Math.min(etat.journal.length, 8);
     const ul = $('#dr-journal');
-    if (ul) ul.innerHTML = etat.journal.map(l => `<li>${l.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</li>`).join('');
+    if (ul) ul.innerHTML = etat.journal.map(l => `<li>${echapper(l)}</li>`).join('');
   }
+  const echapper = t => String(t).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
   const maintenant = () => etat.pause ?? Date.now();
+  const delai = ms => new Promise(r => setTimeout(r, ms));
+  const nomCentre = id => (Centres.CENTRES[id] ? Centres.CENTRES[id].nom : id);
+  const nomServeur = sv => { const c = Centres.centreDuServeur(sv); return c ? c.nom : sv; };
 
   // ── Petits utilitaires ──────────────────────────────────────────────────────────────────────────────────────
   let minuteurToast = 0;
@@ -73,18 +82,53 @@ import Sismo from './sismo/signal.js';
     ctx.lineWidth = 4; ctx.strokeStyle = COUL.paper; ctx.lineJoin = 'round'; ctx.strokeText(t, x, y);
     ctx.fillStyle = coul; ctx.fillText(t, x, y);
   }
-  const api = (service, params) => `api/geofon?${new URLSearchParams({ service, ...params })}`;
-
-  // ── Stations et séismes (FDSN de GEOFON, par le relais) ───────────────────────────────────────────────────────
-  async function chargerStations() {
-    try {
-      const r = await fetch(api('station', { network: 'GE', channel: 'BHZ,HHZ', level: 'channel', format: 'text', ...ZONE, endafter: Fdsn.heure(Date.now()) }));
-      if (!r.ok) throw new Error(r.status);
-      etat.stations = Fdsn.choisirVoies(Fdsn.voies(await r.text()));
-      etat.listeOk = etat.stations.length > 0;
-    } catch { etat.stations = []; etat.listeOk = false; }
-    return etat.listeOk;
+  const api = (service, params, centre = 'geofon') => `api/fdsn?${new URLSearchParams({ centre, service, ...params })}`;
+  // Requête bornée dans le temps (un centre lent ne retient pas la page).
+  async function charger(url, ms) {
+    const ac = new AbortController(), m = setTimeout(() => ac.abort(), ms);
+    try { return await fetch(url, { signal: ac.signal }); } finally { clearTimeout(m); }
   }
+
+  // ── Stations, réseaux et séismes (services FDSN des centres, par le relais) ──────────────────────────────────
+  // réseaux affichés : GE tant que le choix n'est pas fait (stations en cours de chargement)
+  const actif = code => (etat.actifs === null ? code === 'GE' : etat.actifs.has(code));
+  const visibles = () => etat.stations.filter(s => actif(s.reseau) && dansVue(s));
+  // Voies verticales et réseaux d'un centre, dans la zone ; les stations gardent leur centre et leur pays.
+  async function chargerCentre(c) {
+    const p = { channel: 'BHZ,HHZ', format: 'text', includerestricted: 'false', ...ZONE, endafter: Fdsn.heure(Date.now()) };
+    const info = { etat: 'attente', stations: 0 };
+    etat.centres.set(c.id, info);
+    try {
+      const [rv, rr] = await Promise.all([charger(api('station', { ...p, level: 'channel' }, c.id), 20000), charger(api('station', { ...p, level: 'network' }, c.id), 20000).catch(() => null)]);
+      if (rv.status === 204) { Object.assign(info, { etat: 'vide' }); return; }
+      if (!rv.ok) throw new Error(`HTTP ${rv.status}`);
+      const liste = Fdsn.choisirVoies(Fdsn.voies(await rv.text())).map(s => ({ ...s, centre: c.id, pays: Direct.pays(s.lat, s.lon, etat.pays) }));
+      const noms = new Map((rr && rr.ok && rr.status !== 204 ? Fdsn.reseaux(await rr.text()) : []).map(r => [r.reseau, r.description]));
+      ajouterStations(liste, noms, c.id);
+      Object.assign(info, { etat: 'ok', stations: liste.length });
+      journal(`${c.nom} : ${liste.length} stations dans la zone`);
+    } catch (err) {
+      Object.assign(info, { etat: 'echec', erreur: err.name === 'AbortError' ? 'délai dépassé' : (err.message || String(err)) });
+      journal(`${c.nom} : liste des stations inaccessible (${info.erreur})`);
+    } finally { majReseaux(); dessinerCarte(); }
+  }
+  function ajouterStations(liste, noms, centre) {
+    const avant = etat.stations.length;
+    etat.stations = Centres.fusionner([etat.stations, liste]);
+    for (const s of etat.stations.slice(avant)) {
+      if (!etat.reseaux.has(s.reseau)) etat.reseaux.set(s.reseau, { code: s.reseau, description: noms.get(s.reseau) || '', centre, stations: [] });
+      etat.reseaux.get(s.reseau).stations.push(s);
+    }
+    etat.listeOk = etat.stations.length > 0;
+  }
+  // Réseaux affichés au départ : ceux de la dernière visite, sinon GE (GEOFON) et tout réseau qui a une station en Tunisie.
+  function actifsParDefaut() {
+    try { const m = JSON.parse(localStorage.getItem('sismo-direct-reseaux')); if (Array.isArray(m) && m.length) return new Set(m); } catch { /* stockage indisponible */ }
+    const out = new Set(['GE']);
+    for (const r of etat.reseaux.values()) if (r.stations.some(s => s.pays && s.pays.code === 'TN')) out.add(r.code);
+    return out;
+  }
+  function memoriserActifs() { try { localStorage.setItem('sismo-direct-reseaux', JSON.stringify([...etat.actifs])); } catch { /* stockage indisponible */ } }
   async function chargerSeismes() {
     const p = etat.catalogue === 'med'
       ? { format: 'text', ...ZONE, minmagnitude: '2.5', starttime: Fdsn.heure(Date.now() - 7 * 86400000), orderby: 'time', limit: '150' }
@@ -103,16 +147,18 @@ import Sismo from './sismo/signal.js';
   }
   // Stations suivies par défaut : réparties sur le bassin (la plus proche de Tunis, puis à chaque fois la plus éloignée
   // de celles déjà prises).
-  function suiviesParDefaut(liste) {
+  function suiviesParDefaut(liste, nombre = DEFAUT_SUIVIES, deja = []) {
     if (!liste.length) return [];
-    const d = (a, b) => Direct.distanceAzimut(a.lat, a.lon, b.lat, b.lon).distance;
-    const prises = [liste.reduce((m, s) => (d(s, { lat: 36.8, lon: 10.2 }) < d(m, { lat: 36.8, lon: 10.2 }) ? s : m))];
-    while (prises.length < Math.min(DEFAUT_SUIVIES, liste.length)) {
+    const d = (a, b) => Direct.distanceAzimut(a.lat, a.lon, b.lat, b.lon).distance, tunis = { lat: 36.8, lon: 10.2 };
+    const prises = deja.length ? deja.slice() : [liste.reduce((m, s) => (d(s, tunis) < d(m, tunis) ? s : m))];
+    const n0 = deja.length;
+    while (prises.length < Math.min(n0 + nombre, n0 + liste.length) && prises.length - n0 < liste.length) {
       let mieux = null, dm = -1;
       for (const s of liste) { if (prises.includes(s)) continue; const m = Math.min(...prises.map(p => d(p, s))); if (m > dm) { dm = m; mieux = s; } }
+      if (!mieux) break;
       prises.push(mieux);
     }
-    return prises.sort((a, b) => a.lon - b.lon);
+    return (deja.length ? prises.slice(n0) : prises).sort((a, b) => a.lon - b.lon);
   }
 
   // ── Réception des données ─────────────────────────────────────────────────────────────────────────────────────
@@ -121,84 +167,158 @@ import Sismo from './sismo/signal.js';
     if (!etat.voies.has(enr.id)) etat.voies.set(enr.id, Direct.voie());
     etat.voies.get(enr.id).ajouter(enr);
     etat.cx.paquets++; etat.cx.dernier = Date.now();
+    const src = etat.sources.get(enr.id);
+    if (src) src.recu = true;
   }
   // Reprise : à partir du plus ancien des derniers échantillons reçus (sans dépasser la fenêtre ni 30 minutes).
   // Première demande : la fenêtre plus 3 minutes, pour que l'amorce des filtres tombe avant la partie affichée.
-  function reprise() {
-    const plus = Date.now() - Math.min(30, etat.fenetre + 3) * 60000, fins = etat.suivies.map(s => { const v = etat.voies.get(ident(s)); return v ? v.fin() : null; });
+  function reprise(liste = etat.suivies) {
+    const plus = Date.now() - Math.min(30, etat.fenetre + 3) * 60000, fins = liste.map(s => { const v = etat.voies.get(ident(s)); return v ? v.fin() : null; });
     return fins.some(f => f === null) ? plus : Math.max(plus, Math.min(...fins) - 2000);
   }
-  function fermer() {
-    clearInterval(etat.cx.minuteur); clearTimeout(etat.cx.minuteur);
-    if (etat.cx.ws) { const w = etat.cx.ws; etat.cx.ws = null; try { w.close(); } catch { /* déjà fermé */ } }
+  // Source d'une station suivie : rang du serveur SeedLink essayé parmi ses candidats (celui de son centre, puis GEOFON) ;
+  // au-delà, le service FDSN de son centre.
+  function source(s) {
+    const id = ident(s);
+    if (!etat.sources.has(id)) etat.sources.set(id, { essai: 0, depuis: Date.now(), recu: false });
+    return etat.sources.get(id);
   }
-  function connecterSeedLink() {
-    fermer();
-    if (!etat.suivies.length) return;
-    const flux = etat.suivies.map(ident).join(','), proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const serveurDe = s => Centres.candidats(s.centre)[source(s).essai] || null;
+  const parFdsn = () => (etat.mode === 'fdsn' ? etat.suivies : etat.mode === 'seedlink' ? etat.suivies.filter(s => !serveurDe(s)) : []);
+  function suivant(liste, raison) {
+    for (const s of liste) { const src = source(s); src.essai++; src.depuis = Date.now(); src.recu = false; }
+    const vers = liste.map(s => serveurDe(s)), noms = [...new Set(vers.map(v => (v ? nomServeur(v) : 'FDSN (20 s)')))];
+    journal(`${liste.map(s => `${s.reseau}.${s.station}`).join(', ')} : ${raison} → ${noms.join(', ')}`);
+  }
+  function fermer() {
+    for (const g of etat.cx.groupes.values()) fermerGroupe(g);
+    etat.cx.groupes.clear();
+    clearInterval(etat.cx.fdsn); etat.cx.fdsn = 0;
+    clearInterval(etat.cx.demo); etat.cx.demo = 0;
+  }
+  function fermerGroupe(g) {
+    g.ferme = true; clearTimeout(g.minuteur); clearTimeout(g.garde);
+    if (g.ws) { const w = g.ws; g.ws = null; try { w.close(); } catch { /* déjà fermé */ } }
+  }
+  // Une connexion au relais par serveur SeedLink ; un groupe dont les stations n'ont pas changé reste ouvert.
+  function connecter() {
+    if (etat.mode !== 'seedlink') return;
+    const voulus = new Map();
+    for (const s of etat.suivies) { const sv = serveurDe(s); if (sv) { if (!voulus.has(sv)) voulus.set(sv, []); voulus.get(sv).push(s); } }
+    for (const [sv, g] of etat.cx.groupes) {
+      const l = voulus.get(sv);
+      if (!l || l.map(ident).join(',') !== g.cle) { fermerGroupe(g); etat.cx.groupes.delete(sv); }
+    }
+    for (const [sv, l] of voulus) if (!etat.cx.groupes.has(sv)) {
+      const g = { serveur: sv, liste: l, cle: l.map(ident).join(','), ws: null, recu: false, echecs: 0, minuteur: 0, garde: 0, ferme: false };
+      etat.cx.groupes.set(sv, g);
+      ouvrirGroupe(g);
+    }
+    majFdsn(); majBadge();
+  }
+  function ouvrirGroupe(g) {
+    if (g.ferme) return;
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:', base = `${proto}//${location.host}${location.pathname.replace(/[^/]*$/, '')}`;
+    const q = new URLSearchParams({ serveur: g.serveur, flux: g.liste.map(ident).join(','), depuis: new Date(reprise(g.liste)).toISOString() });
     let ws;
-    try { ws = new WebSocket(`${proto}//${location.host}${location.pathname.replace(/[^/]*$/, '')}api/seedlink?flux=${encodeURIComponent(flux)}&depuis=${encodeURIComponent(new Date(reprise()).toISOString())}`); }
-    catch { basculer('fdsn', 'WebSocket indisponible : interrogation du service FDSN.'); return; }
+    try { ws = new WebSocket(`${base}api/seedlink?${q}`); } catch { basculer('fdsn', 'WebSocket indisponible : interrogation du service FDSN.'); return; }
     ws.binaryType = 'arraybuffer';
-    etat.cx.ws = ws; etat.cx.etat = 'connexion'; badge('Connexion SeedLink…', true);
-    journal(`SeedLink : connexion au relais (${etat.suivies.length} flux)`);
-    ws.onopen = () => journal('SeedLink : relais ouvert');
-    let recu = false;
-    const garde = setTimeout(() => { if (!recu && etat.cx.ws === ws) { etat.cx.echecs++; ws.close(); } }, 20000);
+    g.ws = ws; g.recu = false;
+    const ids = new Set(g.liste.map(ident)), nom = nomServeur(g.serveur);
+    journal(`${nom} : connexion au relais (${g.liste.length} flux)`);
+    g.garde = setTimeout(() => { if (!g.recu && g.ws === ws) ws.close(); }, 20000);
     ws.onmessage = e => {
       if (typeof e.data === 'string') {
-        try {
-          const m = JSON.parse(e.data);
-          if (m.message) { etat.cx.message = m.message; journal(`relais : ${m.message}`); }
-          if (m.type === 'fin') journal(`relais : fin (${m.raison}, ${m.paquets} paquets)`);
-          if (m.type === 'erreur') etat.cx.echecs++;
-        } catch { /* message illisible */ }
+        let m;
+        try { m = JSON.parse(e.data); } catch { return; }
+        if (m.message) journal(`relais : ${m.message}`);
+        if (m.type === 'fin') journal(`relais ${nom} : fin (${m.raison}, ${m.paquets} paquets)`);
+        if (m.refusees && m.refusees.length) {
+          // stations refusées par ce serveur : elles passent au suivant ; le relais continue avec les autres
+          const refus = g.liste.filter(s => m.refusees.includes(`${s.reseau}.${s.station}`));
+          g.liste = g.liste.filter(s => !refus.includes(s)); g.cle = g.liste.map(ident).join(',');
+          suivant(refus, `refusées par ${nom}`);
+          setTimeout(connecter, 0);
+        }
         return;
       }
-      if (!recu) { recu = true; etat.cx.echecs = 0; etat.cx.etat = 'ouvert'; badge(`Temps réel · ${etat.suivies.length} stations`); journal('SeedLink : premier paquet reçu'); }
-      recevoir(MiniSeed.enregistrement(e.data));
+      const enr = MiniSeed.enregistrement(e.data);
+      if (!enr || !ids.has(enr.id)) return;
+      if (!g.recu) { g.recu = true; g.echecs = 0; journal(`${nom} : premier paquet reçu`); majBadge(); }
+      recevoir(enr);
     };
     ws.onclose = ev => {
-      clearTimeout(garde);
-      if (etat.cx.ws !== ws || etat.mode !== 'seedlink') return;
-      etat.cx.ws = null;
-      journal(`SeedLink : relais fermé (code ${ev.code}${ev.reason ? `, ${ev.reason}` : ''})${recu ? '' : ', aucun paquet'}`);
-      if (!recu) etat.cx.echecs++;
-      // fermeture normale (10 minutes) : reconnexion immédiate ; deux échecs de suite : service FDSN et diagnostic
-      if (etat.cx.echecs >= 2) { basculer('fdsn', 'Relais SeedLink indisponible : interrogation du service FDSN toutes les 20 s.'); diagnostiquer(); }
-      else etat.cx.minuteur = setTimeout(connecterSeedLink, recu ? 500 : 3000);
+      clearTimeout(g.garde);
+      if (g.ws !== ws || g.ferme) return;
+      g.ws = null;
+      journal(`${nom} : relais fermé (code ${ev.code}${ev.reason ? `, ${ev.reason}` : ''})${g.recu ? '' : ', aucun paquet'}`);
+      if (!g.liste.length) { etat.cx.groupes.delete(g.serveur); return; }
+      if (!g.recu) g.echecs++;
+      // fermeture normale (10 minutes) : reconnexion immédiate ; deux échecs de suite : les stations passent au serveur
+      // suivant (ou au service FDSN) et le diagnostic du serveur s'inscrit au journal
+      if (g.echecs >= 2) {
+        fermerGroupe(g); etat.cx.groupes.delete(g.serveur);
+        suivant(g.liste, `${nom} ne livre rien`);
+        diagnostiquer(g.serveur, g.liste[0]);
+        connecter();
+      } else g.minuteur = setTimeout(() => ouvrirGroupe(g), g.recu ? 500 : 3000);
+      majBadge();
     };
   }
-  // Diagnostic du relais SeedLink (une fois par page) : chaque étape de l'échange avec GEOFON, dans le journal.
-  async function diagnostiquer() {
-    if (etat.cx.diagnostic || !etat.suivies.length) return;
-    etat.cx.diagnostic = true;
-    journal('diagnostic du relais SeedLink en cours (jusqu\'à 40 s)…');
+  // Station acceptée mais muette : 90 s après son arrivée sur un serveur qui livre les autres, elle passe au suivant.
+  function surveiller() {
+    if (etat.mode !== 'seedlink') return;
+    const muettes = [];
+    for (const g of etat.cx.groupes.values()) {
+      if (!g.recu) continue;
+      for (const s of g.liste) { const src = source(s); if (!src.recu && Date.now() - src.depuis > 90000) muettes.push(s); }
+    }
+    if (muettes.length) { suivant(muettes, 'aucune donnée en 90 s'); connecter(); }
+  }
+  function majBadge() {
+    if (etat.mode === 'demo') return;
+    const fd = parFdsn().length, tr = etat.mode === 'seedlink' ? [...etat.cx.groupes.values()].filter(g => g.recu).reduce((n, g) => n + g.liste.length, 0) : 0;
+    if (!etat.suivies.length) badge('Aucune station suivie');
+    else if (tr) badge(`Temps réel · ${tr} stations${fd ? ` · ${fd} toutes les 20 s` : ''}`);
+    else if (fd && etat.cx.fdsn && etat.cx.echecsFdsn === 0 && etat.voies.size) badge(`Toutes les 20 s · ${fd} stations`);
+    else badge(etat.mode === 'fdsn' ? 'Interrogation FDSN…' : 'Connexion SeedLink…', true);
+  }
+  // Diagnostic d'un serveur SeedLink (une fois par serveur et par page) : chaque étape de l'échange, dans le journal.
+  async function diagnostiquer(serveur, s) {
+    if (etat.cx.diagnostics.has(serveur) || !s) return;
+    etat.cx.diagnostics.add(serveur);
+    journal(`diagnostic de ${serveur} en cours (jusqu'à 30 s)…`);
     try {
-      const r = await fetch(`api/seedlink?diagnostic=1&flux=${encodeURIComponent(ident(etat.suivies[0]))}`), d = await r.json();
-      for (const e of d.essais.slice().reverse()) {
-        journal(`diagnostic ${e.serveur} : ${e.etapes.join(' ; ') || '—'}${e.erreur ? ` ; erreur : ${e.erreur}` : ''}${e.paquet ? ` ; paquet ${e.paquet.id} du ${e.paquet.debut}` : ''}`);
-      }
+      const r = await fetch(`api/seedlink?${new URLSearchParams({ diagnostic: 1, serveur, flux: ident(s) })}`), d = await r.json();
+      for (const e of d.essais) journal(`diagnostic ${e.serveur} : ${e.etapes.join(' ; ') || '—'}${e.erreur ? ` ; erreur : ${e.erreur}` : ''}${e.paquet ? ` ; paquet ${e.paquet.id} du ${e.paquet.debut}` : ''}`);
     } catch (err) { journal(`diagnostic impossible : ${err.message || err}`); }
   }
+  // Stations servies par le service FDSN de leur centre (toutes en mode « Toutes les 20 s », sinon celles qu'aucun
+  // serveur SeedLink ne livre) : une requête dataselect par centre toutes les 20 s.
+  function majFdsn() {
+    const besoin = parFdsn().length > 0;
+    if (besoin && !etat.cx.fdsn) { interrogerFdsn(); etat.cx.fdsn = setInterval(interrogerFdsn, INTERVALLE_FDSN); }
+    else if (!besoin && etat.cx.fdsn) { clearInterval(etat.cx.fdsn); etat.cx.fdsn = 0; }
+  }
   async function interrogerFdsn() {
-    if (!etat.suivies.length || etat.mode !== 'fdsn') return;
-    const fin = Date.now(), debut = reprise(), reseaux = [...new Set(etat.suivies.map(s => s.reseau))], voies = [...new Set(etat.suivies.map(s => s.voie))];
-    badge('Interrogation FDSN…', true);
-    try {
-      const r = await fetch(api('dataselect', { network: reseaux.join(','), station: etat.suivies.map(s => s.station).join(','), channel: voies.join(','), starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }));
-      if (r.status === 204) { etat.cx.etat = 'ouvert'; badge(`Toutes les 20 s · ${etat.suivies.length} stations`); journal('FDSN : pas de nouvelle donnée'); return; }
-      if (!r.ok) throw new Error(r.status);
-      const suivis = new Set(etat.suivies.map(ident)), enr = MiniSeed.lire(await r.arrayBuffer());
-      for (const e of enr) if (suivis.has(e.id)) recevoir(e);
-      journal(`FDSN : ${enr.length} enregistrements, ${new Set(enr.map(e => e.id)).size} voies`);
-      etat.cx.echecs = 0; etat.cx.etat = 'ouvert'; badge(`Toutes les 20 s · ${etat.suivies.length} stations`);
-    } catch (err) {
-      etat.cx.echecs++;
-      journal(`FDSN : échec (${err.message || err})`);
-      if (etat.cx.echecs >= 2 && !etat.voies.size) basculer('demo', 'GEOFON injoignable : mode démonstration (signaux simulés).');
-      else badge('FDSN : nouvel essai…', true);
-    }
+    const liste = parFdsn();
+    if (!liste.length) return;
+    const parCentre = new Map();
+    for (const s of liste) { if (!parCentre.has(s.centre)) parCentre.set(s.centre, []); parCentre.get(s.centre).push(s); }
+    let echec = 0;
+    await Promise.all([...parCentre].map(async ([centre, l]) => {
+      const fin = Date.now(), debut = reprise(l), uniq = f => [...new Set(l.map(f))].join(',');
+      try {
+        const r = await fetch(api('dataselect', { network: uniq(s => s.reseau), station: uniq(s => s.station), channel: uniq(s => s.voie), starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }, centre));
+        if (r.status === 204) return;
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const ids = new Set(l.map(ident)), enr = MiniSeed.lire(await r.arrayBuffer());
+        for (const e of enr) if (ids.has(e.id)) recevoir(e);
+      } catch (err) { echec++; journal(`FDSN ${nomCentre(centre)} : échec (${err.message || err})`); }
+    }));
+    etat.cx.echecsFdsn = echec ? etat.cx.echecsFdsn + 1 : 0;
+    if (etat.mode === 'fdsn' && etat.cx.echecsFdsn >= 2 && !etat.voies.size) basculer('demo', 'Centres de données injoignables : mode démonstration (signaux simulés).');
+    majBadge();
   }
   function basculer(mode, message) {
     if (message) toast(message);
@@ -206,16 +326,17 @@ import Sismo from './sismo/signal.js';
   }
   function changerMode(m) {
     fermer();
-    etat.mode = m; etat.cx.echecs = 0; etat.cx.etat = 'arret';
+    etat.mode = m; etat.cx.echecsFdsn = 0;
+    for (const src of etat.sources.values()) { src.essai = 0; src.depuis = Date.now(); src.recu = false; }
     $$('[data-dr-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.drMode === m)));
     $('#dr-mode-aide').textContent = {
-      seedlink: 'Les paquets SeedLink de GEOFON arrivent par le relais du site dès qu\'ils sont publiés : quelques secondes à une minute de retard selon la station.',
-      fdsn: 'Le site interroge le service FDSN de GEOFON toutes les 20 s : plus robuste qu\'une connexion ouverte, mais une à quelques minutes de retard.',
+      seedlink: 'Chaque station reçoit ses paquets SeedLink par le relais du site, depuis le serveur de son centre ou celui de GEOFON : quelques secondes à une minute de retard. Une station qu\'aucun serveur ne livre passe par le service FDSN de son centre.',
+      fdsn: 'Le site interroge le service FDSN du centre de chaque station toutes les 20 s : plus robuste qu\'une connexion ouverte, mais une à quelques minutes de retard.',
       demo: 'Démonstration : séisme fictif et signaux simulés par le générateur de téléséismes du cours. Aucune donnée réelle n\'est affichée.',
     }[m];
     if (m !== 'demo' && etat.demo) { etat.demo = null; etat.voies.clear(); etat.seismes = []; etat.choisi = null; demarrer(); return; }
-    if (m === 'seedlink') connecterSeedLink();
-    else if (m === 'fdsn') { interrogerFdsn(); etat.cx.minuteur = setInterval(interrogerFdsn, INTERVALLE_FDSN); }
+    if (m === 'seedlink') connecter();
+    else if (m === 'fdsn') { majFdsn(); majBadge(); }
     else preparerDemo();
     majTout();
   }
@@ -223,7 +344,7 @@ import Sismo from './sismo/signal.js';
   // ── Démonstration : séisme fictif, signaux simulés à chaque station ───────────────────────────────────────────
   async function preparerDemo() {
     badge('Préparation de la démonstration…', true);
-    if (!etat.suivies.length || !etat.listeOk) { etat.stations = STATIONS_DEMO; etat.suivies = STATIONS_DEMO.slice(); }
+    if (!etat.suivies.length || !etat.listeOk) { etat.stations = STATIONS_DEMO; etat.suivies = STATIONS_DEMO.slice(); etat.actifs = new Set(['XX']); }
     etat.voies.clear();
     const origine = Date.now() - 4 * 60000;
     const seisme = { id: 'demo', temps: origine, lat: 29.0, lon: 57.0, h: 25, mag: 6.6, typeMag: 'Mw', region: 'séisme fictif (sud de l\'Iran), démonstration', auteur: 'démonstration' };
@@ -243,8 +364,8 @@ import Sismo from './sismo/signal.js';
     }
     etat.seismes = [seisme, ...etat.seismes.filter(e => e.id !== 'demo')];
     etat.choisi = seisme; etat.arrivees.clear();
-    clearInterval(etat.cx.minuteur);
-    etat.cx.minuteur = setInterval(pousserDemo, 1000);
+    clearInterval(etat.cx.demo);
+    etat.cx.demo = setInterval(pousserDemo, 1000);
     pousserDemo();
     badge('Démonstration (signaux simulés)');
     majSeismes(); majArrivees();
@@ -341,8 +462,15 @@ import Sismo from './sismo/signal.js';
       }
       const lat = Direct.latence(mes ? mes.fin : null, Date.now());
       const dist = choisi ? Direct.distanceAzimut(choisi.lat, choisi.lon, s.lat, s.lon).distance : null;
-      texte(ctx, `${s.reseau}.${s.station} ${s.voie}${dist !== null ? ` · Δ ${virg(dist, 1)}°` : ''}`, g.x0 + 4, yc - hR / 2 + 9, COUL.ink, `700 11.5px ${MONO}`);
-      texte(ctx, mes ? `max ${virg(max, max < 1 ? 3 : 1)} µm/s · latence ${Number.isFinite(lat) ? depuisQuand(lat * 1000) : '—'}` : 'en attente de données', g.x1 - 4, yc - hR / 2 + 9, lat > latenceGrise() ? COUL.bad : COUL.muted, `10.5px ${MONO}`, 'right');
+      const nom = `${s.reseau}.${s.station} ${s.voie}${dist !== null ? ` · Δ ${virg(dist, 1)}°` : ''}`;
+      texte(ctx, nom, g.x0 + 4, yc - hR / 2 + 9, COUL.ink, `700 11.5px ${MONO}`);
+      // à droite : maximum, latence et source, raccourcis s'ils empiètent sur le nom (téléphone)
+      const par = etat.mode === 'seedlink' && viaFdsn(s) ? ' · FDSN' : '', la = `latence ${Number.isFinite(lat) ? depuisQuand(lat * 1000) : '—'}${par}`;
+      ctx.font = `700 11.5px ${MONO}`;
+      const place = g.x1 - g.x0 - 18 - ctx.measureText(nom).width;
+      ctx.font = `10.5px ${MONO}`;
+      const droite = (mes ? [`max ${virg(max, max < 1 ? 3 : 1)} µm/s · ${la}`, la, la.replace('latence ', '')] : [`en attente de données${par}`, `en attente${par}`]).find(t => ctx.measureText(t).width <= place) || '';
+      texte(ctx, droite, g.x1 - 4, yc - hR / 2 + 9, lat > latenceGrise(s) ? COUL.bad : COUL.muted, `10.5px ${MONO}`, 'right');
     });
   }
   // Arrivées prévues (ak135) d'un séisme à une station, mises en cache.
@@ -417,10 +545,10 @@ import Sismo from './sismo/signal.js';
     }
     // stations : triangles colorés par l'amplitude (suivies), vides sinon
     const suivies = new Set(etat.suivies.map(ident));
-    for (const s of etat.stations.filter(dansVue)) {
+    for (const s of visibles()) {
       const x = X(s.lon), y = Y(s.lat), suivie = suivies.has(ident(s)), m = etat.mesures.get(ident(s)), lat = Direct.latence(m ? m.fin : null, Date.now());
       ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + 6.5, y + 4.5); ctx.lineTo(x - 6.5, y + 4.5); ctx.closePath();
-      if (suivie) { ctx.fillStyle = m && lat <= latenceGrise() ? couleurAmplitude(m.amp) : '#94a3b8'; ctx.fill(); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1.2; ctx.stroke(); }
+      if (suivie) { ctx.fillStyle = m && lat <= latenceGrise(s) ? couleurAmplitude(m.amp) : '#94a3b8'; ctx.fill(); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1.2; ctx.stroke(); }
       else { ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1.2; ctx.stroke(); }
       if (suivie && m && m.decl.some(td => Date.now() - td < 60000)) { ctx.strokeStyle = COUL.bad; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.stroke(); }
       if (suivie) texte(ctx, s.station, x + 8, y - 6, COUL.ink, `700 10.5px ${MONO}`);
@@ -450,16 +578,66 @@ import Sismo from './sismo/signal.js';
     const lat = etat.suivies.map(s => { const m = etat.mesures.get(ident(s)); return Direct.latence(m ? m.fin : null, Date.now()); }).filter(Number.isFinite).sort((a, b) => a - b);
     const recues = etat.suivies.filter(s => etat.voies.has(ident(s))).length;
     $('#dr-afficheurs').innerHTML = [
-      afficheur('Stations reçues', `${recues} / ${etat.suivies.length}`, etat.mode === 'demo' ? 'signaux simulés' : etat.listeOk ? `${etat.stations.length} stations GEOFON dans la zone` : 'liste de GEOFON inaccessible'),
+      afficheur('Stations reçues', `${recues} / ${etat.suivies.length}`, etat.mode === 'demo' ? 'signaux simulés' : etat.listeOk ? `${visibles().length} sur la carte, ${etat.actifs ? etat.actifs.size : 1} réseau${(etat.actifs ? etat.actifs.size : 1) > 1 ? 'x' : ''}` : 'listes des centres inaccessibles'),
       afficheur('Latence médiane', lat.length ? depuisQuand(lat[Math.floor(lat.length / 2)] * 1000) : '—', 'depuis le dernier échantillon'),
       afficheur('Paquets reçus', String(etat.cx.paquets), etat.cx.dernier ? `dernier il y a ${depuisQuand(Date.now() - etat.cx.dernier)}` : '&nbsp;'),
       afficheur('Heure UTC', hms(Date.now()), etat.pause ? 'traces figées (pause)' : 'traces en direct'),
     ].join('');
   }
+  // Carte « Réseaux » : un réseau par ligne (code, description, stations sur la carte, pays principaux, centre), case à
+  // cocher ; en tête, les stations en libre accès trouvées en Tunisie ; en pied, l'état de chaque centre interrogé.
+  function majReseaux() {
+    const div = $('#dr-reseaux');
+    if (!div) return;
+    const enCours = Centres.LISTE.some(c => !etat.centres.has(c.id) || etat.centres.get(c.id).etat === 'attente');
+    const liste = [...etat.reseaux.values()].map(r => ({ ...r, vues: r.stations.filter(dansVue) })).filter(r => r.vues.length)
+      .sort((a, b) => (actif(b.code) - actif(a.code)) || (Centres.temporaire(a.code) - Centres.temporaire(b.code)) || (b.vues.length - a.vues.length) || a.code.localeCompare(b.code));
+    const paysDe = r => {
+      const n = new Map();
+      for (const s of r.vues) { const k = s.pays ? s.pays.nom : 'en mer ou petite île'; n.set(k, (n.get(k) || 0) + 1); }
+      return [...n].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k).join(', ') + (n.size > 3 ? '…' : '');
+    };
+    div.innerHTML = liste.map(r => `<label class="case"><input type="checkbox" data-dr-reseau="${echapper(r.code)}"${actif(r.code) ? ' checked' : ''}><span><b>${echapper(r.code)}</b> ${echapper(r.description || 'sans description')}${Centres.temporaire(r.code) ? ' <em>(temporaire)</em>' : ''}<small>${r.vues.length} station${r.vues.length > 1 ? 's' : ''} · ${echapper(paysDe(r))} · ${echapper(nomCentre(r.centre))}</small></span></label>`).join('')
+      || `<p class="aide">${enCours ? 'Recherche des stations…' : 'Aucune station trouvée.'}</p>`;
+    div.querySelectorAll('[data-dr-reseau]').forEach(cb => cb.addEventListener('change', () => basculerReseau(cb.dataset.drReseau, cb.checked)));
+    // Tunisie
+    const tn = etat.stations.filter(s => s.pays && s.pays.code === 'TN'), pl = n => (n > 1 ? 's' : '');
+    let t;
+    if (tn.length) t = `${tn.length} station${pl(tn.length)} en libre accès (${[...new Set(tn.map(s => s.reseau))].join(', ')}) : ${tn.map(s => `${s.reseau}.${s.station}`).join(', ')}.`;
+    else if (enCours) t = 'recherche en cours…';
+    else {
+      const d = s => Direct.distanceAzimut(36.8, 10.2, s.lat, s.lon).km, proches = etat.stations.filter(s => !Centres.temporaire(s.reseau)).sort((a, b) => d(a) - d(b)).slice(0, 3);
+      t = `aucune station en libre accès dans les centres interrogés : le réseau national ne diffuse pas ses données par les services FDSN.${proches.length ? ` Les plus proches de Tunis : ${proches.map(s => `${s.reseau}.${s.station} (${s.pays ? s.pays.nom : 'en mer'}, ${Math.round(d(s))} km)`).join(', ')}.` : ''}`;
+    }
+    $('#dr-tunisie').innerHTML = `<b>Tunisie :</b> ${echapper(t)}`;
+    $('#dr-centres').innerHTML = Centres.LISTE.map(c => {
+      const i = etat.centres.get(c.id) || { etat: 'attente' };
+      return `<li>${echapper(c.nom)} (${echapper(c.organisme)}) : ${i.etat === 'ok' ? `${i.stations} station${pl(i.stations)}` : i.etat === 'vide' ? 'aucune station dans la zone' : i.etat === 'echec' ? `inaccessible (${echapper(i.erreur)})` : 'en cours…'}</li>`;
+    }).join('');
+  }
+  // Un réseau coché paraît sur la carte et ses deux stations les plus utiles rejoignent les traces (s'il reste de la
+  // place) ; décoché, ses stations quittent la carte et les traces.
+  function basculerReseau(code, on) {
+    if (etat.actifs === null) etat.actifs = new Set(['GE']);
+    if (on) etat.actifs.add(code); else etat.actifs.delete(code);
+    memoriserActifs();
+    if (etat.mode !== 'demo') {
+      if (!on) { for (const s of etat.suivies) if (s.reseau === code) etat.sources.delete(ident(s)); etat.suivies = etat.suivies.filter(s => s.reseau !== code); }
+      else {
+        const place = MAX_SUIVIES - etat.suivies.length, r = etat.reseaux.get(code);
+        const ajout = r && place > 0 ? suiviesParDefaut(r.stations.filter(dansVue), Math.min(2, place), etat.suivies) : [];
+        etat.suivies = [...etat.suivies, ...ajout].sort((a, b) => a.lon - b.lon);
+        if (ajout.length) toast(`${ajout.map(s => `${s.reseau}.${s.station}`).join(', ')} ajoutée${ajout.length > 1 ? 's' : ''} aux traces`);
+        else if (place <= 0) toast(`${MAX_SUIVIES} stations suivies au plus : retirez-en une sur la carte pour suivre ce réseau.`);
+      }
+      if (etat.mode === 'seedlink') connecter(); else if (etat.mode === 'fdsn') { majFdsn(); interrogerFdsn(); }
+    }
+    majReseaux(); majArrivees(); majTout();
+  }
   function majSeismes() {
     const t = Date.now();
     $('#dr-seismes').innerHTML = `<thead><tr><th>Heure (UTC)</th><th>M</th><th>Région</th><th>h</th></tr></thead><tbody>${etat.seismes.slice(0, 60).map((e, i) =>
-      `<tr class="${etat.choisi && e.id === etat.choisi.id ? 'vu' : ''}" data-dr-seisme="${i}" tabindex="0"><td class="n">${new Date(e.temps).toISOString().slice(5, 16).replace('T', ' ')}<br><small style="color:var(--muted)">il y a ${depuisQuand(t - e.temps)}</small></td><td class="n">${virg(e.mag, 1)}</td><td>${e.region}</td><td class="n">${virg(e.h, 0)}</td></tr>`).join('')}</tbody>`;
+      `<tr class="${etat.choisi && e.id === etat.choisi.id ? 'vu' : ''}" data-dr-seisme="${i}" tabindex="0"><td class="n">${new Date(e.temps).toISOString().slice(5, 16).replace('T', ' ')}<br><small style="color:var(--muted)">il y a ${depuisQuand(t - e.temps)}</small></td><td class="n">${virg(e.mag, 1)}</td><td>${echapper(e.region)}</td><td class="n">${virg(e.h, 0)}</td></tr>`).join('')}</tbody>`;
     $$('[data-dr-seisme]').forEach(tr => {
       const choisir = () => { etat.choisi = etat.seismes[+tr.dataset.drSeisme]; majSeismes(); majArrivees(); dessinerTout(); };
       tr.addEventListener('click', choisir);
@@ -473,9 +651,9 @@ import Sismo from './sismo/signal.js';
       const { distance, azimut } = Direct.distanceAzimut(e.lat, e.lon, s.lat, s.lon), a = arriveesStation(s, e);
       const p = a.find(x => /^(P|PKIKP|PKP)$/.test(x.phase)), sS = a.find(x => x.phase === 'S'), lr = a.find(x => x.phase === 'LR');
       const h = x => (x ? hms(e.temps + x.temps * 1000) : '—');
-      return `<tr><td>${s.station}</td><td class="n">${virg(distance, 1)}°</td><td class="n">${Math.round(azimut)}°</td><td class="n">${h(p)}${p && p.phase !== 'P' ? ` <small>${p.phase}</small>` : ''}</td><td class="n">${h(sS)}</td><td class="n">${h(lr)}</td></tr>`;
+      return `<tr><td>${echapper(s.station)}</td><td class="n">${virg(distance, 1)}°</td><td class="n">${Math.round(azimut)}°</td><td class="n">${h(p)}${p && p.phase !== 'P' ? ` <small>${p.phase}</small>` : ''}</td><td class="n">${h(sS)}</td><td class="n">${h(lr)}</td></tr>`;
     }).join('');
-    $('#dr-arrivees').innerHTML = `<p class="aide" style="margin:0 0 6px"><b>M ${virg(e.mag, 1)} ${e.typeMag}</b>, ${e.region}, ${hms(e.temps)} UTC, h = ${virg(e.h, 0)} km${e.id === 'demo' ? ' (fictif)' : ''}.</p>
+    $('#dr-arrivees').innerHTML = `<p class="aide" style="margin:0 0 6px"><b>M ${virg(e.mag, 1)} ${echapper(e.typeMag)}</b>, ${echapper(e.region)}, ${hms(e.temps)} UTC, h = ${virg(e.h, 0)} km${e.id === 'demo' ? ' (fictif)' : ''}.</p>
       <div class="table-defile"><table class="resultats"><thead><tr><th>Station</th><th>Δ</th><th>Az.</th><th>P</th><th>S</th><th>LR</th></tr></thead><tbody>${lignes}</tbody></table></div>
       <p class="aide">Heures UTC prévues par le modèle ak135 (P : première arrivée, PKIKP ou PKP dans la zone d'ombre ; LR : ondes de Rayleigh, période 20 s). Az. : azimut de la station vu du séisme.</p>`;
   }
@@ -487,15 +665,15 @@ import Sismo from './sismo/signal.js';
     if (!geo) return;
     const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
     const proche = (liste, f) => liste.reduce((m, o) => { const d = Math.hypot(geo.X(f(o).lon) - x, geo.Y(f(o).lat) - y); return d < m.d ? { o, d } : m; }, { o: null, d: Infinity });
-    const st = proche(etat.stations.filter(dansVue), s => s);
+    const st = proche(visibles(), s => s);
     if (st.o && st.d < 14 && etat.mode !== 'demo') {
       const id = ident(st.o), i = etat.suivies.findIndex(s => ident(s) === id);
-      if (i >= 0) etat.suivies.splice(i, 1);
+      if (i >= 0) { etat.suivies.splice(i, 1); etat.sources.delete(id); }
       else if (etat.suivies.length >= MAX_SUIVIES) { toast(`${MAX_SUIVIES} stations au plus : retirez-en une d'abord.`); return; }
       else etat.suivies.push(st.o);
       etat.suivies.sort((a, b) => a.lon - b.lon);
-      toast(`${st.o.reseau}.${st.o.station}${st.o.site ? ` (${st.o.site})` : ''} ${i >= 0 ? 'retirée' : 'ajoutée'}`);
-      if (etat.mode === 'seedlink') connecterSeedLink(); else if (etat.mode === 'fdsn') interrogerFdsn();
+      toast(`${st.o.reseau}.${st.o.station} (${st.o.pays ? st.o.pays.nom : 'en mer'}) ${i >= 0 ? 'retirée' : 'ajoutée'}`);
+      if (etat.mode === 'seedlink') connecter(); else if (etat.mode === 'fdsn') { majFdsn(); interrogerFdsn(); }
       majArrivees(); majTout();
       return;
     }
@@ -507,8 +685,8 @@ import Sismo from './sismo/signal.js';
     $('#dr-carte').addEventListener('mousemove', ev => {
       if (!geo) return;
       const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
-      const s = etat.stations.find(o => Math.hypot(geo.X(o.lon) - x, geo.Y(o.lat) - y) < 10);
-      ev.currentTarget.title = s ? `${s.reseau}.${s.station}${s.site ? ` — ${s.site}` : ''} (${s.voie}, ${s.cadence} Hz)` : '';
+      const s = visibles().find(o => Math.hypot(geo.X(o.lon) - x, geo.Y(o.lat) - y) < 10);
+      ev.currentTarget.title = s ? `${s.reseau}.${s.station} (${s.voie}, ${s.cadence} Hz) · ${s.pays ? s.pays.nom : 'en mer'} · ${nomCentre(s.centre)}` : '';
     });
     $$('[data-dr-fenetre]').forEach(b => b.addEventListener('click', () => { etat.fenetre = +b.dataset.drFenetre; $$('[data-dr-fenetre]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); dessinerTout(); }));
     $('#dr-filtre').addEventListener('change', e => { etat.filtre = e.target.value; dessinerTout(); });
@@ -526,13 +704,21 @@ import Sismo from './sismo/signal.js';
   }
 
   // ── Démarrage ─────────────────────────────────────────────────────────────────────────────────────────────────
+  // Pays (pour situer les stations), puis les stations de tous les centres en parallèle : GEOFON d'abord, les autres
+  // pendant 12 s au plus (un centre plus lent ajoute ses réseaux à la liste quand il répond).
   async function demarrer() {
     badge('Chargement des stations…', true);
-    const liste = await chargerStations();
-    etat.suivies = liste ? suiviesParDefaut(etat.stations.filter(dansVue)) : [];
-    journal(liste ? `GEOFON : ${etat.stations.length} stations dans la zone` : 'GEOFON : liste des stations inaccessible');
+    if (!etat.pays.length) { try { etat.pays = (await (await fetch('data/pays-mediterranee.json')).json()).pays; } catch { /* stations sans pays */ } }
+    etat.stations = []; etat.reseaux.clear(); etat.listeOk = false;
+    const promesses = Centres.LISTE.map(c => chargerCentre(c));
+    await promesses[0];
+    await Promise.race([Promise.allSettled(promesses), delai(12000)]);
     chargerSeismes();
-    if (!liste) { changerMode('demo'); toast('Liste des stations de GEOFON inaccessible : mode démonstration (signaux simulés).'); return; }
+    if (!etat.listeOk) { changerMode('demo'); toast('Listes des stations inaccessibles : mode démonstration (signaux simulés).'); return; }
+    if (etat.actifs === null || (etat.actifs.size === 1 && etat.actifs.has('XX'))) etat.actifs = actifsParDefaut();
+    etat.suivies = suiviesParDefaut(visibles());
+    journal(`${etat.stations.length} stations de ${etat.reseaux.size} réseaux ; ${etat.suivies.length} suivies`);
+    majReseaux();
     changerMode(etat.mode === 'demo' ? 'seedlink' : etat.mode);
   }
   lireCouleurs();
@@ -542,5 +728,6 @@ import Sismo from './sismo/signal.js';
     + '<span><i style="background:#94a3b8"></i>pas de donnée</span><span><i style="background:#dc2626;border-radius:50%"></i>séisme de moins d\'une heure</span>';
   demarrer();
   setInterval(() => { if (!document.hidden) majTout(); }, 1000);
+  setInterval(surveiller, 5000);
   setInterval(() => { if (etat.mode !== 'demo' && !document.hidden) chargerSeismes(); }, 120000);
 })();

@@ -1,7 +1,7 @@
-// src/sismo/fdsn.js — services web FDSN (station, dataselect, event) d'un centre de données (GEOFON) : validation des
-// requêtes transmises par le relais (functions/api/geofon.js : paramètres autorisés, durée et nombre de stations
-// bornés), lecture des réponses au format texte (stations et voies avec leur sensibilité, séismes), choix d'une voie
-// verticale par station. Solveurs purs, sans accès au DOM ni au réseau.
+// src/sismo/fdsn.js — services web FDSN (station, dataselect, event) des centres de données (src/sismo/centres.js) :
+// validation des requêtes transmises par le relais (functions/api/fdsn.js : paramètres autorisés, durée et nombre de
+// stations bornés), lecture des réponses au format texte (stations et voies avec leur sensibilité, séismes), choix d'une voie
+// verticale par station, réseaux. Solveurs purs, sans accès au DOM ni au réseau.
 const Fdsn = (() => {
   'use strict';
   const CHEMINS = { station: '/fdsnws/station/1/query', dataselect: '/fdsnws/dataselect/1/query', event: '/fdsnws/event/1/query' };
@@ -46,7 +46,7 @@ const Fdsn = (() => {
   // Voies (level=channel) : identifiant, position, capteur, sensibilité (coups par unité, à la fréquence donnée), cadence.
   function voies(texte) {
     return tableau(texte).map(o => ({
-      reseau: o.network, station: o.station, emplacement: o.location, voie: o.channel,
+      reseau: o.network, station: o.station, emplacement: o.location === '--' ? '' : o.location, voie: o.channel,
       lat: +o.latitude, lon: +o.longitude, altitude: +o.elevation, capteur: o.sensordescription || '',
       sensibilite: +o.scale, frequenceSensibilite: +o.scalefreq, unite: o.scaleunits || '', cadence: +o.samplerate,
       debut: iso(o.starttime), fin: o.endtime ? iso(o.endtime) : null,
@@ -56,6 +56,11 @@ const Fdsn = (() => {
   function stations(texte) {
     return tableau(texte).map(o => ({ reseau: o.network, station: o.station, lat: +o.latitude, lon: +o.longitude, altitude: +o.elevation, site: o.sitename || '' }))
       .filter(s => s.reseau && s.station && Number.isFinite(s.lat));
+  }
+  // Réseaux (level=network) : code, description, années de service, nombre de stations.
+  function reseaux(texte) {
+    return tableau(texte).map(o => ({ reseau: o.network, description: o.description || '', debut: iso(o.starttime), fin: o.endtime ? iso(o.endtime) : null, total: +o.totalstations || 0 }))
+      .filter(r => r.reseau);
   }
   // Une voie verticale par station, ouverte à l'instant donné : large bande à 20 Hz (BHZ) de préférence, puis HHZ ;
   // emplacement vide, puis « 00 » ; sensibilité en m/s connue.
@@ -80,6 +85,6 @@ const Fdsn = (() => {
   // Heure au format des requêtes FDSN (UTC, à la seconde, sans « Z »).
   const heure = ms => new Date(Math.floor(ms / 1000) * 1000).toISOString().slice(0, 19);
 
-  return { CHEMINS, PERMIS, DUREE_MAX, STATIONS_MAX, requete, tableau, voies, stations, choisirVoies, evenements, heure };
+  return { CHEMINS, PERMIS, DUREE_MAX, STATIONS_MAX, requete, tableau, voies, stations, reseaux, choisirVoies, evenements, heure };
 })();
 export default Fdsn;

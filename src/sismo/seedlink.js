@@ -111,6 +111,14 @@ const SeedLink = (() => {
     };
   }
 
+  // Identifiant « RÉSEAU.STATION.EMPLACEMENT.VOIE » d'un enregistrement miniSEED, lu dans l'en-tête fixe (octets 8 à 19)
+  // sans décoder les données : le relais ne transmet que les voies demandées.
+  function identifiant(enr) {
+    if (!enr || enr.length < 20) return null;
+    const t = (a, n) => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(enr[a + i]); return s.trim(); };
+    return `${t(18, 2)}.${t(8, 5)}.${t(13, 2)}.${t(15, 3)}`;
+  }
+
   // Paquet SeedLink à partir d'un enregistrement (serveur d'essai et tests).
   function paquet(sequence, enregistrement) {
     const tete = `SL${sequence.toString(16).toUpperCase().padStart(6, '0')}`, out = new Uint8Array(8 + enregistrement.length);
@@ -119,6 +127,6 @@ const SeedLink = (() => {
     return out;
   }
 
-  return { MAX_FLUX, RETOUR_MAX, lireFlux, versFlux, lireDepuis, temps, commandes, lecteurLignes, decoupeur, paquet };
+  return { MAX_FLUX, RETOUR_MAX, lireFlux, versFlux, lireDepuis, temps, commandes, lecteurLignes, decoupeur, identifiant, paquet };
 })();
 export default SeedLink;

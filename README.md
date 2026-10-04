@@ -131,10 +131,14 @@ src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide,
                         du foyer (P, pP, sP), coupe d'une zone de subduction, en SVG
 src/lecteur-station.js  banc « une station » (séisme local ou lointain)
 src/propagation-anim.js animation en boucle de la propagation : coupe du globe (téléséisme) ou de la croûte (séisme local)
-direct.html             stations GEOFON de la Méditerranée en direct (carte, traces, séismes, arrivées prévues)
-src/direct-page.js      page « En direct » : relais SeedLink, sinon FDSN toutes les 20 s, sinon démonstration simulée
-functions/api/          fonctions Cloudflare Pages : seedlink.js (relais SeedLink → WebSocket), geofon.js (relais FDSN)
+direct.html             stations sismologiques de la Méditerranée en direct, par réseau (carte, traces, séismes, arrivées)
+src/direct-page.js      page « En direct » : par station, relais SeedLink de son centre ou de GEOFON, sinon FDSN toutes
+                        les 20 s ; sans réseau, démonstration simulée
+src/sismo/centres.js    centres de données (FDSN, SeedLink) : liste blanche des relais, serveurs à essayer par station
+functions/api/          fonctions Cloudflare Pages : seedlink.js (relais SeedLink → WebSocket, sonde, diagnostic),
+                        fdsn.js (relais FDSN)
 tools/carte/cotes.py    côtes et frontières Natural Earth découpées à la Méditerranée (data/cotes-mediterranee.json)
+tools/carte/pays.py     pays Natural Earth découpés à la Méditerranée (data/pays-mediterranee.json)
 tools/direct/           serveurs SeedLink et FDSN d'essai, pour essayer les fonctions sans réseau (wrangler pages dev)
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
@@ -157,7 +161,7 @@ src/onglets.js          onglets et fil du parcours (partie, banc précédent et 
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct (192 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays (198 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
