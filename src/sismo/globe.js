@@ -55,7 +55,7 @@ const Globe = (() => {
 
   // Traversée descendante de rHaut à rBas, ou jusqu'au point de retour : distance (rad), temps (s), point de retour.
   // rHaut et rBas tombent toujours sur des nœuds (surface, discontinuités, foyer). Option `points` : renvoie aussi
-  // les points (r, Δ cumulée) de chaque frontière de sous-couche, pour les tracés.
+  // les points (r, Δ cumulée, temps cumulé) de chaque frontière de sous-couche, pour les tracés et les fronts d'onde.
   function traverser(p, onde, rHaut, rBas, couches, points = null) {
     let dist = 0, temps = 0;
     const cle = onde === 'S' ? 'S' : 'P';
@@ -75,7 +75,7 @@ const Globe = (() => {
         dist += (Math.acos(Math.min(1, p / eh)) - Math.acos(Math.min(1, p / eBas))) / k;
         temps += (Math.sqrt(Math.max(eh * eh - p * p, 0)) - Math.sqrt(Math.max(eBas * eBas - p * p, 0))) / k;
       }
-      if (points) points.push([tourne ? rTour : c.rb, dist]);
+      if (points) points.push([tourne ? rTour : c.rb, dist, temps]);
       if (tourne) return { dist, temps, tourne: true, rTour };
     }
     return { dist, temps, tourne: false };
@@ -99,7 +99,7 @@ const Globe = (() => {
 
   // Distance (rad) et temps (s) d'une phase pour le paramètre p, foyer à h km ; null si p n'appartient pas à la phase.
   function evaluer(phase, p, h, avecPoints = false) {
-    let segs = PHASES[phase], rs = R - h, dist = 0, temps = 0, dDesc = 0, dMont = 0;
+    let segs = PHASES[phase], rs = R - h, dist = 0, temps = 0, dDesc = 0, dMont = 0, tDesc = 0, tMont = 0;
     const couches = sousCouches(h), descente = avecPoints ? [] : null, montee = avecPoints ? [] : null;
     if (segs[0].montee) {
       // phase de profondeur : montée du foyer à la surface (même traversée, parcourue à l'envers), sans retour en
@@ -107,8 +107,8 @@ const Globe = (() => {
       const pu = avecPoints ? [] : null, u = traverser(p, segs[0].onde, R, rs, couches, pu);
       if (u.impossible || u.tourne) return null;
       dist = u.dist; temps = u.temps; dDesc = u.dist;
-      if (avecPoints) { [...pu].reverse().forEach(([r, x]) => descente.push([r, u.dist - x])); descente.push([R, u.dist]); }
-      segs = segs.slice(1); rs = R;
+      if (avecPoints) { [...pu].reverse().forEach(([r, x, t]) => descente.push([r, u.dist - x, u.temps - t])); descente.push([R, u.dist, u.temps]); }
+      segs = segs.slice(1); rs = R; tDesc = u.temps;
     }
     let haut = rs;
     for (let i = 0; i < segs.length; i++) {
@@ -122,8 +122,8 @@ const Globe = (() => {
       if (d.tourne && d.rTour >= haut - 1e-9) return null;
       dist += d.dist + m.dist; temps += d.temps + m.temps; haut = bas;
       // points cumulés depuis le foyer (descente) et depuis la station (montée)
-      if (avecPoints) { pd.forEach(([r, x]) => descente.push([r, dDesc + x])); pm.forEach(([r, x]) => montee.push([r, dMont + x])); }
-      dDesc += d.dist; dMont += m.dist;
+      if (avecPoints) { pd.forEach(([r, x, t]) => descente.push([r, dDesc + x, tDesc + t])); pm.forEach(([r, x, t]) => montee.push([r, dMont + x, tMont + t])); }
+      dDesc += d.dist; dMont += m.dist; tDesc += d.temps; tMont += m.temps;
     }
     return avecPoints ? { dist, temps, descente, montee } : { dist, temps };
   }
@@ -190,16 +190,27 @@ const Globe = (() => {
     return out.filter((x, i) => !i || Math.abs(x.temps - out[i - 1].temps) > 1e-6);
   }
 
-  // Tracé d'un rai : points [rayon (km), angle (rad)] du foyer (angle 0) jusqu'à la station.
+  // Tracé d'un rai : points [rayon (km), angle (rad), temps depuis l'origine (s)] du foyer (angle 0, temps 0) jusqu'à
+  // la station (angle Δ, temps de trajet de la phase).
   function trajet(phase, h, p) {
     const e = evaluer(phase, p, h, true);
     if (!e) return null;
-    const desc = [[R - h, 0], ...e.descente];
+    const desc = [[R - h, 0, 0], ...e.descente];
     // montée : points comptés depuis la station, parcourus à l'envers à partir du point bas
     const mont = e.montee, totalMontee = mont.length ? mont[mont.length - 1][1] : 0;
     const bas = desc[desc.length - 1][1];
-    const up = [...mont].reverse().map(([r, d]) => [r, bas + totalMontee - d]).concat([[R, bas + totalMontee]]);
+    const up = [...mont].reverse().map(([r, d, t]) => [r, bas + totalMontee - d, e.temps - t]).concat([[R, bas + totalMontee, e.temps]]);
     return [...desc, ...up];
+  }
+  // Position sur un rai (Globe.trajet) au temps t depuis l'origine : [rayon, angle], interpolée entre deux points ;
+  // null avant l'origine ou après l'arrivée.
+  function position(points, t) {
+    const n = points.length;
+    if (t < 0 || t > points[n - 1][2]) return null;
+    let a = 0, b = n - 1;
+    while (b - a > 1) { const m = (a + b) >> 1; if (points[m][2] <= t) a = m; else b = m; }
+    const [ra, xa, ta] = points[a], [rb, xb, tb] = points[b], k = tb > ta ? (t - ta) / (tb - ta) : 0;
+    return [ra + k * (rb - ra), xa + k * (xb - xa)];
   }
 
   // Retard d'une phase de profondeur (pP, sP) sur P, premières arrivées, à la distance Δ (40° à 95°), foyer à h km.
@@ -216,6 +227,6 @@ const Globe = (() => {
     return (a + b) / 2;
   }
 
-  return { R, RAYONS, PHASES, sousCouches, traverser, evaluer, branche, arrivees, trajet, retard, profondeur, modele: AK135 };
+  return { R, RAYONS, PHASES, sousCouches, traverser, evaluer, branche, arrivees, trajet, position, retard, profondeur, modele: AK135 };
 })();
 export default Globe;

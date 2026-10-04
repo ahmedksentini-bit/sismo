@@ -181,3 +181,20 @@ la virgule décimale.
     legende }` de `ui.noter`) ; ils restent lisibles dans les cas limites (station sur l'épicentre, tenseur isotrope, pas de
     Pn…), chaque figure sert à un calculateur et ce qu'elle chiffre est ce que calcule la note (testé). Une faille
     quelconque se dessine dans son repère (trace fixe, azimut sur une rose à part), jamais en projection géographique.
+32. **Téléséismes** (`src/sismo/teleseisme.js`, banc « station », type « Lointain ») : phases ak135 de Globe (P, pP, sP,
+    PcP, PKP, PKiKP, PKIKP, S, ScS, SKS) ; amplitudes de la théorie des rais : double couple tiré de la graine
+    (`rayonnementP`, `rayonnementS` au signe d'Aki et Richards, éq. 4.29, opposé au `farfield 'S'` d'ObsPy), expansion
+    géométrique tirée de dp/dΔ (bornée aux caustiques), t*, coefficients de réflexion et de transmission d'ordre de grandeur ;
+    Brune à Δσ = 3 MPa ; codas 2 s (P) et 4 s (S) après l'onde directe, pour que le premier mouvement reste lisible. 20 Hz
+    (voies BH) ; la vitesse est l'intégrale causale (niveau d'avant P retranché). Ondes de surface c(T) = c0 + a·ln T,
+    Q = 290, calées (`CALAGE`) pour que la Ms mesurée sans bruit (déplacement vertical, Butterworth d'ordre 4 de 18 à 22 s,
+    IASPEI 2013) soit stable de 20° à 160° et proche de Mw avant la saturation (testé) : à recaler après tout changement de
+    la source, des ondes de surface ou du filtre. Lectures : Δ par S − P dans les rais ak135 (foyer supposé à 33 km tant que
+    pP n'est pas pointée, faux de plusieurs degrés pour un foyer profond), h par pP − P (`Globe.profondeur`, 40° à 95°),
+    t0 = tP − T_P. La vérité des exercices est le générateur (Δ, h, Ms mesurée sans bruit).
+33. **Propagation** (`src/sismo/propagation.js`, animation `src/propagation-anim.js`) : un front d'onde est la position au
+    temps t (`Globe.position` sur `Globe.trajet`, qui porte le temps, vérifiés contre `get_ray_paths` de TauP,
+    `tests/references/trajets.json`) d'un faisceau de rais resserré aux changements de phase ; transmis (P, PKP, PKIKP ; S,
+    SKS : jamais d'onde S dans le noyau), réfléchis sous la surface (pP, sS, trait fin) ou sur le noyau (PcP, ScS, tirets) ;
+    le front rejoint la surface par interpolation des arrivées. Séisme local : coupe de la croûte du générateur (rais droits,
+    Snell au Moho, onde conique). En mode Exercice, l'animation reste masquée jusqu'à « Vérifier ».

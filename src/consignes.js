@@ -4,16 +4,16 @@
 // profils cités sont ceux de labo.html et des bancs (testé).
 const CONSIGNES = {
   station: {
-    objectif: "Lire un sismogramme à trois composantes : pointer les ondes P et S, en déduire la distance et l'heure d'origine, mesurer la magnitude locale et la direction de la source.",
+    objectif: "Lire un sismogramme à trois composantes, d'un séisme local puis lointain : pointer les ondes P et S (et pP), en déduire la distance, l'heure d'origine et la profondeur, mesurer la magnitude (ML ou Ms) et la direction de la source, et suivre la propagation des ondes du foyer à la station.",
     etapes: [
-      "Gardez le séisme proposé (Mw 3,8 à 85 km, foyer à 10 km) et décochez « Phases théoriques » pour pointer sans aide.",
-      "Choisissez le filtre 1 – 10 Hz. Avec « Pointer P », cliquez le début du premier mouvement net sur la verticale (double-clic pour zoomer), puis, avec « Pointer S », la reprise d'amplitude sur une horizontale.",
-      "Relevez tS − tP, la distance R ≈ 8,4 × (tS − tP) et l'heure d'origine t0 = tP − R/Vp ; vérifiez-les sur les afficheurs.",
-      "Avec « Mesurer A » (le lecteur passe en Wood-Anderson), cliquez le plus grand pic d'une horizontale : notez A et ML, et comparez ML à Mw.",
-      "Lisez l'hodogramme : direction de la source à 180° près, puis le signe de la verticale pour lever l'ambiguïté. Recommencez à 30 km puis à 300 km : au-delà de 140 km, la première P devient Pn.",
-      "Passez en mode Exercice, lisez un séisme inconnu, puis cliquez « Vérifier ».",
+      "Gardez le séisme local proposé (Mw 3,8 à 85 km, foyer à 10 km) et décochez « Phases théoriques » pour pointer sans aide. Choisissez le filtre 1 – 10 Hz ; avec « Pointer P », cliquez le début du premier mouvement net sur la verticale (double-clic pour zoomer), puis, avec « Pointer S », la reprise d'amplitude sur une horizontale.",
+      "Relevez tS − tP, la distance R ≈ 8,4 × (tS − tP) et l'heure d'origine t0 = tP − R/Vp. Avec « Mesurer A » (le lecteur passe en Wood-Anderson), cliquez le plus grand pic d'une horizontale : notez A et ML, et comparez ML à Mw.",
+      "Lisez l'hodogramme : direction de la source à 180° près, puis le signe de la verticale pour lever l'ambiguïté. Suivez la carte « Propagation du séisme » à 30 km puis à 300 km : où l'onde conique Pn dépasse-t-elle Pg ?",
+      "Choisissez « Lointain (téléséisme) » (Mw 6,8 à 62°, foyer à 35 km). Filtrez 0,5 – 2 Hz, pointez P, S puis pP ; relevez la distance Δ lue dans les tables ak135, l'heure d'origine et la profondeur. Avec « Mesurer A » sur l'onde de Rayleigh (Z, 18 – 22 s), notez A, T et Ms.",
+      "Dans la coupe du globe, suivez les fronts P et S, puis passez le foyer à 300 km (que deviennent pP et les ondes de surface ?) et la distance à 120° (zone d'ombre : seules les phases du noyau arrivent).",
+      "Passez en mode Exercice, pour un séisme local puis lointain : lisez le séisme inconnu, puis cliquez « Vérifier ».",
     ],
-    rendre: "tP, tS, R, t0, A et ML, la direction de la source et sa polarité, avec le score de l'exercice.",
+    rendre: "pour un séisme local et un lointain : tP, tS, la distance, t0, l'amplitude et la magnitude (ML ou Ms), la profondeur par pP − P pour le lointain, la direction de la source et sa polarité, avec les scores des exercices.",
   },
   reseau: {
     objectif: "Localiser un séisme avec quatre stations : cercles de distance, diagramme de Wadati, recherche sur grille, et juger la qualité de la localisation.",

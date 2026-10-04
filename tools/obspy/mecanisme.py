@@ -3,8 +3,9 @@
 Lit tests/references/modele_mecanisme.json (exporter-mecanisme.mjs) et écrit tests/references/mecanisme.json :
 pour chaque mécanisme, le plan auxiliaire (aux_plane), les deux plans nodaux et les axes P, T, N retrouvés à
 partir du tenseur des moments du site (mt2plane, mt2axes ; NED converti en USE : Mrr = Mzz, Mθθ = Mxx,
-Mφφ = Myy, Mrθ = Mxz, Mrφ = −Myz, Mθφ = −Mxy) et le rayonnement P en champ lointain (farfield, composante
-radiale) pour chaque direction de rai.
+Mφφ = Myy, Mrθ = Mxz, Mrφ = −Myz, Mθφ = −Mxy), le rayonnement P en champ lointain (farfield, composante
+radiale) et le vecteur du rayonnement S (farfield 'S', NED ; ObsPy omet le signe moins d'Aki et Richards, éq. 4.29)
+pour chaque direction de rai.
 """
 import json
 import pathlib
@@ -29,12 +30,14 @@ def main():
         ned = [M[0][0], M[1][1], M[2][2], M[0][1], M[0][2], M[1][2]]
         u = farfield(ned, pts, 'P')
         radial = (u * pts).sum(axis=0)
+        us = farfield(ned, pts, 'S')
         sortie['mecanismes'].append({
             'azimut': m['azimut'], 'pendage': m['pendage'], 'glissement': m['glissement'],
             'auxiliaire': [float(x) for x in aux],
             'plan1': [float(plans.strike), float(plans.dip), float(plans.rake)],
             'axes': {nom: {'azimut': float(a.strike), 'plongement': float(a.dip), 'valeur': float(a.val)} for nom, a in (('T', t), ('N', n), ('P', p))},
             'rayonnement': [float(x) for x in radial],
+            'rayonnementS': [[float(x) for x in col] for col in us.T],
         })
     (REF / 'mecanisme.json').write_text(json.dumps(sortie), encoding='utf-8')
     print(f"écrit tests/references/mecanisme.json ({len(sortie['mecanismes'])} mécanismes)")

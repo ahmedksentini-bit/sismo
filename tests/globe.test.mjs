@@ -50,9 +50,12 @@ test('le globe : rayons des discontinuités, zone d\'ombre de P, S arrêtée par
 test('tracé d\'un rai : du foyer à la station, à la distance de l\'arrivée', () => {
   for (const [phase, d] of [['P', 60], ['ScS', 40], ['PKIKP', 150], ['SKS', 100], ['pP', 60], ['sP', 80]]) {
     const a = G.arrivees(phase, 100, d)[0], t = G.trajet(phase, 100, a.p);
-    assert.deepEqual(t[0], [G.R - 100, 0]);
+    assert.deepEqual(t[0], [G.R - 100, 0, 0]);
     const fin = t[t.length - 1];
     assert.equal(fin[0], G.R);
+    // le temps croît le long du rai et vaut, à la station, le temps de l'arrivée
+    assert.ok(t.every((q, i) => !i || q[2] >= t[i - 1][2] - 1e-9), `${phase} : temps décroissant`);
+    assert.ok(Math.abs(fin[2] - a.temps) < 1e-6, `${phase} : ${fin[2]} contre ${a.temps}`);
     assert.ok(Math.abs(fin[1] * 180 / Math.PI - d) < 1e-6, `${phase} : ${fin[1] * 180 / Math.PI}`);
     // le rai ne descend jamais sous son point le plus bas attendu
     const rMin = Math.min(...t.map(q => q[0]));
@@ -80,4 +83,22 @@ test('phases de profondeur : mode rapide exact de 40° à 95°, profondeur retro
   // le retard croît avec la profondeur et un peu avec la distance ; hors de 1 à 700 km : NaN
   assert.ok(G.retard('pP', 100, 40) < G.retard('pP', 100, 90) && G.retard('pP', 100, 60) < G.retard('pP', 300, 60));
   assert.ok(Number.isNaN(G.profondeur(500, 60)));
+});
+
+test('position le long d\'un rai au temps t : trajets de TauP (get_ray_paths) à 0,01° et 2 km', () => {
+  const ref = JSON.parse(readFileSync(new URL('./references/trajets.json', import.meta.url), 'utf-8')).trajets;
+  for (const r of ref) {
+    const a = G.arrivees(r.phase, r.profondeur, r.distance).reduce((x, y) => (Math.abs(y.p - r.p) < Math.abs(x.p - r.p) ? y : x));
+    const t = G.trajet(r.phase, r.profondeur, a.p);
+    let eD = 0, eZ = 0;
+    for (const [tr, dr, zr] of r.points) {
+      const q = G.position(t, Math.min(tr, a.temps));
+      eD = Math.max(eD, Math.abs((q[1] * 180) / Math.PI - dr)); eZ = Math.max(eZ, Math.abs(G.R - q[0] - zr));
+    }
+    assert.ok(eD < 0.01 && eZ < 2, `${r.phase} ${r.profondeur} km ${r.distance}° : ${eD.toFixed(3)}°, ${eZ.toFixed(2)} km`);
+  }
+  // avant l'origine et après l'arrivée, pas de position
+  const t = G.trajet('P', 10, G.arrivees('P', 10, 40)[0].p);
+  assert.equal(G.position(t, -1), null);
+  assert.equal(G.position(t, t.at(-1)[2] + 1), null);
 });

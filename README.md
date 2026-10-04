@@ -25,7 +25,7 @@ d'exercices et ses exemples chiffrés testés (`tests/cours.test.mjs`). Les anci
 
 | Banc | Rôle |
 |---|---|
-| **Une station** | sismogramme trois composantes (vélocimètre `HH` ou accéléromètre `HN`) ; vitesse, accélération, déplacement ou Wood-Anderson simulé ; filtres de Butterworth causaux ; rotation Z/R/T ; pointés P et S, amplitude Wood-Anderson ; distance par S − P, heure d'origine, ML (IASPEI 2013), azimut de la source par le mouvement de la P ; mode exercice noté |
+| **Une station** | séisme local ou lointain (téléséisme) ; sismogramme trois composantes (vélocimètre `HH` ou accéléromètre `HN` à 100 Hz, voies `BH` à 20 Hz pour un téléséisme) ; vitesse, accélération, déplacement ou Wood-Anderson simulé ; filtres de Butterworth causaux ; rotation Z/R/T ; pointés P, S (et pP), amplitude Wood-Anderson ou des ondes de surface ; local : distance par S − P, heure d'origine, ML (IASPEI 2013) ; lointain : phases ak135 (P, pP, sP, PcP, PKP, S, ScS, SKS, ondes de surface), distance par les tables, profondeur par pP − P, Ms (IASPEI 2013) ; azimut de la source par le mouvement de la P ; animation en boucle de la propagation (coupe du globe ou de la croûte) avec le sismogramme qui s'écrit ; mode exercice noté |
 | **Réseau · localisation** | quatre stations sur un même axe des temps ; cercles de distance, diagramme de Wadati, localisation par recherche sur grille (x, y, h, t₀), zone compatible, gap azimutal ; épicentre déplaçable en exploration ; mode exercice noté |
 | **Sismomètre** | masse, ressort et amortisseur dans un bâti animé ; sol sinusoïdal, lâcher de la masse ou séisme simulé ; préréglages (Wood-Anderson, courte et longue période, accéléromètre) ; réponse en fréquence en déplacement et en accélération ; mesure du régime permanent |
 | **Spectre de réponse** | six bâtiments (T = 0,1 à 4 s) sur une table vibrante ; spectre Sa ou Sd qui se construit pendant la lecture de l'accélérogramme ; spectre élastique de l'EN 1998-1:2004 (types 1 et 2, sols A à E, η, ag calé sur le PGA ou imposé) ; période de l'ouvrage, T₁ = Ct·H^¾ |
@@ -109,6 +109,9 @@ src/sismo/globe.js        rais sismiques dans le globe ak135 : phases P, S, PcP,
                           zone d'ombre, profondeur d'un séisme lointain par le retard de pP ou sP
 src/sismo/tables.js       tables de temps de trajet : régionale (Pg, Pn, Sg, Sn), télésismiques ak135, profondeur ;
                           lecture par interpolation, inversion exacte
+src/sismo/teleseisme.js   sismogrammes d'un téléséisme : phases ak135, amplitudes de la théorie des rais (double couple,
+                          expansion géométrique, t*), codas, ondes de surface calées sur Ms ; lectures Δ, h, t₀, Ms
+src/sismo/propagation.js  fronts d'onde dans le globe (faisceaux de rais P et S, réflexions, zone d'ombre) pour l'animation
 src/sismo/coefficients/   coefficients exportés de hazardlib, modèle ak135 d'ObsPy et calage des accélérogrammes (fichiers produits)
 src/schemas.js          schémas de principe, au moins un par chapitre (ondes, failles, ruptures, sismomètre, spectre,
                         Gutenberg-Richter, rebond élastique, étapes de Cornell, effets de site, liquéfaction, ductilité,
@@ -122,7 +125,8 @@ src/gmpe-notes.js       équations des lois d'atténuation mises en texte : tabl
 src/traits.js           traits communs des schémas (étiquettes, flèches, projection oblique, petit cadre de graphique)
 src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide, graine) et rais des phases, voisinage
                         du foyer (P, pP, sP), coupe d'une zone de subduction, en SVG
-src/lecteur-station.js  banc « une station »
+src/lecteur-station.js  banc « une station » (séisme local ou lointain)
+src/propagation-anim.js animation en boucle de la propagation : coupe du globe (téléséisme) ou de la croûte (séisme local)
 src/lecteur-reseau.js   banc « réseau »
 src/banc-sismometre.js  banc « sismomètre »
 src/banc-profil.js      banc « profil par distance »
@@ -144,7 +148,7 @@ src/onglets.js          onglets et fil du parcours (partie, banc précédent et 
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP (168 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde (177 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)

@@ -422,7 +422,8 @@ const Sismo = (() => {
   }
 
   // Convertit une série enregistrée vers la grandeur affichée, filtre compris.
-  // grandeur : 'vitesse' | 'acceleration' | 'deplacement' | 'wa' ; filtre : [fmin, fmax] ou null.
+  // grandeur : 'vitesse' | 'acceleration' | 'deplacement' | 'wa' ; filtre : [fmin, fmax] ou [fmin, fmax, ordre] (2 par
+  // défaut), ou null.
   function convertir(serie, dt, capteur, grandeur, filtre) {
     const n = serie.length, N = puissance2(Math.ceil(n * 1.25));
     const x = new Float64Array(N);
@@ -439,7 +440,7 @@ const Sismo = (() => {
     const base = capteur === 'HH' ? 'vitesse' : 'acceleration';
     const ordre = { acceleration: 0, vitesse: 1, deplacement: 2, wa: 2 };
     const ecart = ordre[grandeur] - ordre[base];
-    const coupe = passeBande(0.03, 0, 2), bande = filtre ? passeBande(filtre[0], filtre[1], 2) : null;
+    const coupe = passeBande(0.03, 0, 2), bande = filtre ? passeBande(filtre[0], filtre[1], filtre[2] || 2) : null;
     const H = f => {
       let h = [1, 0];
       if (grandeur === 'wa') {
@@ -573,7 +574,7 @@ const Sismo = (() => {
     predicteur, localiser, wadati, gapAzimutal, azimut,
     aleatoire, fft, MODELE, kmS, WA, NIVEAUX, CAPTEURS, temps, source,
     generer, enregistrer, convertir, distanceSP, origineDepuis, ML, azimutP, mlVraie, passeBande,
-    stochastique, saragoniHart, puissance2, etalement: G, Q, ampSite, Reff,
+    stochastique, saragoniHart, puissance2, etalement: G, Q, ampSite, Reff, compenserDC, versSpectre, versTemps, integrer,
   };
 })();
 export default Sismo;
