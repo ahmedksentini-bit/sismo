@@ -158,6 +158,7 @@ la virgule décimale.
     à `retard` et `profondeur`. L'onde P diffractée n'est pas calculée.
 31. **Schémas de principe** (`src/schemas.js`, rempli par `src/cours-schemas.js`) : une figure par notion physique,
     SVG pur, conteneur `<div class="figure-cours" id="schema…">` unique dans `cours.html`, légende dans `SCHEMAS`
-    (testé). Ce qui se chiffre sort des solveurs (aires de Wells et Coppersmith, mécanismes) ; le reste est dessiné
+    (testé) ; chaque chapitre rédigé en a au moins un (testé). Ce qui se chiffre sort des solveurs (aires de Wells et
+    Coppersmith, mécanismes, spectre EC8, modèle simple d'aléa, loi d'Akkar, modes du bâtiment) ; le reste est dessiné
     « de principe ». Un SVG imbriqué (sphère focale) porte sa taille en style en ligne, sinon la règle
     `.figure-cours svg` (largeur 100 %) l'agrandit.

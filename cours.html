@@ -1122,6 +1122,7 @@
   <p class="method-note">Chaque oscillateur est intégré par Newmark à accélération moyenne, avec un pas au
      plus égal à T/20 : les courtes périodes demandent des sous-pas, l'accélérogramme étant interpolé
      linéairement entre ses échantillons.</p>
+  <div class="figure-cours" id="schemaOscillateurs"></div>
 
   <div class="calc" id="calcSpectre">
     <h3>Spectre de réponse d'un accélérogramme</h3>
@@ -1259,6 +1260,7 @@
      séismes parmi les petits, vaut près de 1 dans la plupart des régions : une unité de magnitude de plus,
      dix fois moins de séismes. La loi est <strong>tronquée</strong> à une magnitude maximale Mmax, la
      plus grande que les failles de la région puissent produire.</p>
+  <div class="figure-cours" id="schemaGR"></div>
   <div class="a-retenir"><strong>Exemple</strong>
     <p>Une région compte en moyenne 2 séismes de magnitude ≥ 4 par an, avec b = 1 : λ(≥ 5) = 0,2 par an,
        soit un séisme de magnitude 5 tous les <strong>5 ans</strong> en moyenne ; λ(≥ 6) = 0,02 (tous les
@@ -1396,6 +1398,7 @@
   <p class="method-note">La moitié du glissement s'accumule dans une bande de ± D autour de la faille ; le
      taux de déformation y culmine à s/(πD). 1 mm/an par km vaut 10<sup>−6</sup> par an, soit 1 000
      nanodéformations par an (ns/an).</p>
+  <div class="figure-cours" id="schemaRebond"></div>
   <p>Le taux de moment que doit libérer une faille de longueur L et de largeur W qui glisse à la vitesse s
      s'écrit comme le moment d'un séisme (chapitre 4) : Ṁ<sub>0</sub> = μ·L·W·s.</p>
   <div class="a-retenir"><strong>Exemple</strong>
@@ -1544,6 +1547,7 @@
      source) ; P(R | M) : répartition des distances, les séismes étant uniformément répartis dans la zone
      source ; P(Y &gt; y | M, R) : loi d'atténuation. La courbe λ(y) est la <strong>courbe d'aléa</strong> ;
      la probabilité de dépassement en t années en découle par Poisson, 1 − e<sup>−λt</sup>.</p>
+  <div class="figure-cours" id="schemaCornell"></div>
   <p>On lit sur la courbe le niveau de probabilité choisie : 10 % en 50 ans (475 ans) pour le dimensionnement
      courant, 2 % en 50 ans (2 475 ans) pour les ouvrages sensibles. En répétant le calcul pour Sa(T) à
      plusieurs périodes, on obtient le <strong>spectre à probabilité uniforme</strong> (UHS), que l'on compare
@@ -1690,6 +1694,7 @@
   <p>La réponse à retenir (§ 4.3.3.4.3 (3)) est la <strong>moyenne</strong> des réponses si l'on a fait au
      moins 7 calculs, la plus défavorable sinon. Quand le jeu ne respecte pas les règles, on le multiplie
      par un facteur commun, le plus petit qui les satisfait.</p>
+  <div class="figure-cours" id="schemaDemarche"></div>
 
   <div class="calc" id="calcCalage">
     <h3>Caler sept accélérogrammes sur le spectre de l'EN 1998-1:2004</h3>
@@ -1760,6 +1765,7 @@
      qui repart dans le rocher, mesurée par le <strong>contraste d'impédance</strong> I =
      ρ<sub>s</sub>V<sub>s</sub> / (ρ<sub>r</sub>V<sub>r</sub>), et l'amortissement ξ du sol :</p>
   <p class="formula">A(f<sub>0</sub>) ≈ 1 / (I + πξ/2)</p>
+  <div class="figure-cours" id="schemaCouche"></div>
   <div class="a-retenir"><strong>Exemple</strong>
     <p>20 m de sol à V<sub>s</sub> = 200 m/s (17,5 kN/m³) sur un rocher à 1 000 m/s (22 kN/m³), ξ = 2 % :
        f<sub>0</sub> = 200 / 80 = <strong>2,5 Hz</strong>, soit une période de 0,4 s ; I = (17,5 × 200)/(22 ×
@@ -1869,6 +1875,7 @@
   <p class="method-note">Sont sensibles les sables et sables limoneux lâches, jeunes, saturés (sous la
      nappe), à moins de 15 à 20 m de profondeur. Les sols fins plastiques se comportent autrement
      (radoucissement cyclique) : la méthode ci-dessous les exclut (indice de comportement Ic &gt; 2,6).</p>
+  <div class="figure-cours" id="schemaLiquefaction"></div>
 
   <h3>La méthode simplifiée</h3>
   <p>Seed et Idriss (1971) comparent deux rapports de contrainte, sous forme adimensionnelle. La
@@ -1979,6 +1986,7 @@
      puisse se déformer au-delà de sa limite élastique sans perdre sa résistance : c'est la
      <strong>ductilité</strong>. Le séisme impose surtout un déplacement ; un ouvrage ductile le suit en
      dissipant de l'énergie dans ses zones plastiques.</p>
+  <div class="figure-cours" id="schemaDuctilite"></div>
 
   <h3>L'oscillateur élastoplastique</h3>
   <p>Reprenons l'oscillateur du chapitre 5, avec un ressort qui plafonne à la force f<sub>y</sub> (puis
@@ -2114,6 +2122,7 @@
      extrémités). Le mouvement du sol excite tout le bâtiment ; son équation est celle de l'oscillateur, écrite
      avec des matrices :</p>
   <p class="formula">M·ü + C·u̇ + K·u = −M·1·üg</p>
+  <div class="figure-cours" id="schemaConsole"></div>
 
   <h3>Modes propres</h3>
   <p>Libre et non amorti, le bâtiment vibre selon des <strong>modes propres</strong> : des déformées φ<sub>n</sub>
@@ -2240,6 +2249,7 @@
      résistance V<sub>y,i</sub>), la courbe est bilinéaire : sous le multiplicateur λ des forces, l'effort tranchant de
      l'étage i vaut λ·S<sub>i</sub>, et le premier étage qui atteint sa résistance — celui où V<sub>y,i</sub>/S<sub>i</sub> est
      minimal — forme un <strong>mécanisme d'étage</strong> : au-delà, lui seul se déforme.</p>
+  <div class="figure-cours" id="schemaPoussee"></div>
 
   <h3>Le système équivalent (annexe B)</h3>
   <p>La méthode N2 (Fajfar) ramène la structure à un oscillateur à un degré de liberté :</p>
@@ -2330,6 +2340,7 @@
      superstructure chutent, et presque toute la déformation se concentre dans les isolateurs. Deux familles
      dominent : les <strong>appuis en élastomère fretté</strong>, souvent à noyau de plomb qui dissipe en se
      plastifiant, et les <strong>pendules à friction</strong>, dont le rayon de courbure fixe la période.</p>
+  <div class="figure-cours" id="schemaIsolation"></div>
 
   <h3>L'isolateur bilinéaire</h3>
   <p>Les deux familles se représentent par une loi bilinéaire : raideur initiale K<sub>1</sub>, raideur

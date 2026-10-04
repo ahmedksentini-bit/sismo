@@ -38,3 +38,33 @@ test('types de failles : mécanismes des trois blocs bien classés', () => {
   const s = SCHEMAS.schemaTypes.f();
   for (const t of ['Faille normale', 'Faille inverse', 'Décrochement', 'Sphère focale : faille normale']) assert.ok(s.includes(t), t);
 });
+
+test('aléa, sismicité, spectre : les chiffres des schémas sortent des solveurs', async () => {
+  const { cornell, nombreEnergie, oscillateurs } = await import('../src/schemas.js');
+  const Psha = (await import('../src/sismo/psha.js')).default, Spectre = (await import('../src/sismo/spectre.js')).default;
+  const res = Psha.calculer(Psha.modeleSimple({ imts: ['PGA'] })), a475 = Psha.niveauPourProba(res.niveaux, res.moyenne[0], 0.1);
+  const nb = s => s.replace(/[  ]/g, ' ');
+  assert.ok(nb(cornell()).includes(`475 ans → ${a475.toLocaleString('fr-FR', { maximumSignificantDigits: 2 })} g`));
+  const gr = nb(nombreEnergie());
+  for (const t of ['>20<', '>2<', '>5 ans<', '>50 ans<', '>500 ans<']) assert.ok(gr.includes(t), t);
+  assert.equal(Math.round(10 ** 1.5), 32);
+  // le plateau du spectre dessiné est celui de l'EN 1998-1:2004, type 1, sol C, ag = 0,2 g
+  assert.equal(Spectre.ec8(0.4, { type: 1, sol: 'C', ag: 0.2 }).toFixed(3), '0.575');
+  assert.ok(oscillateurs().includes('0,6'));
+});
+
+test('chaque chapitre rédigé a au moins un schéma de principe ; modes et spectre des schémas calculés', async () => {
+  const plan = JSON.parse(readFileSync(new URL('../data/chapitres.json', import.meta.url), 'utf-8'));
+  const sections = cours.split(/<section id="(ch\d+)" class="card">/);
+  for (const c of plan.chapitres.filter(x => x.cours)) {
+    const corps = sections[sections.indexOf(c.id) + 1];
+    assert.ok(/class="figure-cours" id="(schema\w+|globeCh1|figSubduction)"/.test(corps), `${c.id} sans schéma`);
+  }
+  const Batiment = (await import('../src/sismo/batiment.js')).default;
+  const md = Batiment.modes({ m: Array(5).fill(200), k: Array(5).fill(2e5) }), s = SCHEMAS.schemaConsole.f();
+  assert.ok(s.includes(`T = ${md[0].T.toLocaleString('fr-FR', { maximumSignificantDigits: 2 })} s`) && s.includes(`${Math.round(100 * md[0].part)} % de la masse`));
+  // isolation : l'accélération spectrale chute de la base fixe à la base isolée
+  const Spectre = (await import('../src/sismo/spectre.js')).default, se = T => Spectre.ec8(T, { type: 1, sol: 'C', ag: 0.2 });
+  assert.ok(se(2.5) < se(0.4) / 4);
+  assert.ok(SCHEMAS.schemaIsolation.f().includes('0,11 g'));
+});
