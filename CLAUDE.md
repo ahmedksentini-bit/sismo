@@ -200,15 +200,22 @@ la virgule décimale.
     SKS : jamais d'onde S dans le noyau), réfléchis sous la surface (pP, sS, trait fin) ou sur le noyau (PcP, ScS, tirets) ;
     le front rejoint la surface par interpolation des arrivées. Séisme local : coupe de la croûte du générateur (rais droits,
     Snell au Moho, onde conique). En mode Exercice, l'animation reste masquée jusqu'à « Vérifier ».
-34. **En direct** (`direct.html`, `src/direct-page.js`) : stations GEOFON (réseau GE) autour de la Méditerranée. Deux
-    fonctions Cloudflare Pages (`functions/api/`) servent de relais, bornés : `seedlink.js` ouvre une connexion TCP vers le
-    SeedLink de GEOFON (geofon.gfz.de:18000, seul serveur permis) pour 12 flux validés au plus, reprise ≤ 30 min, fermeture
-    au bout de 10 min (la page se reconnecte depuis son dernier échantillon) ; `geofon.js` ne transmet que les services
-    FDSN station, dataselect (≤ 2 h, ≤ 12 stations nommées) et event, au format texte. Si le relais SeedLink échoue deux
-    fois, la page interroge dataselect toutes les 20 s ; si GEOFON est injoignable, mode « Démo (simulée) » : séisme fictif,
-    signaux de `teleseisme.js`, toujours signalé comme tel. Décodage miniSEED (`src/sismo/miniseed.js`, Steim 1 et 2,
-    entiers, réels) vérifié contre ObsPy ; protocole SeedLink (`src/sismo/seedlink.js`) ; filtres de Butterworth comme scipy
-    (`butter` + `sosfilt`), STA/LTA et déclenchements comme ObsPy (`src/sismo/direct.js`). Détecteur : 0,7–2 Hz (ordre 4),
-    STA 2 s / LTA 80 s, seuils 4 et 1,5 ; le bruit gaussien déclenche de temps en temps, c'est attendu. Côtes Natural Earth
-    produites par `tools/carte/cotes.py`. Essai local sans réseau : `node tools/direct/serveurs-essai.mjs` puis
-    `wrangler pages dev . --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding GEOFON_FDSN=http://127.0.0.1:8090`.
+34. **En direct** (`direct.html`, `src/direct-page.js`) : stations autour de la Méditerranée des centres de données de
+    `src/sismo/centres.js` (GEOFON, INGV, Epos-France, NOA, KOERI, SED, NIEP, ORFEUS, IGN, ICGC, EarthScope), choisies par
+    réseau (carte « Réseaux », GE et tout réseau ayant une station en Tunisie cochés au départ ; pays par les polygones de
+    `tools/carte/pays.py`). Cette liste est la liste blanche des deux fonctions Cloudflare Pages (`functions/api/`), relais
+    bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 12 flux validés au plus, reprise
+    ≤ 30 min, ne transmet que les voies demandées, se ferme au bout de 10 min (la page se reconnecte depuis son dernier
+    échantillon) ; `?sonde=1` dit quels serveurs répondent à HELLO, `?diagnostic=1` déroule l'échange avec l'un d'eux ;
+    `fdsn.js` ne transmet que les services FDSN station, dataselect (≤ 2 h, ≤ 12 stations nommées) et event, au format
+    texte. Chaque station suivie essaie le serveur SeedLink de son centre, puis GEOFON, puis le dataselect de son centre
+    toutes les 20 s : elle passe au suivant si le serveur la refuse (STATION ou SELECT), échoue deux fois de suite ou ne
+    livre rien d'elle en 90 s. Seuls GEOFON, Résif et EarthScope ont un serveur SeedLink connu ; les autres sont supposés
+    sur l'hôte FDSN au port 18000 (`verifie: false`) jusqu'à confirmation par la sonde. Sans aucune liste de stations, mode
+    « Démo (simulée) » : séisme fictif, signaux de `teleseisme.js`, toujours signalé comme tel. Décodage miniSEED
+    (`src/sismo/miniseed.js`, Steim 1 et 2, entiers, réels) vérifié contre ObsPy ; protocole SeedLink
+    (`src/sismo/seedlink.js`) ; filtres de Butterworth comme scipy (`butter` + `sosfilt`), STA/LTA et déclenchements comme
+    ObsPy (`src/sismo/direct.js`). Détecteur : 0,7–2 Hz (ordre 4), STA 2 s / LTA 80 s, seuils 4 et 1,5 ; le bruit gaussien
+    déclenche de temps en temps, c'est attendu. Côtes et pays Natural Earth produits par `tools/carte/cotes.py` et
+    `tools/carte/pays.py`. Essai local sans réseau : `node tools/direct/serveurs-essai.mjs` puis `wrangler pages dev .
+    --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding "FDSN_ESSAI=http://127.0.0.1:8090/{centre}"`.

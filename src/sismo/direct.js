@@ -4,7 +4,8 @@ import Teleseisme from './teleseisme.js';
 // src/sismo/direct.js — traitements de la page « En direct » (stations en temps réel) : distance et azimut sur la
 // sphère, filtre de Butterworth passe-bande causal en sections du second ordre (comme scipy.signal.butter et sosfilt),
 // détecteur STA/LTA et déclenchements (comme ObsPy, classic_sta_lta et trigger_onset), tampon d'une voie qui assemble
-// les enregistrements miniSEED reçus (trous, recouvrements), arrivées prévues d'un séisme à une station (ak135).
+// les enregistrements miniSEED reçus (trous, recouvrements), arrivées prévues d'un séisme à une station (ak135), pays
+// d'une station.
 // Vérifié contre scipy et ObsPy (tests/references/direct.json, tools/obspy/direct.py). Solveurs purs.
 const Direct = (() => {
   'use strict';
@@ -176,9 +177,44 @@ const Direct = (() => {
     return out.sort((x, y) => x.temps - y.temps);
   }
 
+  // ── Pays d'une station ──────────────────────────────────────────────────────────────────────────────────────
+  // Polygones { code, nom, anneaux: [[lon, lat, lon, lat…]…] } de data/pays-mediterranee.json (Natural Earth, règle
+  // pair-impair, trous compris). Une station côtière peut tomber juste hors du polygone simplifié : à moins de `marge`
+  // degrés du pays le plus proche, elle lui est rattachée. null : en mer, ou hors des polygones donnés.
+  const boites = new WeakMap();
+  function boite(p) {
+    if (!boites.has(p)) {
+      const b = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const a of p.anneaux) for (let i = 0; i < a.length; i += 2) { b[0] = Math.min(b[0], a[i]); b[1] = Math.min(b[1], a[i + 1]); b[2] = Math.max(b[2], a[i]); b[3] = Math.max(b[3], a[i + 1]); }
+      boites.set(p, b);
+    }
+    return boites.get(p);
+  }
+  function pays(lat, lon, liste, marge = 0.1) {
+    const kx = Math.cos(lat * RAD);
+    let proche = null, dmin = marge;
+    for (const p of liste) {
+      const b = boite(p);
+      if (lon < b[0] - marge / kx || lon > b[2] + marge / kx || lat < b[1] - marge || lat > b[3] + marge) continue;
+      let dedans = false;
+      for (const a of p.anneaux) {
+        for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2) {
+          const xi = a[i], yi = a[i + 1], xj = a[j], yj = a[j + 1];
+          if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) dedans = !dedans;
+          // distance au côté, longitudes ramenées en degrés de grand cercle
+          const ux = (xj - xi) * kx, uy = yj - yi, vx = (lon - xi) * kx, vy = lat - yi, l2 = ux * ux + uy * uy;
+          const t = l2 > 0 ? Math.max(0, Math.min(1, (vx * ux + vy * uy) / l2)) : 0, d = Math.hypot(vx - t * ux, vy - t * uy);
+          if (d < dmin) { dmin = d; proche = p; }
+        }
+      }
+      if (dedans) return { code: p.code, nom: p.nom };
+    }
+    return proche ? { code: proche.code, nom: proche.nom } : null;
+  }
+
   // Latence (s) d'une voie : temps écoulé depuis son dernier échantillon.
   const latence = (fin, maintenant = Date.now()) => (fin === null ? Infinity : (maintenant - fin) / 1000);
 
-  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, latence, PHASES };
+  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, pays, latence, PHASES };
 })();
 export default Direct;

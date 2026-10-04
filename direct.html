@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#075985">
-<meta name="description" content="Stations sismologiques du réseau GEOFON autour de la Méditerranée, en temps réel : carte des stations, traces qui défilent, séismes récents et arrivées prévues">
+<meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
 <link rel="stylesheet" href="lecteur.css">
 </head>
@@ -22,35 +22,36 @@
 <main>
   <section class="banniere">
     <div>
-      <p class="eyebrow">Données réelles · réseau GEOFON</p>
+      <p class="eyebrow">Données réelles · réseaux sismologiques</p>
       <h1>Stations sismologiques en direct</h1>
-      <p class="chapeau">Les stations du réseau GEOFON (GFZ Potsdam) autour de la Méditerranée, comme dans un centre de surveillance
-        (SeisComP) : carte des stations colorées par le mouvement du sol, traces qui défilent, séismes récents et arrivées prévues
-        des ondes à chaque station.</p>
+      <p class="chapeau">Les stations des réseaux sismologiques autour de la Méditerranée (GEOFON, INGV, Epos-France, NOA,
+        KOERI…), comme dans un centre de surveillance (SeisComP) : carte des stations colorées par le mouvement du sol, traces
+        qui défilent, séismes récents et arrivées prévues des ondes à chaque station.</p>
     </div>
     <span class="live-badge" id="dr-badge"><i></i><span>Connexion…</span></span>
   </section>
 
   <div class="poste" id="poste-direct">
     <section class="carte consigne" aria-label="Ce que vous allez faire">
-      <details open><summary><h2>Ce que vous allez faire<small>Observation libre · données réelles du réseau GEOFON</small></h2></summary>
+      <details open><summary><h2>Ce que vous allez faire<small>Observation libre · données réelles des réseaux de la Méditerranée</small></h2></summary>
         <p><b>Objectif.</b> Voir arriver les ondes de vrais séismes aux stations de la Méditerranée et les relier à ce que les
           travaux pratiques simulent : P, S et ondes de surface, temps de trajet ak135, détection automatique.</p>
         <ol class="experiences">
           <li>Attendez que les traces se remplissent (quelques minutes de données récentes arrivent d'abord). Repérez la latence de chaque station et le bruit de la houle (microséisme) sans filtre, puis avec le filtre « 0,5 – 5 Hz ».</li>
-          <li>Cliquez une station sur la carte pour l'ajouter aux traces ou l'en retirer (12 au plus).</li>
+          <li>Cliquez une station sur la carte pour l'ajouter aux traces ou l'en retirer (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
           <li>Dans « Séismes », choisissez un séisme récent : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et ses fronts P et S s'étendent sur la carte. Comparez-les aux arrivées observées.</li>
           <li>Pour un séisme lointain (« Monde, M ≥ 5,5 »), passez la fenêtre à 60 minutes et le filtre à « 18 – 22 s » : les ondes de surface arrivent bien après P et S.</li>
           <li>Repérez les déclenchements STA/LTA (triangles sur les traces) : un vrai séisme déclenche plusieurs stations dans l'ordre des distances, le bruit local une seule.</li>
         </ol>
-        <p class="a-rendre"><b>À noter.</b> Les données viennent de GEOFON à travers un relais du site ; sans connexion, la page
-          passe en mode « Démonstration » (séisme fictif, signaux simulés), clairement signalé.</p>
+        <p class="a-rendre"><b>À noter.</b> Les données viennent des centres de données (GEOFON, INGV, Epos-France…) à travers un
+          relais du site ; sans connexion, la page passe en mode « Démo (simulée) » (séisme fictif, signaux simulés), clairement
+          signalé.</p>
       </details>
     </section>
 
     <div class="colonne">
       <section class="carte" aria-label="Carte des stations">
-        <h2>Carte des stations<small>Couleur : vitesse maximale du sol des 60 dernières secondes, filtrée de 0,5 à 5 Hz ; gris : pas de donnée depuis 3 min ; cercle vide : station non suivie. Disques : séismes récents (taille selon la magnitude) ; anneaux : fronts P et S du séisme choisi</small></h2>
+        <h2>Carte des stations<small>Couleur : vitesse maximale du sol des 60 dernières secondes, filtrée de 0,5 à 5 Hz ; gris : pas de donnée depuis 3 min (15 min par le service FDSN) ; cercle vide : station non suivie. Disques : séismes récents (taille selon la magnitude) ; anneaux : fronts P et S du séisme choisi</small></h2>
         <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; un clic ajoute ou retire une station"></canvas>
         <p class="legende" id="dr-legende-carte"></p>
       </section>
@@ -84,6 +85,14 @@
         <p class="sous-titre" style="margin-top:14px">Journal de connexion</p>
         <ul class="journal" id="dr-journal"></ul>
       </section>
+      <section class="carte" aria-label="Réseaux">
+        <p class="sous-titre">Réseaux</p>
+        <p class="aide">Stations en service et en libre accès des centres de données européens et américains (services web FDSN).
+          Cochez un réseau pour afficher ses stations sur la carte ; deux d'entre elles rejoignent les traces.</p>
+        <p class="aide" id="dr-tunisie"></p>
+        <div id="dr-reseaux"><p class="aide">Recherche des stations…</p></div>
+        <details class="dr-centres"><summary>Centres interrogés</summary><ul class="journal" id="dr-centres"></ul></details>
+      </section>
       <section class="carte" aria-label="Séismes">
         <p class="sous-titre">Séismes</p>
         <div class="segments" role="group" aria-label="Catalogue" style="margin-bottom:10px">
@@ -101,7 +110,8 @@
       <section class="carte retenir" aria-label="À retenir">
         <h2>À retenir</h2>
         <ul class="notes-loc">
-          <li><b>SeedLink</b> : les stations envoient leurs données en paquets miniSEED de 512 octets ; un centre (ici GEOFON) les redistribue en quelques secondes. Un navigateur ne parle pas SeedLink : une petite fonction du site sert de relais.</li>
+          <li><b>SeedLink</b> : les stations envoient leurs données en paquets miniSEED de 512 octets ; un centre (GEOFON, INGV…) les redistribue en quelques secondes. Un navigateur ne parle pas SeedLink : une petite fonction du site sert de relais.</li>
+          <li><b>Réseaux</b> : chaque réseau porte un code de la FDSN (GE pour GEOFON, IV pour l'Italie, HL pour la Grèce…) ; un centre de données l'archive et le sert par les services web FDSN, souvent aussi par SeedLink. Un réseau national n'apparaît ici que s'il publie ses données en libre accès.</li>
           <li><b>Latence</b> : le temps entre le mouvement du sol et son arrivée ici (numérisation, paquet de 512 octets à remplir, transmission). Elle va de quelques secondes à quelques minutes selon la station.</li>
           <li><b>Microséisme</b> : sans filtre, la houle des océans (périodes de 3 à 10 s) domine les traces ; un filtre de 0,5 à 5 Hz fait sortir les séismes proches et les ondes P lointaines.</li>
           <li><b>STA/LTA</b> : rapport de l'énergie moyenne sur 2 s à celle sur 80 s, sur la trace filtrée de 0,7 à 2 Hz ; au-delà de 4, la station « déclenche ». Le bruit fait déclencher une station de temps en temps ; un centre ne retient un séisme que si plusieurs stations déclenchent dans l'ordre des distances, puis le localise.</li>
