@@ -1,10 +1,11 @@
-// Exercices du chapitre 6 : la structure de la Terre. Les temps d'arrivée « lus » sortent des temps de
-// trajet des modèles (Sismo.temps pour la croûte tirée au hasard, Globe.arrivees pour ak135) ; les réponses
-// appliquent les formules du cours aux lectures arrondies.
+// Exercices du chapitre 6 : la structure de la Terre, lecture d'une table de temps de trajet comprise. Les temps
+// d'arrivée « lus » sortent des temps de trajet des modèles (Sismo.temps pour la croûte tirée au hasard,
+// Globe.arrivees pour ak135) ; les réponses appliquent les formules du cours aux lectures arrondies.
 import { fr, frd, nombre, choixMelange, donnee } from "./alea.js";
 import Sismo from "../sismo/signal.js";
 import Refraction from "../sismo/refraction.js";
 import Globe from "../sismo/globe.js";
+import Tables from "../sismo/tables.js";
 import { globe, raisVers } from "../globe-figure.js";
 
 export default [
@@ -121,6 +122,30 @@ export default [
           choixMelange(a, "Pourquoi le retard pP − P dépend-il surtout de la profondeur, et peu de la distance ?",
             ["parce que pP et P suivent presque le même chemin, à l'aller-retour au-dessus du foyer près", "parce que pP se propage plus vite que P", "parce que pP traverse le noyau", "parce que la station est dans la zone d'ombre"],
             "pP monte, se réfléchit sous la surface près de l'épicentre, puis suit P : le retard ≈ 2h·cos i/v ne varie avec la distance que par l'angle i."),
+        ],
+      };
+    },
+  },
+  {
+    id: "ch6-table", titre: "Distance et heure d'origine par la table de temps de trajet", difficulte: 2,
+    generer(a) {
+      // distance hors des lignes de la table ; les lectures sortent des rais ak135, les réponses de la table arrondie
+      const h = a.choix([10, 100, 300]), D0 = a.entier(23, 87), D = D0 % 10 ? D0 : D0 + 3, t0 = a.entier(0, 3000);
+      const tP = +(t0 + Tables.premiere("P", h, D)).toFixed(1), tS = +(t0 + Tables.premiere("S", h, D)).toFixed(1), sp = +(tS - tP).toFixed(1);
+      const lignes = Tables.telesismique({ h, distances: [20, 30, 40, 50, 60, 70, 80, 90], phases: ["P", "S"] })
+        .map((l) => ({ d: l.d, P: +l.P.toFixed(1), SP: +l.SP.toFixed(1) }));
+      const lu = Tables.inverser(lignes, sp, (l) => l.d, (l) => l.SP), TP = lu.a.P + lu.r * (lu.b.P - lu.a.P), origine = tP - TP;
+      const ms = (t) => `${Math.floor(t / 60)} min ${frd(t % 60, 1)} s`;
+      const heure = (t) => `${10 + Math.floor(t / 3600)} h ${String(Math.floor((t % 3600) / 60)).padStart(2, "0")} min ${frd(t % 60, 1)} s`;
+      return {
+        enonce: `Une station enregistre un séisme lointain, de foyer à ${h} km : P arrive à ${heure(tP)}, S à ${heure(tS)}. Les données donnent un extrait de la table ak135 de cette profondeur : pour chaque distance, le temps de trajet de P et l'écart S − P.`,
+        donnees: [donnee("P lue", heure(tP)), donnee("S lue", heure(tS)), donnee("profondeur", `${h} km`),
+          ...lignes.map((l) => donnee(`table, Δ = ${l.d}°`, `P : ${ms(l.P)} ; S − P : ${ms(l.SP)}`))],
+        questions: [
+          nombre("Écart S − P lu ?", sp, "s", `S − P = ${heure(tS)} − ${heure(tP)} = ${frd(sp, 1)} s = ${ms(sp)}.`, { abs: 0.15 }),
+          nombre("Distance épicentrale, par interpolation linéaire dans la table ?", lu.x, "°", `${frd(sp, 1)} s est entre ${frd(lu.a.SP, 1)} s (${lu.a.d}°) et ${frd(lu.b.SP, 1)} s (${lu.b.d}°) : r = (${frd(sp, 1)} − ${frd(lu.a.SP, 1)}) / (${frd(lu.b.SP, 1)} − ${frd(lu.a.SP, 1)}) = ${frd(lu.r, 3)}, Δ = ${lu.a.d} + 10r = ${frd(lu.x, 1)}° (vrai : ${D}°).`, { abs: 0.3 }),
+          nombre("Temps de trajet de P à cette distance ?", TP, "s", `Même interpolation dans la colonne P : ${frd(lu.a.P, 1)} + ${frd(lu.r, 3)} × (${frd(lu.b.P, 1)} − ${frd(lu.a.P, 1)}) = ${frd(TP, 1)} s = ${ms(TP)}.`, { abs: 1.5 }),
+          nombre("Heure d'origine, en secondes après 10 h ?", origine, "s", `t₀ = t_P − T_P = ${heure(tP)} − ${ms(TP)} = ${heure(origine)}, soit ${frd(origine, 1)} s après 10 h (vrai : ${t0} s).`, { abs: 2 }),
         ],
       };
     },

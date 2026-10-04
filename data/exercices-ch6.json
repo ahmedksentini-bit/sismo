@@ -337,6 +337,93 @@
    ]
   },
   {
+   "id": "ch6-table",
+   "titre": "Distance et heure d'origine par la table de temps de trajet",
+   "difficulte": 2,
+   "graine": 1068969841,
+   "enonce": "Une station enregistre un séisme lointain, de foyer à 10 km : P arrive à 10 h 31 min 21,9 s, S à 10 h 40 min 43,4 s. Les données donnent un extrait de la table ak135 de cette profondeur : pour chaque distance, le temps de trajet de P et l'écart S − P.",
+   "donnees": [
+    {
+     "label": "P lue",
+     "valeur": "10 h 31 min 21,9 s"
+    },
+    {
+     "label": "S lue",
+     "valeur": "10 h 40 min 43,4 s"
+    },
+    {
+     "label": "profondeur",
+     "valeur": "10 km"
+    },
+    {
+     "label": "table, Δ = 20°",
+     "valeur": "P : 4 min 32,7 s ; S − P : 3 min 44,8 s"
+    },
+    {
+     "label": "table, Δ = 30°",
+     "valeur": "P : 6 min 8,7 s ; S − P : 4 min 57,9 s"
+    },
+    {
+     "label": "table, Δ = 40°",
+     "valeur": "P : 7 min 34,9 s ; S − P : 6 min 5,5 s"
+    },
+    {
+     "label": "table, Δ = 50°",
+     "valeur": "P : 8 min 54,4 s ; S − P : 7 min 10,7 s"
+    },
+    {
+     "label": "table, Δ = 60°",
+     "valeur": "P : 10 min 6,7 s ; S − P : 8 min 12,5 s"
+    },
+    {
+     "label": "table, Δ = 70°",
+     "valeur": "P : 11 min 11,7 s ; S − P : 9 min 10,4 s"
+    },
+    {
+     "label": "table, Δ = 80°",
+     "valeur": "P : 12 min 9,5 s ; S − P : 10 min 4,0 s"
+    },
+    {
+     "label": "table, Δ = 90°",
+     "valeur": "P : 12 min 59,7 s ; S − P : 10 min 52,9 s"
+    }
+   ],
+   "questions": [
+    {
+     "texte": "Écart S − P lu ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 561.5,
+     "explication": "S − P = 10 h 40 min 43,4 s − 10 h 31 min 21,9 s = 561,5 s = 9 min 21,5 s.",
+     "tolerance": 0.15
+    },
+    {
+     "texte": "Distance épicentrale, par interpolation linéaire dans la table ?",
+     "type": "nombre",
+     "unite": "°",
+     "reponse": 72.0709,
+     "explication": "561,5 s est entre 550,4 s (70°) et 604,0 s (80°) : r = (561,5 − 550,4) / (604,0 − 550,4) = 0,207, Δ = 70 + 10r = 72,1° (vrai : 72°).",
+     "tolerance": 0.3
+    },
+    {
+     "texte": "Temps de trajet de P à cette distance ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 683.67,
+     "explication": "Même interpolation dans la colonne P : 671,7 + 0,207 × (729,5 − 671,7) = 683,7 s = 11 min 23,7 s.",
+     "tolerance": 1.5
+    },
+    {
+     "texte": "Heure d'origine, en secondes après 10 h ?",
+     "type": "nombre",
+     "unite": "s",
+     "reponse": 1198.23,
+     "explication": "t₀ = t_P − T_P = 10 h 31 min 21,9 s − 11 min 23,7 s = 10 h 19 min 58,2 s, soit 1 198,2 s après 10 h (vrai : 1198 s).",
+     "tolerance": 2
+    }
+   ]
+  },
+  {
    "id": "ch6-notions",
    "titre": "Croûte, Moho et premières arrivées",
    "difficulte": 1,

@@ -105,6 +105,8 @@ src/sismo/liquefaction.js déclenchement de la liquéfaction (CPT, SPT), LPI, ta
 src/sismo/site.js         effets de site 1D : ondes SH, linéaire équivalent, Darendeli, Vs30 et classe EC8
 src/sismo/globe.js        rais sismiques dans le globe ak135 : phases P, S, PcP, ScS, PKP, PKiKP, PKIKP, SKS, pP, sP,
                           zone d'ombre, profondeur d'un séisme lointain par le retard de pP ou sP
+src/sismo/tables.js       tables de temps de trajet : régionale (Pg, Pn, Sg, Sn), télésismiques ak135, profondeur ;
+                          lecture par interpolation, inversion exacte
 src/sismo/coefficients/   coefficients exportés de hazardlib, modèle ak135 d'ObsPy et calage des accélérogrammes (fichiers produits)
 src/schemas.js          schémas de principe, au moins un par chapitre (ondes, failles, ruptures, sismomètre, spectre,
                         Gutenberg-Richter, rebond élastique, étapes de Cornell, effets de site, liquéfaction, ductilité,
@@ -139,7 +141,7 @@ src/parcours.js         plan des travaux pratiques : quatre parties, ordre des b
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois (162 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet (165 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
