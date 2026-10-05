@@ -69,7 +69,7 @@ const ENTETE = '#Network | Station | Location | Channel | Latitude | Longitude |
 const voie = (r, s, lat, lon) => `${r}|${s}||BHZ|${lat}|${lon}|100.0|0.0|0.0|-90.0|essai|6.0E8|1.0|M/S|20.0|2010-01-01T00:00:00|`;
 const CENTRES = {
   geofon: { voies: [voie('GE', 'MTE', 40.4, -7.5), voie('GE', 'ESSAI', 38.0, 23.7)], reseaux: ['GE|GEOFON (essai)|1993-01-01T00:00:00||2'] },
-  ingv: { voies: [voie('IV', 'LPEL', 35.5, 12.6), voie('IV', 'ROMA', 41.9, 12.5)], reseaux: ['IV|Réseau italien (essai)|1988-01-01T00:00:00||2'] },
+  ingv: { voies: [voie('IV', 'LPEL', 35.5, 12.6), voie('IV', 'ROMA', 41.9, 12.5)], reseaux: ['IV|Réseau italien (essai) https://doi.org/10.13127/SD/X0FXNH7QFY_IDENTIFIANT_TRES_LONG_SANS_ESPACE_POUR_ESSAYER_LE_DEBORDEMENT|1988-01-01T00:00:00||2'] },
   earthscope: { voies: [voie('TT', 'TUNI', 36.8, 10.2), voie('GE', 'MTE', 40.4, -7.5)], reseaux: ['TT|Réseau tunisien fictif (essai)|2010-01-01T00:00:00||1', 'GE|GEOFON|1993-01-01T00:00:00||1'] },
 };
 const SEISMES = `#EventID | Time | Latitude | Longitude | Depth/km | Author | Catalog | Contributor | ContributorID | MagType | Magnitude | MagAuthor | EventLocationName

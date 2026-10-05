@@ -39,7 +39,7 @@ import Sismo from './sismo/signal.js';
   const etat = {
     mode: 'seedlink', stations: [], suivies: [], voies: new Map(), seismes: [], catalogue: 'med', choisi: null,
     fenetre: 15, filtre: 'large', pause: null, cotes: null, pays: [], demo: null, mesures: new Map(), arrivees: new Map(),
-    reseaux: new Map(), actifs: null, centres: new Map(), sources: new Map(), listeOk: false, journal: [],
+    reseaux: new Map(), actifs: null, centres: new Map(), sources: new Map(), listeOk: false, journal: [], selection: null,
     cx: { groupes: new Map(), fdsn: 0, demo: 0, echecsFdsn: 0, paquets: 0, dernier: null, diagnostics: new Set() },
   };
   // Journal de connexion (les 8 derniers événements), affiché sous la source des données : il dit ce qui se passe quand
@@ -249,7 +249,7 @@ import Sismo from './sismo/signal.js';
     g.ws = ws; g.recu = false;
     const ids = new Set(g.liste.map(ident)), nom = nomServeur(g.serveur);
     journal(`${nom} : connexion au relais (${g.liste.length} flux)`);
-    g.garde = setTimeout(() => { if (!g.recu && g.ws === ws) ws.close(); }, 20000);
+    g.garde = setTimeout(() => { if (!g.recu && g.ws === ws) ws.close(); }, 15000);
     ws.onmessage = e => {
       if (typeof e.data === 'string') {
         let m;
@@ -288,15 +288,15 @@ import Sismo from './sismo/signal.js';
       majBadge();
     };
   }
-  // Station acceptée mais muette : 90 s après son arrivée sur un serveur qui livre les autres, elle passe au suivant.
+  // Station acceptée mais muette : 60 s après son arrivée sur un serveur qui livre les autres, elle passe au suivant.
   function surveiller() {
     if (etat.mode !== 'seedlink') return;
     const muettes = [];
     for (const g of etat.cx.groupes.values()) {
       if (!g.recu) continue;
-      for (const s of g.liste) { const src = source(s); if (!src.recu && Date.now() - src.depuis > 90000) muettes.push(s); }
+      for (const s of g.liste) { const src = source(s); if (!src.recu && Date.now() - src.depuis > 60000) muettes.push(s); }
     }
-    if (muettes.length) { suivant(muettes, 'aucune donnée en 90 s'); connecter(); }
+    if (muettes.length) { suivant(muettes, 'aucune donnée en 60 s'); connecter(); }
   }
   function majBadge() {
     if (etat.mode === 'demo') return;
@@ -540,7 +540,7 @@ import Sismo from './sismo/signal.js';
     const t = maintenant();
     for (const e of etat.seismes) {
       if (e.lon < VUE.lon[0] || e.lon > VUE.lon[1] || e.lat < VUE.lat[0] || e.lat > VUE.lat[1]) continue;
-      const age = t - e.temps, r = 2.5 + 2.2 * Math.max(0, (e.mag ?? 3) - 2.5);
+      const age = t - e.temps, r = rayonSeisme(e);
       ctx.fillStyle = age < 3600000 ? '#dc2626' : age < 86400000 ? '#ea580c' : '#ca8a04'; ctx.globalAlpha = 0.55;
       ctx.beginPath(); ctx.arc(X(e.lon), Y(e.lat), r, 0, 2 * Math.PI); ctx.fill(); ctx.globalAlpha = 1;
       if (etat.choisi && e.id === etat.choisi.id) { ctx.strokeStyle = COUL.ink; ctx.lineWidth = 2; ctx.stroke(); }
@@ -576,7 +576,14 @@ import Sismo from './sismo/signal.js';
       if (suivie && m && m.decl.some(td => Date.now() - td < 60000)) { ctx.strokeStyle = COUL.bad; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.stroke(); }
       if (suivie) texte(ctx, s.station, x + 8, y - 6, COUL.ink, `700 10.5px ${MONO}`);
     }
+    // objet touché (fiche ouverte sous la carte) : double anneau
+    const sel = etat.selection;
+    if (sel) {
+      const o = sel.objet, x = X(o.lon), y = Y(o.lat), r = sel.type === 'station' ? 13 : rayonSeisme(o) + 5;
+      if (dansVue(o)) for (const [coul, l] of [[COUL.paper, 5], [COUL.ink, 2]]) { ctx.strokeStyle = coul; ctx.lineWidth = l; ctx.beginPath(); ctx.arc(x, y - (sel.type === 'station' ? 1 : 0), r, 0, 2 * Math.PI); ctx.stroke(); }
+    }
   }
+  const rayonSeisme = e => 2.5 + 2.2 * Math.max(0, (e.mag ?? 3) - 2.5);
   // Point à la distance d (degrés) et à l'azimut az d'un point (sphère).
   function destination(lat, lon, d, az) {
     const p1 = (lat * Math.PI) / 180, l1 = (lon * Math.PI) / 180, dr = (d * Math.PI) / 180, a = (az * Math.PI) / 180;
@@ -655,16 +662,17 @@ import Sismo from './sismo/signal.js';
       }
       if (etat.mode === 'seedlink') connecter(); else if (etat.mode === 'fdsn') { majFdsn(); interrogerFdsn(); }
     }
-    majReseaux(); majArrivees(); majTout();
+    if (!on && etat.selection && etat.selection.type === 'station' && etat.selection.objet.reseau === code) etat.selection = null;
+    majReseaux(); majFiche(); majArrivees(); majTout();
   }
   function majSeismes() {
     const t = Date.now();
     $('#dr-seismes').innerHTML = `<thead><tr><th>Heure (UTC)</th><th>M</th><th>Région</th><th>h</th></tr></thead><tbody>${etat.seismes.slice(0, 60).map((e, i) =>
       `<tr class="${etat.choisi && e.id === etat.choisi.id ? 'vu' : ''}" data-dr-seisme="${i}" tabindex="0"><td class="n">${new Date(e.temps).toISOString().slice(5, 16).replace('T', ' ')}<br><small style="color:var(--muted)">il y a ${depuisQuand(t - e.temps)}</small></td><td class="n">${virg(e.mag, 1)}</td><td>${echapper(e.region)}</td><td class="n">${virg(e.h, 0)}</td></tr>`).join('')}</tbody>`;
     $$('[data-dr-seisme]').forEach(tr => {
-      const choisir = () => { etat.choisi = etat.seismes[+tr.dataset.drSeisme]; majSeismes(); majArrivees(); dessinerTout(); };
-      tr.addEventListener('click', choisir);
-      tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisir(); } });
+      const prendre = () => choisir({ type: 'seisme', objet: etat.seismes[+tr.dataset.drSeisme] });
+      tr.addEventListener('click', prendre);
+      tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); prendre(); } });
     });
   }
   function majArrivees() {
@@ -680,29 +688,103 @@ import Sismo from './sismo/signal.js';
       <div class="table-defile"><table class="resultats"><thead><tr><th>Station</th><th>Δ</th><th>Az.</th><th>P</th><th>S</th><th>LR</th></tr></thead><tbody>${lignes}</tbody></table></div>
       <p class="aide">Heures UTC prévues par le modèle ak135 (P : première arrivée, PKIKP ou PKP dans la zone d'ombre ; LR : ondes de Rayleigh, période 20 s). Az. : azimut de la station vu du séisme.</p>`;
   }
-  function dessinerTout() { if (!COUL.paper) lireCouleurs(); dessinerTraces(); dessinerCarte(); }
+  function dessinerTout() { if (!COUL.paper) lireCouleurs(); dessinerTraces(); dessinerCarte(); dessinerFiche(); }
   function majTout() { dessinerTout(); majAfficheurs(); }
 
   // ── Interactions ──────────────────────────────────────────────────────────────────────────────────────────────
+  // Toucher la carte : l'objet le plus proche (station de la carte ou séisme), dans un rayon plus large au doigt ; sa
+  // fiche s'ouvre sous la carte. Toucher un séisme le choisit (arrivées sur les traces, fronts sur la carte).
   function cliquerCarte(ev) {
     if (!geo) return;
     const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
-    const proche = (liste, f) => liste.reduce((m, o) => { const d = Math.hypot(geo.X(f(o).lon) - x, geo.Y(f(o).lat) - y); return d < m.d ? { o, d } : m; }, { o: null, d: Infinity });
-    const st = proche(visibles(), s => s);
-    if (st.o && st.d < 14 && etat.mode !== 'demo') {
-      const id = ident(st.o), i = etat.suivies.findIndex(s => ident(s) === id);
-      if (i >= 0) { etat.suivies.splice(i, 1); etat.sources.delete(id); }
-      else if (etat.suivies.length >= MAX_SUIVIES) { toast(`${MAX_SUIVIES} stations au plus : retirez-en une d'abord.`); return; }
-      else etat.suivies.push(st.o);
-      etat.suivies.sort((a, b) => a.lon - b.lon);
-      toast(`${st.o.reseau}.${st.o.station} (${st.o.pays ? st.o.pays.nom : 'en mer'}) ${i >= 0 ? 'retirée' : 'ajoutée'}`);
-      if (etat.mode === 'seedlink') connecter(); else if (etat.mode === 'fdsn') { majFdsn(); interrogerFdsn(); }
-      majArrivees(); majTout();
-      return;
-    }
-    const se = proche(etat.seismes, e => e);
-    if (se.o && se.d < 12) { etat.choisi = se.o; majSeismes(); majArrivees(); dessinerTout(); }
+    const rayon = window.matchMedia('(pointer: coarse)').matches ? 24 : 14;
+    const touches = [
+      ...visibles().map(o => ({ type: 'station', objet: o, d: Math.hypot(geo.X(o.lon) - x, geo.Y(o.lat) - 1 - y) })),
+      ...etat.seismes.filter(dansVue).map(o => ({ type: 'seisme', objet: o, d: Math.max(0, Math.hypot(geo.X(o.lon) - x, geo.Y(o.lat) - y) - rayonSeisme(o) / 2) })),
+    ].filter(c => c.d < rayon).sort((a, b) => a.d - b.d);
+    choisir(touches.length ? { type: touches[0].type, objet: touches[0].objet } : null);
   }
+  function choisir(sel) {
+    etat.selection = sel;
+    if (sel && sel.type === 'seisme') { etat.choisi = sel.objet; majSeismes(); majArrivees(); }
+    majFiche(); dessinerTout();
+  }
+  // Suivre une station ou ne plus la suivre (12 au plus) : traces et connexions mises à jour.
+  function basculerSuivi(s) {
+    if (etat.mode === 'demo') { toast('Démonstration : les stations simulées sont fixées.'); return; }
+    const id = ident(s), i = etat.suivies.findIndex(x => ident(x) === id);
+    if (i >= 0) { etat.suivies.splice(i, 1); etat.sources.delete(id); }
+    else if (etat.suivies.length >= MAX_SUIVIES) { toast(`${MAX_SUIVIES} stations suivies au plus : retirez-en une d'abord.`); return; }
+    else etat.suivies.push(s);
+    etat.suivies.sort((a, b) => a.lon - b.lon);
+    toast(`${s.reseau}.${s.station} ${i >= 0 ? 'retirée des' : 'ajoutée aux'} traces`);
+    if (etat.mode === 'seedlink') connecter(); else if (etat.mode === 'fdsn') { majFdsn(); interrogerFdsn(); }
+    majFiche(); majArrivees(); majTout();
+  }
+
+  // ── Fiche de l'objet touché ─────────────────────────────────────────────────────────────────────────────────
+  const suivie = s => etat.suivies.some(x => ident(x) === ident(s));
+  // D'où viennent les données d'une station suivie, et depuis quand rien n'est arrivé.
+  function etatStation(s) {
+    if (!suivie(s)) return 'non suivie : « Suivre cette station » l\'ajoute aux traces.';
+    if (etat.mode === 'demo') return 'suivie, signaux simulés (démonstration).';
+    const m = etat.mesures.get(ident(s)), lat = Direct.latence(m ? m.fin : null, Date.now());
+    const par = viaFdsn(s) ? `par le service FDSN du centre ${nomCentre(s.centre)}, toutes les 20 s` : `en temps réel par le serveur SeedLink du centre ${nomServeur(serveurDe(s))}`;
+    const n = Centres.candidats(s.centre).length + 1, rang = etat.mode === 'seedlink' ? ` (source ${Math.min(source(s).essai + 1, n)} sur ${n})` : '';
+    return `suivie, ${par}${rang} ; ${Number.isFinite(lat) ? `dernier échantillon il y a ${depuisQuand(lat * 1000)}` : 'aucune donnée reçue pour l\'instant'}.`;
+  }
+  function majFiche() {
+    const div = $('#dr-fiche'), sel = etat.selection;
+    if (!div) return;
+    if (!sel) { div.hidden = true; div.innerHTML = ''; return; }
+    div.hidden = false;
+    if (sel.type === 'station') {
+      const s = sel.objet, r = etat.reseaux.get(s.reseau);
+      div.innerHTML = `<p class="fiche-titre"><b>${echapper(`${s.reseau}.${s.station}`)}</b> · station sismologique · ${echapper(s.pays ? s.pays.nom : 'en mer ou petite île')}</p>
+        <p class="aide">Réseau ${echapper(s.reseau)}${r && r.description ? ` (${echapper(r.description)})` : ''} · centre ${echapper(nomCentre(s.centre))} · voie ${echapper(s.voie)}, ${virg(s.cadence, 0)} Hz${s.capteur ? ` · ${echapper(s.capteur)}` : ''}</p>
+        <p class="aide"><b>État :</b> <span id="dr-fiche-etat">${echapper(etatStation(s))}</span></p>
+        ${suivie(s) ? '<canvas id="dr-fiche-trace" aria-label="Trace de la station, sur la fenêtre des traces"></canvas>' : ''}
+        <div class="fiche-actions">${etat.mode === 'demo' ? '' : `<button type="button" class="bouton primaire" id="dr-fiche-suivre">${suivie(s) ? 'Ne plus suivre' : 'Suivre cette station'}</button>`}
+        ${suivie(s) ? '<button type="button" class="bouton" id="dr-fiche-traces">Voir toutes les traces</button>' : ''}</div>`;
+      const b = $('#dr-fiche-suivre');
+      if (b) b.addEventListener('click', () => basculerSuivi(s));
+    } else {
+      const e = sel.objet, t = Date.now();
+      const d = etat.suivies.map(s => ({ s, d: Direct.distanceAzimut(e.lat, e.lon, s.lat, s.lon).distance })).sort((a, b) => a.d - b.d).slice(0, 3);
+      div.innerHTML = `<p class="fiche-titre"><b>Séisme M ${virg(e.mag, 1)}${e.typeMag ? ` ${echapper(e.typeMag)}` : ''}</b> · ${echapper(e.region || 'région inconnue')}</p>
+        <p class="aide">${new Date(e.temps).toISOString().slice(0, 19).replace('T', ' à ')} UTC (il y a ${depuisQuand(t - e.temps)}) · profondeur ${virg(e.h, 0)} km · ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E${e.id === 'demo' ? ' · séisme fictif' : ''}</p>
+        <p class="aide">Ses arrivées prévues (P, S, ondes de surface) sont placées sur les traces${t - e.temps < 3600000 ? ' et ses fronts P et S s\'étendent sur la carte' : ''}.${d.length ? ` Stations suivies les plus proches : ${d.map(x => `${echapper(x.s.station)} à ${virg(x.d, 1)}°`).join(', ')}.` : ''}${t - e.temps > etat.fenetre * 60000 ? ' Le séisme est plus ancien que la fenêtre des traces : ses ondes ne s\'y voient plus.' : ''}</p>
+        <div class="fiche-actions"><button type="button" class="bouton primaire" id="dr-fiche-traces">Voir les traces</button></div>`;
+    }
+    const v = $('#dr-fiche-traces');
+    if (v) v.addEventListener('click', () => $('section[aria-label="Traces en temps réel"]').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    dessinerFiche();
+  }
+  // Trace de la station touchée, sur la fenêtre des traces (mesure déjà faite pour les traces).
+  function dessinerFiche() {
+    const sel = etat.selection, cv = $('#dr-fiche-trace');
+    if (!sel || sel.type !== 'station' || !cv) return;
+    const span = $('#dr-fiche-etat');
+    if (span) span.textContent = etatStation(sel.objet);
+    const { ctx, W, H } = preparer(cv, 96), m = etat.mesures.get(ident(sel.objet)), t1 = maintenant(), t0 = t1 - etat.fenetre * 60000;
+    if (!m || !m.x.length) { texte(ctx, 'en attente de données', W / 2, H / 2, COUL.muted, `700 12px ${POLICE}`, 'center'); return; }
+    let max = 0;
+    for (const v of m.x) if (!Number.isNaN(v)) max = Math.max(max, Math.abs(v));
+    const X = t => 6 + ((t - t0) / (t1 - t0)) * (W - 12), yc = H / 2 + 6, ech = (H * 0.38) / (max || 1), parPx = Math.max(1, Math.floor(m.x.length / (W - 12)));
+    ctx.strokeStyle = COUL.trace; ctx.lineWidth = 1; ctx.beginPath();
+    let leve = true;
+    for (let i = 0; i < m.x.length; i += parPx) {
+      let mn = Infinity, mx = -Infinity;
+      for (let j = i; j < Math.min(m.x.length, i + parPx); j++) { const v = m.x[j]; if (!Number.isNaN(v)) { if (v < mn) mn = v; if (v > mx) mx = v; } }
+      if (mn === Infinity) { leve = true; continue; }
+      const x = X(m.t0 + (i * 1000) / m.fs);
+      if (leve) { ctx.moveTo(x, yc - mx * ech); leve = false; } else ctx.lineTo(x, yc - mx * ech);
+      ctx.lineTo(x, yc - mn * ech);
+    }
+    ctx.stroke();
+    texte(ctx, `${etat.fenetre} min · max ${virg(max, max < 1 ? 3 : 1)} µm/s`, 8, 10, COUL.muted, `10.5px ${MONO}`);
+  }
+
   function brancher() {
     $('#dr-carte').addEventListener('click', cliquerCarte);
     $('#dr-carte').addEventListener('mousemove', ev => {
@@ -747,8 +829,17 @@ import Sismo from './sismo/signal.js';
   lireCouleurs();
   brancher();
   fetch('data/cotes-mediterranee.json').then(r => r.json()).then(j => { etat.cotes = j; dessinerCarte(); }).catch(() => { /* carte sans côtes */ });
-  $('#dr-legende-carte').innerHTML = ['0,01', '0,05', '0,2', '1', '5', '≥ 10'].map((v, i) => `<span><i style="background:${['#2563eb', '#0891b2', '#16a34a', '#ca8a04', '#ea580c', '#dc2626'][i]}"></i>${v} µm/s</span>`).join('')
-    + '<span><i style="background:#94a3b8"></i>pas de donnée</span><span><i style="background:#dc2626;border-radius:50%"></i>séisme de moins d\'une heure</span>';
+  // Légende : les symboles mêmes de la carte (triangles des stations, disques des séismes, fronts)
+  const triangle = (fond, trait) => `<svg viewBox="0 0 16 14" width="15" height="13" aria-hidden="true"><path d="M8 1.5 L14.5 12.5 L1.5 12.5 Z" fill="${fond}" stroke="${trait}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+  const disque = (coul, r) => `<svg viewBox="0 0 ${2 * r + 2} ${2 * r + 2}" width="${2 * r + 2}" height="${2 * r + 2}" aria-hidden="true"><circle cx="${r + 1}" cy="${r + 1}" r="${r}" fill="${coul}" fill-opacity=".55"/></svg>`;
+  const front = coul => `<svg viewBox="0 0 22 10" width="22" height="10" aria-hidden="true"><path d="M1 9 Q11 -3 21 9" fill="none" stroke="${coul}" stroke-width="2"/></svg>`;
+  $('#dr-legende-carte').innerHTML = `<span class="titre-legende">Stations (triangles)</span>`
+    + ['0,01', '0,05', '0,2', '1', '5', '≥ 10'].map((v, i) => `<span>${triangle(['#2563eb', '#0891b2', '#16a34a', '#ca8a04', '#ea580c', '#dc2626'][i], 'transparent')}${v} µm/s</span>`).join('')
+    + `<span>${triangle('#94a3b8', 'transparent')}suivie, pas de donnée</span><span>${triangle('none', 'var(--muted)')}non suivie</span>`
+    + `<span><svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="var(--bad)" stroke-width="2"/></svg>déclenchement STA/LTA dans la dernière minute</span>`
+    + `<span class="titre-legende">Séismes des 7 derniers jours (disques, taille selon la magnitude)</span>`
+    + `<span>${disque('#dc2626', 6)}moins d'une heure</span><span>${disque('#ea580c', 6)}moins d'un jour</span><span>${disque('#ca8a04', 6)}plus ancien</span>`
+    + `<span>${front('var(--pick-p)')}front P</span><span>${front('var(--pick-s)')}front S du séisme choisi</span>`;
   demarrer();
   setInterval(() => { if (!document.hidden) majTout(); }, 1000);
   setInterval(surveiller, 5000);

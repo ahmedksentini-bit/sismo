@@ -206,14 +206,17 @@ la virgule décimale.
     permanent ; pays par les polygones de `tools/carte/pays.py`). La page démarre sur le réseau GE de GEOFON, demandé par
     son nom (requête courte) ; les inventaires complets des centres, lents sans nom de réseau, complètent la liste à
     leur arrivée (60 s au plus), et « Centres interrogés » donne la cause d'un échec. `api/geofon` reste un alias de
-    `api/fdsn` pour les pages restées en cache. Cette liste est la liste blanche des deux fonctions Cloudflare Pages (`functions/api/`), relais
-    bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 12 flux validés au plus, reprise
+    `api/fdsn` pour les pages restées en cache. Carte : triangles = stations, disques = séismes des 7 derniers jours, légende
+    faite des symboles mêmes de la carte ; toucher un objet (le plus proche, rayon élargi au doigt) ouvre sa fiche sous la
+    carte (station : centre, pays, d'où viennent ses données, sa trace, « Suivre cette station » ; séisme : détails,
+    arrivées placées sur les traces) ; un toucher ne change jamais à lui seul les stations suivies. La liste des centres est la liste blanche des deux
+    fonctions Cloudflare Pages (`functions/api/`), relais bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 12 flux validés au plus, reprise
     ≤ 30 min, ne transmet que les voies demandées, se ferme au bout de 10 min (la page se reconnecte depuis son dernier
     échantillon) ; `?sonde=1` dit quels serveurs répondent à HELLO, `?diagnostic=1` déroule l'échange avec l'un d'eux ;
     `fdsn.js` ne transmet que les services FDSN station, dataselect (≤ 2 h, ≤ 12 stations nommées) et event, au format
     texte. Chaque station suivie essaie le serveur SeedLink de son centre, puis GEOFON, puis le dataselect de son centre
     toutes les 20 s : elle passe au suivant si le serveur la refuse (STATION ou SELECT), échoue deux fois de suite ou ne
-    livre rien d'elle en 90 s. Seuls GEOFON, Résif et EarthScope ont un serveur SeedLink connu ; les autres sont supposés
+    livre rien d'elle en 60 s. Seuls GEOFON, Résif et EarthScope ont un serveur SeedLink connu ; les autres sont supposés
     sur l'hôte FDSN au port 18000 (`verifie: false`) jusqu'à confirmation par la sonde. Sans aucune liste de stations, mode
     « Démo (simulée) » : séisme fictif, signaux de `teleseisme.js`, toujours signalé comme tel. Décodage miniSEED
     (`src/sismo/miniseed.js`, Steim 1 et 2, entiers, réels) vérifié contre ObsPy ; protocole SeedLink
