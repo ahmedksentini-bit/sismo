@@ -56,7 +56,9 @@ la virgule décimale.
     scalaire, premier plan nodal), QuakeML (nodalPlane1, profondeur en m), tableaux à colonnes strike, dip, rake (ISC ;
     `Catalogue.lire` les attache aux séismes en `mec`) ; régimes de Zoback (1992) par les plongements de P, B et T ; sphères
     focales sur la carte (hémisphère inférieur, cache de canevas) ; chaque zone se voit proposer le mécanisme dominant de
-    ses mécanismes tant que l'étudiant n'a pas choisi le sien. Le site ne télécharge pas les mécanismes : fichier à charger.
+    ses mécanismes tant que l'étudiant n'a pas choisi le sien. Le site ne télécharge pas les mécanismes : fichier à charger ;
+    la case « Afficher les mécanismes » reste grisée (« aucun chargé ») tant qu'aucun n'est lu, et le bilan signale ceux hors de la
+    région du catalogue.
 12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et le
     moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le

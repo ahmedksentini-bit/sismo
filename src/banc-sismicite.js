@@ -486,9 +486,22 @@ import ZonesReel from './zones-reel.js';
   function installerMecs(r, nom) {
     etat.mecs = { nom, format: r.format, rejetees: r.rejetees, liste: r.mecanismes.map((m, i) => ({ ...m, regime: Mecanismes.regime(m), cle: `${i}|${m.azimut}|${m.pendage}|${m.glissement}` })) };
     cacheMecs.clear();
-    const b = Mecanismes.bilan(etat.mecs.liste), t = b.parType, pl = n => (n > 1 ? 's' : '');
-    $('#sc-mec-info').innerHTML = `<b>${echapper(nom)}</b> : ${milliers(b.n)} mécanisme${pl(b.n)} au foyer (${t.normale} normale${pl(t.normale)}, ${t.inverse} inverse${pl(t.inverse)}, ${t.decrochement} décrochement${pl(t.decrochement)}${t.indetermine ? `, ${t.indetermine} indéterminé${pl(t.indetermine)}` : ''}, régimes de Zoback 1992)${r.rejetees ? ` ; ${milliers(r.rejetees)} séisme${pl(r.rejetees)} sans mécanisme lisible` : ''}. Touchez une sphère focale pour lire ses plans nodaux.`;
-    majZones(); dessinerCarte();
+    majInfoMecs(); majZones(); dessinerCarte();
+  }
+  // Case « Afficher les mécanismes » : grisée tant qu'aucun mécanisme n'est lu (le site ne les télécharge pas), suivie de
+  // leur nombre ; bilan des mécanismes lus et de ceux qui tombent dans la région du catalogue.
+  let AIDE_MECS = '';
+  function majInfoMecs() {
+    const m = etat.mecs, cas = $('#sc-mec-afficher');
+    cas.disabled = !m; $('#sc-mec-compte').textContent = m ? `(${milliers(m.liste.length)})` : '(aucun chargé)';
+    if (!m) { $('#sc-mec-info').textContent = AIDE_MECS; return; }
+    const b = Mecanismes.bilan(m.liste), t = b.parType, pl = n => (n > 1 ? 's' : ''), c = etat.reel && etat.reel.cadre;
+    const dans = c ? m.liste.filter(q => { const lon = Cat.lonDans(q.lon, c.lon[0]); return lon <= c.lon[1] && q.lat >= c.lat[0] && q.lat <= c.lat[1]; }).length : null;
+    const region = dans === null || dans === b.n ? ''
+      : dans === 0 ? ' <b>Aucun n\'est dans la région du catalogue</b> : le fichier couvre-t-il la même région ?'
+        : ` ${milliers(dans)} dans la région du catalogue.`;
+    $('#sc-mec-info').innerHTML = `<b>${echapper(m.nom)}</b> : ${milliers(b.n)} mécanisme${pl(b.n)} au foyer (${t.normale} normale${pl(t.normale)}, ${t.inverse} inverse${pl(t.inverse)}, ${t.decrochement} décrochement${pl(t.decrochement)}${t.indetermine ? `, ${t.indetermine} indéterminé${pl(t.indetermine)}` : ''}, régimes de Zoback 1992)${m.rejetees ? ` ; ${milliers(m.rejetees)} séisme${pl(m.rejetees)} sans mécanisme lisible` : ''}.${region}`
+      + (etat.afficherMecs ? ' Touchez une sphère focale pour lire ses plans nodaux.' : ' Cochez « Afficher les mécanismes » pour les voir sur la carte.');
   }
   async function chargerMecs(fichier) {
     try {
@@ -854,6 +867,7 @@ import ZonesReel from './zones-reel.js';
     etat.reel = { lu, evts, periode, nom, tronque, famille: 'tous', resume: Cat.resume(evts), cadre, vue: vueEnsemble(cadre) };
     const avecMec = evts.filter(e => e.mec);
     if (avecMec.length) installerMecs({ format: 'catalogue', mecanismes: avecMec.map(e => ({ t: e.t, lat: e.lat, lon: e.lon, h: e.h, mag: e.mag, typeMag: e.typeMag, id: e.id, ...e.mec })), rejetees: 0 }, `${nom} (colonnes du catalogue)`);
+    else if (etat.mecs) majInfoMecs(); // mécanismes d'un fichier : comptés de nouveau dans la région du nouveau catalogue
     const ec = Object.entries(lu.ecartes || {}), rej = lu.rejets && lu.rejets.length ? ` (ligne ${lu.rejets[0].ligne} : ${lu.rejets[0].raison}${lu.rejetees > 1 ? '…' : ''})` : '';
     const col = Object.values(lu.colonnes || {});
     $('#sc-reel-info').innerHTML = `<b>${echapper(nom)}</b> : ${echapper(lu.nom)}, ${milliers(evts.length)} séismes lus`
@@ -967,7 +981,8 @@ import ZonesReel from './zones-reel.js';
     const carte = $('#sc-carte');
     carte.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) { const m = mecProche(e.offsetX, e.offsetY); if (m) infoMec(m); else infoSeisme(seismeProche(e.offsetX, e.offsetY)); } });
     $('#sc-mec-fichier').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) chargerMecs(f); });
-    $('#sc-mec-afficher').addEventListener('change', e => { etat.afficherMecs = e.target.checked; majZones(); dessinerCarte(); });
+    AIDE_MECS = $('#sc-mec-info').textContent.replace(/\s+/g, ' ').trim();
+    $('#sc-mec-afficher').addEventListener('change', e => { etat.afficherMecs = e.target.checked; majInfoMecs(); majZones(); dessinerCarte(); });
     gestes(carte, { zoomer: zoomerCarte, glisser: deplacerCarte, toucher: toucherCarte });
     $('#sc-carte-plus').addEventListener('click', () => zoomerCarte(2));
     $('#sc-carte-moins').addEventListener('click', () => zoomerCarte(0.5));

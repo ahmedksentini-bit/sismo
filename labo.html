@@ -22,7 +22,7 @@
   "./src/banc-poussee.js": "./src/banc-poussee.js?v=1ae7248b49",
   "./src/banc-profil.js": "./src/banc-profil.js?v=34e550acef",
   "./src/banc-selection.js": "./src/banc-selection.js?v=fa88657041",
-  "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=83a05b337f",
+  "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=d581fd3cc0",
   "./src/banc-sismometre.js": "./src/banc-sismometre.js?v=97df4b1e82",
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
   "./src/banc-source.js": "./src/banc-source.js?v=a0c137fe7c",
@@ -634,9 +634,12 @@
         </div>
         <div class="outils">
           <label class="bouton secondaire bouton-fichier">Charger des mécanismes au foyer<input type="file" id="sc-mec-fichier" accept=".ndk,.txt,.csv,.tsv,.xml,.qml,text/plain,text/csv,application/xml"></label>
-          <label class="case"><input type="checkbox" id="sc-mec-afficher" checked> Afficher les mécanismes</label>
+          <label class="case"><input type="checkbox" id="sc-mec-afficher" checked disabled> Afficher les mécanismes <span id="sc-mec-compte">(aucun chargé)</span></label>
         </div>
-        <p class="aide" id="sc-mec-info">Pour guider le tracé, chargez les mécanismes au foyer de la région : fichier ndk du Global CMT (recherche sur globalcmt.org), QuakeML, ou tableau à colonnes azimut, pendage et glissement (strike, dip, rake), comme le CSV des mécanismes du bulletin de l'ISC. Ils s'affichent en sphères focales (hémisphère inférieur) et chaque zone se voit proposer le mécanisme dominant.</p>
+        <p class="aide" id="sc-mec-info">Aucun mécanisme chargé : le site ne les télécharge pas, et un catalogue n'en apporte que s'il a des colonnes azimut,
+          pendage et glissement. Pour guider le tracé, chargez ceux de la région avec « Charger des mécanismes au foyer » : fichier ndk du Global CMT
+          (globalcmt.org), QuakeML, ou tableau à colonnes azimut, pendage et glissement (strike, dip, rake), comme le CSV des mécanismes du bulletin de
+          l'ISC. Ils s'affichent en sphères focales (hémisphère inférieur) et chaque zone se voit proposer le mécanisme dominant.</p>
         <p class="aide" id="sc-zones-aide"></p>
         <div class="table-defile"><table class="resultats" id="sc-zones-table"></table></div>
         <div class="actions" style="margin-top:10px">
@@ -1676,7 +1679,7 @@
 <script type="module" src="src/banc-sismometre.js?v=97df4b1e82"></script>
 <script type="module" src="src/banc-profil.js?v=34e550acef"></script>
 <script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>
-<script type="module" src="src/banc-sismicite.js?v=83a05b337f"></script>
+<script type="module" src="src/banc-sismicite.js?v=d581fd3cc0"></script>
 <script type="module" src="src/banc-geodesie.js?v=34dc2cee6d"></script>
 <script type="module" src="src/banc-alea.js?v=f0e62e5949"></script>
 <script type="module" src="src/banc-selection.js?v=fa88657041"></script>
