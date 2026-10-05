@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=c75582e051">
+<link rel="stylesheet" href="lecteur.css?v=d222fc3ad5">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=3d27c9fbcf",
+  "./src/direct-page.js": "./src/direct-page.js?v=de803ba1f7",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -167,7 +167,13 @@
     <div class="colonne">
       <section class="carte" aria-label="Carte des stations">
         <h2>Carte des stations<small>Triangles : stations sismologiques, colorées par la vitesse maximale du sol des 60 dernières secondes (filtrée de 0,5 à 5 Hz). Disques : séismes des 7 derniers jours. Touchez un triangle ou un disque : sa fiche s'ouvre sous la carte</small></h2>
-        <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte"></canvas>
+        <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte ; pincer ou la molette zooment, glisser déplace la carte"></canvas>
+        <div class="outils outils-zoom">
+          <div class="segments compact" role="group" aria-label="Zoom de la carte">
+            <button type="button" id="dr-carte-plus" aria-label="Zoomer la carte">+</button><button type="button" id="dr-carte-moins" aria-label="Dézoomer la carte">−</button><button type="button" id="dr-carte-tout">Vue d'ensemble</button>
+          </div>
+          <span class="aide">Pincez (ou molette) pour zoomer, glissez pour déplacer, double-touchez pour agrandir.</span>
+        </div>
         <p class="legende legende-carte" id="dr-legende-carte"></p>
         <div class="fiche" id="dr-fiche" hidden aria-live="polite"></div>
       </section>
@@ -180,21 +186,29 @@
           <select id="dr-filtre" aria-label="Filtre">
             <option value="aucun">Sans filtre</option><option value="large" selected>0,5 – 5 Hz</option><option value="proche">1 – 8 Hz · séismes proches</option><option value="tele">0,5 – 2 Hz · ondes P lointaines</option><option value="ms">18 – 22 s · ondes de surface</option>
           </select>
+          <div class="segments compact" role="group" aria-label="Zoom des traces">
+            <button type="button" id="dr-traces-plus" aria-label="Zoomer les traces">+</button><button type="button" id="dr-traces-moins" aria-label="Dézoomer les traces">−</button>
+          </div>
           <button type="button" class="outil neutre" id="dr-pause" aria-pressed="false">Pause</button>
+          <button type="button" class="outil" id="dr-direct" hidden>Revenir au direct</button>
           <span class="curseur-lecture" id="dr-curseur">—</span>
         </div>
         <canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas>
-        <p class="aide">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite.</p>
+        <p class="aide">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite. Zoom : boutons + et −, pincement ou Ctrl + molette ; glissez de côté pour remonter dans le temps (70 minutes au plus), « Revenir au direct » pour suivre de nouveau.</p>
       </section>
       <section class="carte" aria-label="Sismogrammes du séisme" id="dr-sismo" hidden>
         <h2>Sismogrammes du séisme choisi<small id="dr-ev-titre"></small></h2>
         <p class="aide">Enregistrements lus dans les archives des centres de données (services FDSN), pour des stations réparties
           en distance : composante verticale, vitesse du sol (µm/s), une échelle par trace, temps comptés depuis l'origine du
-          séisme. Traits verticaux : arrivées prévues par le modèle ak135 (P, S, ondes de surface LR).</p>
+          séisme. Traits verticaux : arrivées prévues par le modèle ak135 (P, S, ondes de surface LR). Zoom : boutons, pincement ou
+          Ctrl + molette, double toucher ; glissez de côté pour vous déplacer.</p>
         <div class="outils">
           <select id="dr-ev-filtre" aria-label="Filtre des sismogrammes">
             <option value="aucun">Sans filtre</option><option value="large">0,5 – 5 Hz</option><option value="proche">1 – 8 Hz · séismes proches</option><option value="tele">0,5 – 2 Hz · ondes P lointaines</option><option value="ms">18 – 22 s · ondes de surface</option>
           </select>
+          <div class="segments compact" role="group" aria-label="Zoom des sismogrammes">
+            <button type="button" id="dr-ev-plus" aria-label="Zoomer les sismogrammes">+</button><button type="button" id="dr-ev-moins" aria-label="Dézoomer les sismogrammes">−</button><button type="button" id="dr-ev-tout">Tout</button>
+          </div>
           <button type="button" class="outil neutre" id="dr-ev-fermer">Fermer</button>
         </div>
         <p class="aide" id="dr-ev-etat"></p>
@@ -252,6 +266,6 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="src/direct-page.js?v=3d27c9fbcf"></script>
+<script type="module" src="src/direct-page.js?v=de803ba1f7"></script>
 </body>
 </html>

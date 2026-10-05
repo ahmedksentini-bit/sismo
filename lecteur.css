@@ -394,7 +394,11 @@ aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; 
 @media (max-width: 760px) { #propagation { height: 410px; } }
 /* page « En direct » : carte des stations et traces en temps réel */
 #dr-carte, #dr-traces, #dr-ev-traces { display: block; width: 100%; height: 360px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
-#dr-carte { cursor: pointer; }
+#dr-carte { cursor: grab; touch-action: none; }
+#dr-traces, #dr-ev-traces { touch-action: pan-y; }
+#dr-carte.glisse, #dr-traces.glisse, #dr-ev-traces.glisse { cursor: grabbing; }
+.outils-zoom { margin-top: 8px; }
+.outils-zoom .aide { margin: 0; }
 #dr-filtre, #dr-ev-filtre { width: auto; min-width: 0; padding: 6px 8px; font-size: 13px; }
 #poste-direct .legende span i { border-radius: 2px; }
 #poste-direct .carte { min-width: 0; max-width: 100%; }
