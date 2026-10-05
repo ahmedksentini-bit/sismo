@@ -65,6 +65,13 @@ const Sismicite = (() => {
   // Renvoie l'amas de chaque séisme et un drapeau : 0 choc principal ou isolé, 1 réplique, −1 précurseur.
   const JOURS_GK = 364.75;
   const distancePlane = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  // Distance épicentrale d'HMTK (haversine, rayon 6371,227 km) entre deux séismes { lat, lon } : celle du déclusterage
+  // d'un catalogue réel.
+  const haversine = (a, b) => {
+    const r = Math.PI / 180, dlat = (a.lat - b.lat) * r, dlon = (a.lon - b.lon) * r;
+    const h = Math.sin(dlat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dlon / 2) ** 2;
+    return 2 * 6371.227 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  };
   function amasGK(cat, { distance = distancePlane, propPrecurseurs = 0 } = {}) {
     const n = cat.length, amas = new Int32Array(n), drapeau = new Int8Array(n);
     const parTemps = [...cat.keys()].sort((i, j) => cat[i].t - cat[j].t), temps = parTemps.map(i => cat[i].t);
@@ -129,7 +136,7 @@ const Sismicite = (() => {
     return h;
   }
   function comptagesCompletude(evts, table, dm, anneeFin) {
-    const mmaxObs = Math.max(...evts.map(e => e.M));
+    const mmaxObs = evts.reduce((a, e) => Math.max(a, e.M), -Infinity); // boucle : un catalogue réel peut dépasser la pile
     let cmag = table.map(r => r[1]);
     if (mmaxObs > Math.max(...cmag)) cmag = [...cmag, mmaxObs];
     const cannee = [anneeFin + 1, ...table.map(r => r[0])];
@@ -187,6 +194,6 @@ const Sismicite = (() => {
   const probabilite = (lam, t) => 1 - Math.exp(-lam * t);
   const periodeRetour = (P, t) => -t / Math.log(1 - P);
 
-  return { MMIN, DM, COMPLETUDE, JOURS_GK, mcAnnee, fenetreGK, genererCatalogue, amasGK, declusterGK, mcCourbureMax, valeurB, recurrence, comptagesCompletude, weichert, stepp, probabilite, periodeRetour };
+  return { MMIN, DM, COMPLETUDE, JOURS_GK, mcAnnee, fenetreGK, genererCatalogue, haversine, amasGK, declusterGK, mcCourbureMax, valeurB, recurrence, comptagesCompletude, weichert, stepp, probabilite, periodeRetour };
 })();
 export default Sismicite;
