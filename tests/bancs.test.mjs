@@ -60,3 +60,64 @@ test('distance de croisement Pg / Pn cohérente avec le générateur', () => {
   const a = S.temps(xc - 1, h), b = S.temps(xc + 1, h);
   assert.ok(a.tPg < a.tPn && b.tPn < b.tPg, `croisement ${xc.toFixed(1)} km`);
 });
+
+test('coupe de la croûte : distance critique, rais Pg et Pn et croisement conformes aux temps du générateur', () => {
+  const distances = Array.from({ length: 12 }, (_, i) => 15 + 30 * i);
+  const modeles = [[S.MODELE, 5], [S.MODELE, 10], [{ ...S.MODELE, H: 24, vp1: 6.4, vp2: 7.7 }, 5], [{ ...S.MODELE, H: 48, vp1: 5.7, vp2: 8.3 }, 5]];
+  for (const [m, h] of modeles) {
+    const V1 = m.vp1, V2 = m.vp2, H = m.H, c = Rf.coupe(V1, V2, H, h, distances), xcr = Rf.distanceCritique(V1, V2, H, h);
+    assert.ok(Math.abs(Math.sin(c.ic) - V1 / V2) < 1e-12 && c.xcr === xcr && Math.abs(c.ti - Rf.intercept(V1, V2, H, h)) < 1e-12);
+    // Pn existe à partir de la distance critique, pas avant (générateur) ; au croisement, tPg = tPn
+    assert.equal(S.temps(xcr - 0.01, h, m).tPn, null);
+    assert.notEqual(S.temps(xcr + 0.01, h, m).tPn, null);
+    const tc = S.temps(c.xc, h, m);
+    assert.ok(Math.abs(tc.tPg - tc.tPn) < 1e-6, `croisement ${c.xc.toFixed(1)} km`);
+    const L = (p, q) => Math.hypot(q[0] - p[0], q[1] - p[1]);
+    for (const st of c.stations) {
+      const tt = S.temps(st.d, h, m);
+      assert.deepEqual(st.pg.pts, [[0, h], [st.d, 0]]);
+      assert.ok(Math.abs(st.pg.t - tt.tPg) < 1e-9);
+      if (tt.tPn === null) assert.equal(st.pn, null, `${st.d} km : pas de Pn avant la distance critique`);
+      else {
+        // rai dessiné : foyer, Moho, Moho, station ; temps le long du rai (croûte à V₁, Moho à V₂) = tPn du générateur
+        const [a, b, e, f] = st.pn.pts;
+        assert.deepEqual([a, f], [[0, h], [st.d, 0]]);
+        assert.ok(b[1] === H && e[1] === H && e[0] >= b[0]);
+        const t = (L(a, b) + L(e, f)) / V1 + L(b, e) / V2;
+        assert.ok(Math.abs(t - tt.tPn) < 1e-9 && Math.abs(st.pn.t - tt.tPn) < 1e-9, `${st.d} km`);
+        // descente et remontée sous l'angle critique (Snell : sin iᶜ = V₁/V₂)
+        assert.ok(Math.abs((b[0] - a[0]) / L(a, b) - V1 / V2) < 1e-12 && Math.abs((f[0] - e[0]) / L(e, f) - V1 / V2) < 1e-12);
+      }
+      // phase première : celle du générateur, et Pn exactement au-delà du croisement
+      assert.equal(st.premiere, tt.tP === tt.tPn ? 'Pn' : 'Pg');
+      assert.equal(st.premiere === 'Pn', st.d > c.xc);
+    }
+    // au point critique, descente et remontée se rejoignent sur le Moho (réflexion critique)
+    const pc = Rf.raiPn(V1, V2, H, h, xcr);
+    assert.ok(Math.abs(pc.pts[1][0] - pc.pts[2][0]) < 1e-9);
+  }
+  // modèle sans manteau plus rapide, ou Moho au-dessus du foyer : rais Pg seulement
+  for (const c of [Rf.coupe(6, 5.5, 30, 5, distances), Rf.coupe(6, 8, 4, 5, distances), Rf.coupe(6, null, null, 5, distances)]) {
+    assert.ok(c.xcr === null && c.xc === null && c.stations.every(s => s.pn === null && s.premiere === 'Pg'));
+  }
+});
+
+test('phase lue la première sur deux droites : la plus précoce, en accord avec leur croisement et le générateur', () => {
+  const h = 5, distances = () => Array.from({ length: 12 }, (_, i) => 15 + 30 * i);
+  const dg = Rf.droite({ d: 15, t: S.temps(15, h).tPg }, { d: 75, t: S.temps(75, h).tPg });
+  const dn = Rf.droite({ d: 195, t: S.temps(195, h).tPn }, { d: 345, t: S.temps(345, h).tPn });
+  const xc = Rf.intersection(dg, dn);
+  for (let d = 15; d <= 345; d += 30) {
+    assert.equal(Rf.premiereLue(dg, dn, d), d > xc ? 'Pn' : 'Pg');
+    const tt = S.temps(d, h);
+    if (Math.abs(d - xc) > 5) assert.equal(Rf.premiereLue(dg, dn, d), tt.tP === tt.tPn ? 'Pn' : 'Pg', `${d} km`);
+  }
+  assert.equal(Rf.premiereLue(dg, null, 100), null);
+  assert.equal(Rf.premiereLue(null, dn, 100), null);
+  assert.equal(Rf.premiereLue(dn, dg, 100), null); // « Pn » plus lente que « Pg » : pas de croisement
+  // croûte tirée de ces droites (épaisseur des lectures) : le rai Pn dessiné arrive sur la droite Pn, et H est proche
+  // du modèle (la droite Pg par deux points n'est qu'une approximation de √(Δ² + h²)/V₁)
+  const H = Rf.epaisseur(dg.V, dn.V, dn.ti, h), c = Rf.coupe(dg.V, dn.V, H, h, distances());
+  for (const st of c.stations) if (st.pn) assert.ok(Math.abs(st.pn.t - (dn.ti + st.d / dn.V)) < 1e-9);
+  assert.ok(Math.abs(H - S.MODELE.H) < 1);
+});
