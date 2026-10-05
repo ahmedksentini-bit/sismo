@@ -1,11 +1,12 @@
 import Globe from './globe.js';
 import Teleseisme from './teleseisme.js';
+import Localisation from './localisation.js';
 
 // src/sismo/direct.js — traitements de la page « En direct » (stations en temps réel) : distance et azimut sur la
 // sphère, filtre de Butterworth passe-bande causal en sections du second ordre (comme scipy.signal.butter et sosfilt),
 // détecteur STA/LTA et déclenchements (comme ObsPy, classic_sta_lta et trigger_onset), tampon d'une voie qui assemble
 // les enregistrements miniSEED reçus (trous, recouvrements), arrivées prévues d'un séisme à une station (ak135),
-// stations et fenêtre des sismogrammes d'un séisme passé, pays d'une station.
+// stations et fenêtre des sismogrammes d'un séisme passé, pays d'une station, fronts d'onde dessinés sur la carte.
 // Vérifié contre scipy et ObsPy (tests/references/direct.json, tools/obspy/direct.py). Solveurs purs.
 const Direct = (() => {
   'use strict';
@@ -177,6 +178,57 @@ const Direct = (() => {
     return out.sort((x, y) => x.temps - y.temps);
   }
 
+  // ── Fronts d'onde sur la carte ──────────────────────────────────────────────────────────────────────────────
+  // Temps (s depuis l'origine) des premières arrivées P et S d'un foyer à h km, de 0 à 180° : table de la localisation
+  // (data/temps-localisation.json : croûte du cours jusqu'à 1°, ak135 au-delà, h ≤ 40 km, jusqu'à 100°) quand elle est
+  // fournie, sinon ak135 (Globe) ; au-delà de 100°, PKIKP et SKS d'ak135 (la P diffractée n'est pas calculée : le front
+  // franchit la zone d'ombre par interpolation) ; S = min(S, SKS). Temps rendus croissants (maximum cumulé), pour que
+  // l'inversion du temps en distance ait un sens. { h, P: [[d, t]…], S: [[d, t]…] }.
+  function tableFronts(h, table = null) {
+    h = Math.max(0, h);
+    const premier = (phs, d) => {
+      let t = null;
+      for (const ph of phs) { const a = Globe.arrivees(ph, h, d); if (a.length && (t === null || a[0].temps < t)) t = a[0].temps; }
+      return t;
+    };
+    const min = (a, b) => (a === null ? b : b === null ? a : Math.min(a, b));
+    const avecTable = !!table && h <= table.profondeurs[table.profondeurs.length - 1], ds = [], P = [], S = [];
+    const lire = (ph, d) => (avecTable ? Localisation.temps(table, ph, h, d) : premier([ph], d));
+    for (let d = avecTable ? 0 : 0.5; d <= 100 + 1e-9; d += d < 20 ? 0.5 : 2) {
+      ds.push(d); P.push(lire('P', d)); S.push(min(lire('S', d), d >= 80 ? premier(['SKS'], d) : null));
+    }
+    for (let d = 102; d <= 180; d += 2) { ds.push(d); P.push(premier(['PKIKP'], d)); S.push(premier(['SKS'], d)); }
+    const serie = T => {
+      const pts = [];
+      let m = 0;
+      ds.forEach((d, i) => { if (T[i] !== null && Number.isFinite(T[i])) { m = Math.max(m, T[i]); pts.push([d, m]); } });
+      return pts;
+    };
+    return { h, P: serie(P), S: serie(S) };
+  }
+  const vitesseLR = () => Teleseisme.groupe('LR', 20);
+  // Distance (°) atteinte au temps t (s depuis l'origine) par le front d'une phase : 'P', 'S', ou 'LR' (ondes de
+  // Rayleigh, vitesse de groupe à 20 s) ; null avant que le front n'atteigne la surface ou au-delà de 180°.
+  function distanceFront(tf, phase, t) {
+    if (phase === 'LR') { const d = (t * vitesseLR()) / (RAD * Globe.R); return d > 0 && d <= 180 ? d : null; }
+    const pts = tf[phase];
+    if (!pts.length || !(t >= pts[0][1]) || t > pts[pts.length - 1][1]) return null;
+    for (let i = 1; i < pts.length; i++) {
+      if (t > pts[i][1]) continue;
+      const [d0, t0] = pts[i - 1], [d1, t1] = pts[i];
+      return t1 > t0 ? d0 + ((t - t0) / (t1 - t0)) * (d1 - d0) : d0;
+    }
+    return pts[0][0];
+  }
+  // Temps (s) d'arrivée d'un front à la distance d (°), interpolé dans la même table ; null hors de la table.
+  function tempsFront(tf, phase, d) {
+    if (phase === 'LR') return (d * RAD * Globe.R) / vitesseLR();
+    const pts = tf[phase];
+    if (!pts.length || d < pts[0][0] || d > pts[pts.length - 1][0]) return null;
+    for (let i = 1; i < pts.length; i++) if (d <= pts[i][0]) { const [d0, t0] = pts[i - 1], [d1, t1] = pts[i]; return t0 + ((d - d0) / (d1 - d0)) * (t1 - t0); }
+    return pts[pts.length - 1][1];
+  }
+
   // ── Sismogrammes d'un séisme passé (archives des centres) ──────────────────────────────────────────────────
   // Stations retenues pour un séisme : les trois plus proches, puis des stations réparties sur le reste des distances
   // (rangs régulièrement espacés), n au plus, rangées par distance : { s, distance (°), azimut (°) }.
@@ -240,6 +292,6 @@ const Direct = (() => {
   // Latence (s) d'une voie : temps écoulé depuis son dernier échantillon.
   const latence = (fin, maintenant = Date.now()) => (fin === null ? Infinity : (maintenant - fin) / 1000);
 
-  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, stationsSeisme, fenetreSeisme, pays, latence, PHASES };
+  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, tableFronts, distanceFront, tempsFront, stationsSeisme, fenetreSeisme, pays, latence, PHASES };
 })();
 export default Direct;

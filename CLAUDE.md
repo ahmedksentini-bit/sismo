@@ -242,7 +242,14 @@ la virgule décimale.
     ObsPy (`src/sismo/direct.js`). Détecteur : 0,7–2 Hz (ordre 4), STA 2 s / LTA 80 s, seuils 4 et 1,5 ; le bruit gaussien
     déclenche de temps en temps, c'est attendu. Côtes et pays Natural Earth produits par `tools/carte/cotes.py` et
     `tools/carte/pays.py`. Essai local sans réseau : `node tools/direct/serveurs-essai.mjs` puis `wrangler pages dev .
-    --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding "FDSN_ESSAI=http://127.0.0.1:8090/{centre}"`.
+    --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding "FDSN_ESSAI=http://127.0.0.1:8090/{centre}"`. **Propagation** :
+    fronts P, S et de Rayleigh du séisme choisi (`Direct.tableFronts` : table de la localisation, h ≤ 40 km, jusqu'à 100°,
+    sinon ak135 ; PKIKP et SKS au-delà de 100°, zone d'ombre franchie par interpolation, S = min(S, SKS), temps rendus
+    croissants ; Rayleigh à la vitesse de groupe à 20 s ; testé), à l'heure de l'horloge tant que le séisme a moins de deux
+    heures, ou au temps d'un rejeu (« Rejouer la propagation » : × 1 à × 60, pause, curseur, jusqu'aux ondes de Rayleigh à la
+    station la plus lointaine) ; les stations de la carte s'allument au passage de la P et de la S prévues dans la même table ;
+    un séisme réel de moins de 30 min, nouveau et plus récent que le choisi, est choisi tout seul (jamais pendant un rejeu) ;
+    pendant un rejeu, un trait rouge suit le temps sur les sismogrammes du même séisme.
 35. **Versions** (`tools/versions.mjs`, `npm run versions`) : chaque page qui charge des modules porte en tête une carte
     d'import (`<script type="importmap">`) qui donne à chaque module de `src/` l'empreinte de son contenu (`?v=`, 10
     caractères de SHA-256) ; scripts d'entrée et feuilles de style la portent dans leur attribut. Les pages HTML ne sont

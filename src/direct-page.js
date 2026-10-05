@@ -3,7 +3,6 @@ import Fdsn from './sismo/fdsn.js';
 import Centres from './sismo/centres.js';
 import Dossier from './sismo/dossier.js';
 import Direct from './sismo/direct.js';
-import Globe from './sismo/globe.js';
 import Teleseisme from './sismo/teleseisme.js';
 import Sismo from './sismo/signal.js';
 
@@ -44,6 +43,8 @@ import Sismo from './sismo/signal.js';
     mode: 'seedlink', stations: [], suivies: [], voies: new Map(), seismes: [], catalogue: 'med', choisi: null,
     fenetre: 15, filtre: 'large', pause: null, cotes: null, pays: [], demo: null, mesures: new Map(), arrivees: new Map(),
     reseaux: new Map(), actifs: null, centres: new Map(), sources: new Map(), listeOk: false, journal: [], selection: null, ev: null,
+    // propagation : table des temps (data/temps-localisation.json), fronts par séisme, rejeu en cours, séismes déjà vus
+    table: null, fronts: new Map(), rejeu: null, vus: null,
     cx: { groupes: new Map(), fdsn: 0, demo: 0, echecsFdsn: 0, paquets: 0, dernier: null, diagnostics: new Set() },
   };
   // Journal de connexion (les 8 derniers événements), affiché sous la source des données : il dit ce qui se passe quand
@@ -197,6 +198,14 @@ import Sismo from './sismo/signal.js';
       if (etat.mode !== 'demo') $('#dr-seismes-info').textContent = 'Catalogue de GEOFON inaccessible pour le moment.';
     }
     if (etat.demo) etat.seismes = [etat.demo.seisme, ...etat.seismes.filter(e => e.id !== etat.demo.seisme.id)];
+    // séisme réel publié depuis moins de 30 min : choisi (ses fronts se dessinent en direct) s'il est nouveau et plus récent
+    // que le séisme choisi, sauf pendant un rejeu
+    const recent = etat.seismes.find(e => e.id !== 'demo' && Date.now() - e.temps < 30 * 60000 && Date.now() > e.temps);
+    if (recent && !etat.rejeu && (!etat.vus || !etat.vus.has(recent.id)) && (!etat.choisi || etat.choisi.temps < recent.temps)) {
+      choisir({ type: 'seisme', objet: recent });
+      toast(`Séisme M ${virg(recent.mag, 1)}, ${recent.region || ''}, il y a ${depuisQuand(Date.now() - recent.temps)} : ses ondes se propagent sur la carte.`);
+    }
+    etat.vus = new Set(etat.seismes.map(e => e.id));
     majSeismes();
   }
   // Stations suivies par défaut : réparties sur le bassin (la plus proche de Tunis, puis à chaque fois la plus éloignée
@@ -603,17 +612,9 @@ import Sismo from './sismo/signal.js';
       ctx.beginPath(); ctx.arc(X(e.lon), Y(e.lat), r, 0, 2 * Math.PI); ctx.fill(); ctx.globalAlpha = 1;
       if (etat.choisi && e.id === etat.choisi.id) { ctx.strokeStyle = COUL.ink; ctx.lineWidth = 2; ctx.stroke(); }
     }
-    // fronts P et S du séisme choisi (une heure au plus après l'origine)
-    const c = etat.choisi;
-    if (c && t - c.temps < 3600000 && t > c.temps) {
-      for (const [ph, coul] of [['P', COUL['pick-p']], ['S', COUL['pick-s']]]) {
-        const d = distanceFront(c, ph, (t - c.temps) / 1000);
-        if (!(d > 0)) continue;
-        ctx.strokeStyle = coul; ctx.lineWidth = 2; ctx.beginPath();
-        for (let k = 0; k <= 120; k++) { const [la, lo] = destination(c.lat, c.lon, d, (k * 360) / 120); (k ? ctx.lineTo : ctx.moveTo).call(ctx, X(lo), Y(la)); }
-        ctx.stroke();
-      }
-    }
+    // fronts des ondes P, S et de Rayleigh : séisme choisi en direct (deux heures au plus), ou rejeu
+    const fr = tempsFronts(), c = etat.choisi;
+    if (fr) dessinerFronts(ctx, pr, fr);
     ctx.restore();
     // séisme choisi hors de la carte : flèche au bord, dans sa direction
     if (c && !dansCadre(c)) {
@@ -634,6 +635,9 @@ import Sismo from './sismo/signal.js';
       if (suivie && m && m.decl.some(td => Date.now() - td < 60000)) { ctx.strokeStyle = COUL.bad; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.stroke(); }
       if (suivie) texte(ctx, s.station, x + 8, y - 6, COUL.ink, `700 10.5px ${MONO}`);
     }
+    // stations atteintes par la P ou la S à l'instant : anneau qui s'élargit
+    if (fr) passages(ctx, pr, fr, dansCadre);
+    if (fr) bandeau(ctx, pr, fr);
     // objet touché (fiche ouverte sous la carte) : double anneau
     const sel = etat.selection;
     if (sel) {
@@ -649,15 +653,166 @@ import Sismo from './sismo/signal.js';
     const l2 = l1 + Math.atan2(Math.sin(a) * Math.sin(dr) * Math.cos(p1), Math.cos(dr) - Math.sin(p1) * Math.sin(p2));
     return [(p2 * 180) / Math.PI, (l2 * 180) / Math.PI];
   }
-  // Distance atteinte par le front d'une phase au temps t (s) : inversion de la table des temps de P ou S (ak135).
-  const tablesFront = new Map();
-  function distanceFront(e, phase, t) {
-    const cle = `${e.id}|${phase}`;
-    if (!tablesFront.has(cle)) tablesFront.set(cle, Array.from({ length: 31 }, (_, i) => { const a = Globe.arrivees(phase, Math.max(0, e.h || 10), i + 0.5); return [i + 0.5, a.length ? a[0].temps : null]; }).filter(q => q[1] !== null));
-    const tb = tablesFront.get(cle);
-    if (!tb.length || t < tb[0][1]) return tb.length ? (t / tb[0][1]) * tb[0][0] : 0;
-    for (let i = 1; i < tb.length; i++) if (t <= tb[i][1]) return tb[i - 1][0] + ((t - tb[i - 1][1]) / (tb[i][1] - tb[i - 1][1])) * (tb[i][0] - tb[i - 1][0]);
-    return 0; // au-delà de 30° : le front sort de la carte
+
+  // ── Propagation des ondes sur la carte : en direct et en rejeu ─────────────────────────────────────────────────
+  // Fronts P, S et de Rayleigh d'un séisme (Direct.tableFronts : table de la localisation puis ak135, jusqu'à 180°), au
+  // temps de l'horloge (séisme choisi de moins de deux heures) ou au temps du rejeu (accéléré, en pause, ou déplacé au
+  // curseur). Les stations s'allument au passage de la P et de la S prévues ; un bandeau dit où en sont les ondes.
+  const FRONTS = [['LR', 'amp', [7, 5], 1.6, 'Rayleigh'], ['S', 'pick-s', [], 2.2, 'S'], ['P', 'pick-p', [], 2.2, 'P']];
+  const DUREE_DIRECT = 7200;
+  const hDe = e => (Number.isFinite(e.h) ? Math.max(0, e.h) : 10);
+  function frontsDe(e) {
+    const cle = `${e.id}|${e.lat}|${e.lon}|${hDe(e)}|${etat.table ? 'table' : 'ak135'}`;
+    if (!etat.fronts.has(cle)) etat.fronts.set(cle, Direct.tableFronts(hDe(e), etat.table));
+    return etat.fronts.get(cle);
+  }
+  const tempsRejeu = r => (r.pause ? r.t : r.t + ((performance.now() - r.depuis) / 1000) * r.vitesse);
+  // Séisme et temps (s depuis l'origine) des fronts dessinés, ou null.
+  function tempsFronts() {
+    const r = etat.rejeu;
+    if (r) return { e: r.e, t: tempsRejeu(r), rejeu: true };
+    const c = etat.choisi, t = c ? (maintenant() - c.temps) / 1000 : -1;
+    return c && t > 0 && t < DUREE_DIRECT ? { e: c, t, rejeu: false } : null;
+  }
+  const kmDe = d => Math.round(d * 111.195).toLocaleString('fr-FR');
+  // Cercle d'un front sur la carte : points à la distance d de l'épicentre ; longitudes ramenées autour du centre de la
+  // vue, tracé coupé aux sauts (cercle qui passe derrière la carte). Renvoie le point le plus haut visible (étiquette).
+  function cercle(ctx, pr, e, d) {
+    const n = 240, C = pr.cadre;
+    let haut = null, avant = null;
+    ctx.beginPath();
+    for (let k = 0; k <= n; k++) {
+      const [la, lo0] = destination(e.lat, e.lon, d, (k * 360) / n), lo = ((lo0 - carteVue.clon + 540) % 360) - 180 + carteVue.clon;
+      const x = pr.X(lo), y = pr.Y(la);
+      if (!avant || Math.abs(x - avant[0]) > pr.W / 2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      avant = [x, y];
+      if (lo > C.lon[0] && lo < C.lon[1] && la > C.lat[0] && la < C.lat[1] && (!haut || y < haut[1])) haut = [x, y];
+    }
+    ctx.stroke();
+    return haut;
+  }
+  function dessinerFronts(ctx, pr, fr) {
+    const tf = frontsDe(fr.e);
+    for (const [ph, coul, tirets, larg, nom] of FRONTS) {
+      const d = Direct.distanceFront(tf, ph, fr.t);
+      if (d === null) continue;
+      ctx.strokeStyle = COUL[coul]; ctx.lineWidth = larg; ctx.setLineDash(tirets);
+      const h = cercle(ctx, pr, fr.e, d);
+      ctx.setLineDash([]);
+      if (h) texte(ctx, nom, h[0], h[1] - 9, COUL[coul], `800 11px ${POLICE}`, 'center');
+    }
+  }
+  // Arrivées prévues (P, S) d'un séisme aux stations de la carte, mises en cache : distance et temps des fronts.
+  const passagesCache = new Map();
+  function arriveesFronts(e, s) {
+    const cle = `${e.id}|${etat.table ? 1 : 0}|${ident(s)}`;
+    if (!passagesCache.has(cle)) {
+      const tf = frontsDe(e), d = Direct.distanceAzimut(e.lat, e.lon, s.lat, s.lon).distance;
+      passagesCache.set(cle, { d, P: Direct.tempsFront(tf, 'P', d), S: Direct.tempsFront(tf, 'S', d) });
+    }
+    return passagesCache.get(cle);
+  }
+  // Durée (s) de l'anneau d'une station au passage d'une onde : 20 s en direct, 1,5 s à l'écran en rejeu.
+  const dureeAnneau = fr => (fr.rejeu ? Math.max(3, 1.5 * etat.rejeu.vitesse) : 20);
+  function passages(ctx, pr, fr, dansCadre) {
+    const vie = dureeAnneau(fr);
+    for (const s of visibles().filter(dansCadre)) {
+      const a = arriveesFronts(fr.e, s);
+      for (const [ph, coul] of [['P', COUL['pick-p']], ['S', COUL['pick-s']]]) {
+        const age = a[ph] === null ? -1 : fr.t - a[ph];
+        if (age < 0 || age > vie) continue;
+        const k = age / vie, x = pr.X(s.lon), y = pr.Y(s.lat) - 1;
+        ctx.strokeStyle = coul; ctx.lineWidth = 2.5 * (1 - k) + 0.8; ctx.globalAlpha = 1 - 0.8 * k;
+        ctx.beginPath(); ctx.arc(x, y, 9 + 16 * k, 0, 2 * Math.PI); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+    }
+  }
+  const chrono = s => { const a = Math.abs(Math.round(s)), m = Math.floor(a / 60), r = a % 60; return m ? `${m} min ${String(r).padStart(2, '0')} s` : `${r} s`; };
+  // Bandeau en haut à gauche de la carte : séisme, temps depuis l'origine, rejeu.
+  function bandeau(ctx, pr, fr) {
+    const e = fr.e;
+    if (pr.W < 520) {
+      // carte étroite (téléphone) : une ligne, le détail est sous la carte
+      const l = `${fr.rejeu ? `Rejeu × ${etat.rejeu.vitesse}` : 'En direct'} · ${fr.rejeu ? '+' : 'il y a '}${chrono(fr.t)}`;
+      ctx.font = `800 11px ${POLICE}`;
+      const w = ctx.measureText(l).width + 14;
+      ctx.fillStyle = COUL.paper; ctx.globalAlpha = 0.88; ctx.fillRect(14, 14, w, 20); ctx.globalAlpha = 1;
+      texte(ctx, l, 21, 24, fr.rejeu ? COUL.ink : COUL.bad, `800 11px ${POLICE}`);
+      return;
+    }
+    const l1 = `${fr.rejeu ? `Rejeu × ${etat.rejeu.vitesse}${etat.rejeu.pause ? ' (pause)' : ''}` : 'En direct'} · M ${virg(e.mag, 1)} ${e.region || ''}`.trim();
+    const l2 = fr.rejeu ? `origine + ${chrono(fr.t)}` : `origine il y a ${chrono(fr.t)}`;
+    ctx.font = `800 12px ${POLICE}`;
+    const w = Math.min(pr.W - 40, Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 20);
+    ctx.fillStyle = COUL.paper; ctx.globalAlpha = 0.88; ctx.fillRect(16, 16, w, 42); ctx.globalAlpha = 1;
+    ctx.strokeStyle = COUL['grid-strong']; ctx.lineWidth = 1; ctx.strokeRect(16.5, 16.5, w - 1, 41);
+    ctx.save(); ctx.beginPath(); ctx.rect(16, 16, w, 42); ctx.clip();
+    texte(ctx, l1, 26, 29, fr.rejeu ? COUL.ink : COUL.bad, `800 12px ${POLICE}`);
+    texte(ctx, l2, 26, 47, COUL.muted, `700 11px ${MONO}`);
+    ctx.restore();
+  }
+  // Rejeu : de l'origine jusqu'au passage des ondes de Rayleigh à la plus lointaine des stations de la carte (30 s de
+  // plus, deux heures au plus) ; vitesse au choix, pause, curseur de temps ; les sismogrammes du même séisme suivent.
+  function finRejeu(e) {
+    const sts = visibles(), dmax = sts.length ? Math.max(...sts.map(s => arriveesFronts(e, s).d)) : 30;
+    return Math.min(DUREE_DIRECT, Math.max(120, Direct.tempsFront(frontsDe(e), 'LR', dmax) + 30));
+  }
+  function lancerRejeu(e) {
+    etat.rejeu = { e, t: 0, depuis: performance.now(), vitesse: +$('#dr-rejeu-vitesse').value || 10, pause: false, fin: 0 };
+    etat.rejeu.fin = finRejeu(e);
+    if (!etat.choisi || etat.choisi.id !== e.id) { etat.choisi = e; majSeismes(); majArrivees(); }
+    $('#dr-rejeu').hidden = false; $('#dr-rejeu-temps').max = String(Math.ceil(etat.rejeu.fin));
+    $('#dr-carte').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    majRejeu(); majPropagation(); requestAnimationFrame(boucleRejeu);
+  }
+  function arreterRejeu() { etat.rejeu = null; $('#dr-rejeu').hidden = true; curseurSismogrammes(); majTout(); }
+  function majRejeu() {
+    const r = etat.rejeu;
+    if (!r) return;
+    const t = tempsRejeu(r);
+    $('#dr-rejeu-pause').textContent = r.pause ? (t >= r.fin ? 'Rejouer' : 'Reprendre') : 'Pause';
+    $('#dr-rejeu-temps').value = String(Math.round(t));
+    $('#dr-rejeu-heure').textContent = `origine + ${chrono(t)} · ${hms(r.e.temps + t * 1000)} UTC`;
+    curseurSismogrammes();
+  }
+  // Une image toutes les 40 ms au plus (la carte a ses côtes et ses stations à redessiner) ; arrêt en fin de rejeu.
+  let derniereImage = 0;
+  function boucleRejeu(horloge) {
+    const r = etat.rejeu;
+    if (!r || r.pause) return;
+    if (tempsRejeu(r) >= r.fin) { r.t = r.fin; r.pause = true; }
+    if (r.pause || horloge - derniereImage > 40) { derniereImage = horloge; dessinerCarte(); majRejeu(); }
+    if (r.pause) majPropagation(); else requestAnimationFrame(boucleRejeu);
+  }
+  // Curseur du rejeu sur les sismogrammes du même séisme (trait posé sur le canvas, sans le redessiner).
+  function curseurSismogrammes() {
+    const c = $('#dr-ev-curseur'), ev = etat.ev, r = etat.rejeu, g = geoSismo;
+    if (!c) return;
+    const tAbs = r ? r.e.temps + tempsRejeu(r) * 1000 : NaN;
+    if (!ev || !r || ev.seisme.id !== r.e.id || !g || $('#dr-sismo').hidden || !(tAbs >= ev.vue.t0 && tAbs <= ev.vue.t1)) { c.hidden = true; return; }
+    c.hidden = false;
+    c.style.left = `${g.x0 + ((tAbs - ev.vue.t0) / (ev.vue.t1 - ev.vue.t0)) * (g.x1 - g.x0) - 1}px`;
+  }
+  // Texte sous la carte : où en sont les fronts, prochaine station atteinte par la P (stations suivies, sinon de la carte).
+  function majPropagation() {
+    const p = $('#dr-propagation');
+    if (!p) return;
+    const fr = tempsFronts();
+    if (!fr) {
+      p.innerHTML = 'Les fronts des ondes d\'un séisme se dessinent ici en temps réel tant qu\'il date de moins de deux heures (choisissez-le dans la liste ou sur la carte). Pour un séisme plus ancien, « Rejouer la propagation » dans sa fiche. GEOFON publie un séisme quelques minutes après l\'origine : les ondes P ont souvent déjà traversé la carte, les ondes S et de Rayleigh pas toujours.';
+      return;
+    }
+    const tf = frontsDe(fr.e), ds = FRONTS.slice().reverse().map(([ph, , , , nom]) => { const d = Direct.distanceFront(tf, ph, fr.t); return d === null ? null : `${nom} à ${kmDe(d)} km`; }).filter(Boolean);
+    const sts = (etat.suivies.length ? etat.suivies : visibles()).map(s => ({ s, a: arriveesFronts(fr.e, s) }));
+    const suivante = sts.filter(x => x.a.P !== null && x.a.P > fr.t).sort((a, b) => a.a.P - b.a.P)[0];
+    const nP = sts.filter(x => x.a.P !== null && x.a.P <= fr.t).length, nS = sts.filter(x => x.a.S !== null && x.a.S <= fr.t).length;
+    p.innerHTML = `<b>${fr.rejeu ? 'Rejeu' : 'En direct'} : M ${virg(fr.e.mag, 1)} ${echapper(fr.e.region || '')}</b>, ${fr.rejeu ? `origine + ${chrono(fr.t)}` : `origine il y a ${chrono(fr.t)}`}. `
+      + (ds.length ? `Fronts : ${ds.join(', ')} de l'épicentre. ` : 'Les fronts ont quitté la Terre ronde (au-delà de 180°). ')
+      + `${etat.suivies.length ? 'Stations suivies' : 'Stations de la carte'} déjà atteintes : ${nP} par la P, ${nS} par la S sur ${sts.length}.`
+      + (suivante ? (() => {
+        const reste = (suivante.a.P - fr.t) / (fr.rejeu ? etat.rejeu.vitesse : 1), nom = `${echapper(suivante.s.reseau)}.${echapper(suivante.s.station)}`;
+        return reste < 1 ? ` La P atteint ${nom} à l'instant.` : ` La P atteindra ${nom} dans ${chrono(reste)}${fr.rejeu ? ' (à cette vitesse)' : ''}.`;
+      })() : '');
   }
 
   // ── Panneaux ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -747,7 +902,7 @@ import Sismo from './sismo/signal.js';
       <p class="aide">Heures UTC prévues par le modèle ak135 (P : première arrivée, PKIKP ou PKP dans la zone d'ombre ; LR : ondes de Rayleigh, période 20 s). Az. : azimut de la station vu du séisme.</p>`;
   }
   function dessinerTout() { if (!COUL.paper) lireCouleurs(); dessinerTraces(); dessinerCarte(); dessinerFiche(); }
-  function majTout() { dessinerTout(); majAfficheurs(); }
+  function majTout() { dessinerTout(); majAfficheurs(); majPropagation(); }
 
   // ── Interactions ──────────────────────────────────────────────────────────────────────────────────────────────
   // Toucher la carte : l'objet le plus proche (station de la carte ou séisme), dans un rayon plus large au doigt ; sa
@@ -762,6 +917,7 @@ import Sismo from './sismo/signal.js';
     choisir(touches.length ? { type: touches[0].type, objet: touches[0].objet } : null);
   }
   function choisir(sel) {
+    if (sel && sel.type === 'seisme' && etat.rejeu && etat.rejeu.e.id !== sel.objet.id) { etat.rejeu = null; $('#dr-rejeu').hidden = true; curseurSismogrammes(); }
     etat.selection = sel;
     if (sel && sel.type === 'seisme') { etat.choisi = sel.objet; majSeismes(); majArrivees(); }
     majFiche(); dessinerTout();
@@ -931,6 +1087,7 @@ import Sismo from './sismo/signal.js';
       texte(ctx, `${s.reseau}.${s.station} · Δ ${virg(l.distance, 1)}°`, g.x0 + 4, yc - hR / 2 + 9, COUL.ink, `700 11.5px ${MONO}`);
       texte(ctx, x ? `max ${virg(max, max < 1 ? 3 : 1)} µm/s` : ev.etat === 'lecture' ? 'lecture…' : 'pas de donnée', g.x1 - 4, yc - hR / 2 + 9, COUL.muted, `10.5px ${MONO}`, 'right');
     });
+    curseurSismogrammes();
   }
 
   // ── Gestes : glisser (un doigt ou la souris), pincer (deux doigts), molette, double toucher ─────────────────────
@@ -1011,9 +1168,10 @@ import Sismo from './sismo/signal.js';
         <p class="aide">${new Date(e.temps).toISOString().slice(0, 19).replace('T', ' à ')} UTC (il y a ${depuisQuand(t - e.temps)}) · profondeur ${virg(e.h, 0)} km · ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E${e.id === 'demo' ? ' · séisme fictif' : ''}</p>
         <p class="aide">${e.id === 'demo' ? 'Séisme fictif de la démonstration.' : `Séisme réel, lu dans le catalogue de GEOFON (GFZ Potsdam) : position et magnitude calculées par ce centre, identifiant ${/^gfz/.test(e.id) ? `<a href="https://geofon.gfz.de/eqinfo/event.php?id=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">${echapper(e.id)}</a>` : echapper(e.id)}.`}</p>
         <p class="aide">« Sismogrammes de ce séisme » lit dans les archives des centres les enregistrements de stations réparties en distance, autour de ses arrivées prévues, même s'il date de plusieurs jours.${t - e.temps < etat.fenetre * 60000 ? ' Il est aussi assez récent pour paraître sur les traces en direct.' : ''}${d.length ? ` Stations suivies les plus proches : ${d.map(x => `${echapper(x.s.station)} à ${virg(x.d, 1)}°`).join(', ')}.` : ''}</p>
-        <div class="fiche-actions">${e.id === 'demo' ? '' : '<button type="button" class="bouton primaire" id="dr-fiche-sismo">Sismogrammes de ce séisme</button>'}<button type="button" class="bouton" id="dr-fiche-traces">Traces en direct</button></div>`;
+        <div class="fiche-actions">${e.id === 'demo' ? '' : '<button type="button" class="bouton primaire" id="dr-fiche-sismo">Sismogrammes de ce séisme</button>'}<button type="button" class="bouton" id="dr-fiche-rejouer">Rejouer la propagation</button><button type="button" class="bouton" id="dr-fiche-traces">Traces en direct</button></div>`;
       const b = $('#dr-fiche-sismo');
       if (b) b.addEventListener('click', () => chargerSismogrammes(e));
+      $('#dr-fiche-rejouer').addEventListener('click', () => lancerRejeu(e));
     }
     const v = $('#dr-fiche-traces');
     if (v) v.addEventListener('click', () => $('section[aria-label="Traces en temps réel"]').scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -1055,6 +1213,18 @@ import Sismo from './sismo/signal.js';
     $('#dr-traces-plus').addEventListener('click', () => zoomerTraces(2));
     $('#dr-traces-moins').addEventListener('click', () => zoomerTraces(0.5));
     $('#dr-direct').addEventListener('click', () => { vueT.fin = null; bornerTraces(); dessinerTout(); });
+    // rejeu de la propagation
+    $('#dr-rejeu-pause').addEventListener('click', () => {
+      const r = etat.rejeu;
+      if (!r) return;
+      if (r.pause) { if (r.t >= r.fin) r.t = 0; r.depuis = performance.now(); r.pause = false; requestAnimationFrame(boucleRejeu); }
+      else { r.t = tempsRejeu(r); r.pause = true; }
+      majRejeu(); dessinerCarte(); majPropagation();
+    });
+    $('#dr-rejeu-vitesse').addEventListener('change', ev => { const r = etat.rejeu; if (!r) return; r.t = tempsRejeu(r); r.depuis = performance.now(); r.vitesse = +ev.target.value; majRejeu(); });
+    $('#dr-rejeu-temps').addEventListener('input', ev => { const r = etat.rejeu; if (!r) return; r.t = Math.min(r.fin, +ev.target.value); r.depuis = performance.now(); dessinerCarte(); majRejeu(); majPropagation(); });
+    $('#dr-rejeu-arreter').addEventListener('click', arreterRejeu);
+    $('#dr-ev-rejouer').addEventListener('click', () => { if (etat.ev) lancerRejeu(etat.ev.seisme); });
     gestes($('#dr-traces'), { molette: 'ctrl', glisser: dx => deplacerTraces(dx), zoomer: (f, x) => zoomerTraces(f, x) });
     // carte : pincer, molette, double toucher, glisser ; un toucher bref ouvre la fiche
     gestes($('#dr-carte'), { molette: 'libre', glisser: (dx, dy) => deplacerCarte(dx, dy), zoomer: (f, x, y) => zoomerCarte(f, x, y), toucher: (x, y) => toucherCarte(x, y) });
@@ -1105,17 +1275,21 @@ import Sismo from './sismo/signal.js';
   lireCouleurs();
   brancher();
   fetch('data/cotes-mediterranee.json').then(r => r.json()).then(j => { etat.cotes = j; dessinerCarte(); }).catch(() => { /* carte sans côtes */ });
+  // table des temps de la localisation (croûte du cours puis ak135) pour les fronts ; sans elle, ak135 seul
+  fetch('data/temps-localisation.json').then(r => r.json()).then(j => { etat.table = j; dessinerCarte(); }).catch(() => { /* fronts d'ak135 */ });
   // Légende : les symboles mêmes de la carte (triangles des stations, disques des séismes, fronts)
   const triangle = (fond, trait) => `<svg viewBox="0 0 16 14" width="15" height="13" aria-hidden="true"><path d="M8 1.5 L14.5 12.5 L1.5 12.5 Z" fill="${fond}" stroke="${trait}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
   const disque = (coul, r) => `<svg viewBox="0 0 ${2 * r + 2} ${2 * r + 2}" width="${2 * r + 2}" height="${2 * r + 2}" aria-hidden="true"><circle cx="${r + 1}" cy="${r + 1}" r="${r}" fill="${coul}" fill-opacity=".55"/></svg>`;
-  const front = coul => `<svg viewBox="0 0 22 10" width="22" height="10" aria-hidden="true"><path d="M1 9 Q11 -3 21 9" fill="none" stroke="${coul}" stroke-width="2"/></svg>`;
+  const front = (coul, tirets = '') => `<svg viewBox="0 0 22 10" width="22" height="10" aria-hidden="true"><path d="M1 9 Q11 -3 21 9" fill="none" stroke="${coul}" stroke-width="2"${tirets ? ` stroke-dasharray="${tirets}"` : ''}/></svg>`;
   $('#dr-legende-carte').innerHTML = `<span class="titre-legende">Stations (triangles)</span>`
     + ['0,01', '0,05', '0,2', '1', '5', '≥ 10'].map((v, i) => `<span>${triangle(['#2563eb', '#0891b2', '#16a34a', '#ca8a04', '#ea580c', '#dc2626'][i], 'transparent')}${v} µm/s</span>`).join('')
     + `<span>${triangle('#94a3b8', 'transparent')}suivie, pas de donnée</span><span>${triangle('none', 'var(--muted)')}non suivie</span>`
     + `<span><svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="var(--bad)" stroke-width="2"/></svg>déclenchement STA/LTA dans la dernière minute</span>`
     + `<span class="titre-legende">Séismes des 7 derniers jours (disques, taille selon la magnitude)</span>`
     + `<span>${disque('#dc2626', 6)}moins d'une heure</span><span>${disque('#ea580c', 6)}moins d'un jour</span><span>${disque('#ca8a04', 6)}plus ancien</span>`
-    + `<span>${front('var(--pick-p)')}front P</span><span>${front('var(--pick-s)')}front S du séisme choisi</span>`;
+    + `<span class="titre-legende">Ondes du séisme choisi (en direct ou en rejeu)</span>`
+    + `<span>${front('var(--pick-p)')}front P</span><span>${front('var(--pick-s)')}front S</span><span>${front('var(--amp)', '5 3')}ondes de Rayleigh</span>`
+    + `<span><svg viewBox="0 0 18 18" width="16" height="16" aria-hidden="true"><circle cx="9" cy="9" r="7.5" fill="none" stroke="var(--pick-p)" stroke-width="2"/></svg>station atteinte par la P (ou la S, en bleu) à l'instant</span>`;
   demarrer();
   setInterval(() => { if (!document.hidden) majTout(); }, 1000);
   setInterval(surveiller, 5000);

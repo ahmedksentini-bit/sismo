@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=ef644887be">
+<link rel="stylesheet" href="lecteur.css?v=c5e05430db">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=1cec448846",
+  "./src/direct-page.js": "./src/direct-page.js?v=9aad13dfd7",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -91,7 +91,7 @@
   "./src/sismo/coefficients/akkar2014.js": "./src/sismo/coefficients/akkar2014.js?v=d649279ca2",
   "./src/sismo/coefficients/bindi2014.js": "./src/sismo/coefficients/bindi2014.js?v=75d65799f7",
   "./src/sismo/coefficients/boore2014.js": "./src/sismo/coefficients/boore2014.js?v=61fd6969f4",
-  "./src/sismo/direct.js": "./src/sismo/direct.js?v=50be7b1701",
+  "./src/sismo/direct.js": "./src/sismo/direct.js?v=20fea47383",
   "./src/sismo/dossier.js": "./src/sismo/dossier.js?v=7bcc26a0b7",
   "./src/sismo/faille.js": "./src/sismo/faille.js?v=711c6bcef2",
   "./src/sismo/fdsn.js": "./src/sismo/fdsn.js?v=ced37285b4",
@@ -159,7 +159,8 @@
         <ol class="experiences">
           <li>Attendez que les traces se remplissent (quelques minutes de données récentes arrivent d'abord). Repérez la latence de chaque station et le bruit de la houle (microséisme) sans filtre, puis avec le filtre « 0,5 – 5 Hz ».</li>
           <li>Touchez une station (triangle) sur la carte : sa fiche s'ouvre sous la carte, avec sa trace ; « Suivre cette station » l'ajoute aux traces (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
-          <li>Touchez un séisme (disque) sur la carte, ou une ligne de « Séismes » : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et ses fronts P et S s'étendent sur la carte. Comparez-les aux arrivées observées.</li>
+          <li>Touchez un séisme (disque) sur la carte, ou une ligne de « Séismes » : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et, s'il date de moins de deux heures, les fronts de ses ondes P, S et de Rayleigh s'étendent sur la carte en temps réel ; les stations s'allument au passage de la P et de la S. Un séisme publié par GEOFON pendant que la page est ouverte est choisi tout seul. Comparez les arrivées prévues aux arrivées observées.</li>
+          <li>Pour un séisme plus ancien, « Rejouer la propagation » (dans sa fiche ou au-dessus de ses sismogrammes) rejoue ses fronts en accéléré : vitesse, pause, curseur du temps ; ses sismogrammes suivent avec un trait rouge.</li>
           <li>Pour un séisme lointain (« Monde, M ≥ 5,5 »), passez la fenêtre à 60 minutes et le filtre à « 18 – 22 s » : les ondes de surface arrivent bien après P et S.</li>
           <li>Repérez les déclenchements STA/LTA (triangles sur les traces) : un vrai séisme déclenche plusieurs stations dans l'ordre des distances, le bruit local une seule.</li>
         </ol>
@@ -171,7 +172,7 @@
 
     <div class="colonne">
       <section class="carte" aria-label="Carte des stations">
-        <h2>Carte des stations<small>Triangles : stations sismologiques, colorées par la vitesse maximale du sol des 60 dernières secondes (filtrée de 0,5 à 5 Hz). Disques : séismes des 7 derniers jours. Touchez un triangle ou un disque : sa fiche s'ouvre sous la carte</small></h2>
+        <h2>Carte des stations<small>Triangles : stations sismologiques, colorées par la vitesse maximale du sol des 60 dernières secondes (filtrée de 0,5 à 5 Hz). Disques : séismes des 7 derniers jours. Cercles : fronts des ondes P, S et de Rayleigh du séisme choisi, en temps réel ou en rejeu. Touchez un triangle ou un disque : sa fiche s'ouvre sous la carte</small></h2>
         <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte ; pincer ou la molette zooment, glisser déplace la carte"></canvas>
         <div class="outils outils-zoom">
           <div class="segments compact" role="group" aria-label="Zoom de la carte">
@@ -179,6 +180,16 @@
           </div>
           <span class="aide">Pincez (ou molette) pour zoomer, glissez pour déplacer, double-touchez pour agrandir.</span>
         </div>
+        <div class="outils outils-rejeu" id="dr-rejeu" hidden>
+          <button type="button" class="outil" id="dr-rejeu-pause">Pause</button>
+          <select id="dr-rejeu-vitesse" aria-label="Vitesse du rejeu">
+            <option value="1">× 1 (temps réel)</option><option value="5">× 5</option><option value="10" selected>× 10</option><option value="30">× 30</option><option value="60">× 60</option>
+          </select>
+          <input type="range" id="dr-rejeu-temps" min="0" max="600" step="1" value="0" aria-label="Temps depuis l'origine">
+          <span class="curseur-lecture" id="dr-rejeu-heure">—</span>
+          <button type="button" class="outil neutre" id="dr-rejeu-arreter">Arrêter le rejeu</button>
+        </div>
+        <p class="aide" id="dr-propagation"></p>
         <p class="legende legende-carte" id="dr-legende-carte"></p>
         <div class="fiche" id="dr-fiche" hidden aria-live="polite"></div>
       </section>
@@ -214,11 +225,12 @@
           <div class="segments compact" role="group" aria-label="Zoom des sismogrammes">
             <button type="button" id="dr-ev-plus" aria-label="Zoomer les sismogrammes">+</button><button type="button" id="dr-ev-moins" aria-label="Dézoomer les sismogrammes">−</button><button type="button" id="dr-ev-tout">Tout</button>
           </div>
+          <button type="button" class="outil" id="dr-ev-rejouer">Rejouer la propagation</button>
           <button type="button" class="outil" id="dr-ev-exporter">Enregistrer pour le TP de localisation</button>
           <button type="button" class="outil neutre" id="dr-ev-fermer">Fermer</button>
         </div>
         <p class="aide" id="dr-ev-etat"></p>
-        <canvas id="dr-ev-traces" aria-label="Sismogrammes du séisme choisi, rangés par distance"></canvas>
+        <div class="ev-cadre"><canvas id="dr-ev-traces" aria-label="Sismogrammes du séisme choisi, rangés par distance"></canvas><div id="dr-ev-curseur" hidden></div></div>
       </section>
     </div>
 
@@ -272,6 +284,6 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="src/direct-page.js?v=1cec448846"></script>
+<script type="module" src="src/direct-page.js?v=9aad13dfd7"></script>
 </body>
 </html>
