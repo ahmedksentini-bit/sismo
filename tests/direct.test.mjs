@@ -147,3 +147,12 @@ test('fronts d\'onde : la distance atteinte au temps de la table, P puis PKIKP, 
   const prof = D.tableFronts(120, T);
   assert.ok(Math.abs(D.distanceFront(prof, 'P', G.arrivees('P', 120, 30)[0].temps) - 30) < 0.1);
 });
+
+test('paquets : connexions au relais de 20 flux et requêtes FDSN de 10 stations, dans l\'ordre, sans perte', () => {
+  const l = Array.from({ length: 47 }, (_, i) => i);
+  const p = D.paquets(l, 20);
+  assert.deepEqual(p.map(x => x.length), [20, 20, 7]);
+  assert.deepEqual(p.flat(), l);
+  assert.deepEqual(D.paquets([], 10), []);
+  assert.deepEqual(D.paquets([1, 2], 10), [[1, 2]]);
+});

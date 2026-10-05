@@ -449,6 +449,13 @@ aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; 
 #dr-journal { margin: 4px 0 0; padding: 0; list-style: none; font: 11.5px/1.45 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
 #dr-journal li + li { margin-top: 3px; }
 #dr-reseaux { display: grid; gap: 7px; max-height: 340px; margin-top: 8px; overflow-y: auto; overscroll-behavior: contain; }
+.dr-filtre-reseaux { width: 100%; margin-top: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; font-size: 13px; }
+/* traces : bouton × par rangée, par-dessus le canevas */
+.dr-traces-cadre { position: relative; }
+#dr-traces-x { position: absolute; inset: 0 auto auto 0; width: 0; height: 0; }
+.trace-x { position: absolute; width: 18px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--paper);
+  color: var(--muted); font: 700 13px/1 system-ui, sans-serif; cursor: pointer; display: grid; place-items: center; }
+.trace-x:hover, .trace-x:focus-visible { color: var(--bad); border-color: var(--bad); }
 #dr-reseaux .case { align-items: flex-start; font-weight: 600; font-size: 13px; line-height: 1.35; }
 #dr-reseaux .case input { flex: none; margin: 2px 0 0; }
 #dr-reseaux .case small { display: block; margin-top: 1px; color: var(--muted); font-size: 11.5px; font-weight: 500; }
@@ -528,16 +535,21 @@ tr.hors td { color: var(--muted); }
     padding: 4px 18px 14px; border: 1px solid #a5d8ee; border-radius: 14px; background: var(--paper); box-shadow: 0 18px 40px #0c4a6e30; }
 
   /* gauche : source des données, réseaux, à retenir */
-  #dr-p-source { grid-column: 1; grid-row: 2 / 8; }
-  #dr-p-reseaux { grid-column: 1; grid-row: 8 / 11; }
-  #dr-p-retenir { grid-column: 1; grid-row: 11 / 14; }
+  #dr-p-source { grid-column: 1; grid-row: 2 / 7; }
+  #dr-p-reseaux { grid-column: 1; grid-row: 7 / 12; }
+  #dr-p-retenir { grid-column: 1; grid-row: 12 / 14; }
+  #poste-direct #dr-tunisie { margin: 0; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #poste-direct #dr-p-reseaux .dr-centres { margin-top: 4px; font-size: 12px; }
   #poste-direct #dr-afficheurs { margin-top: 8px !important; }
   #dr-p-source .segments button { font-size: 12.5px; padding-inline: 6px; }
   #dr-mode-aide { font-size: 12.5px; }
   #dr-p-source .afficheur { padding: 6px 9px; }
   #dr-p-source .afficheur small { font-size: 11px; }
-  #dr-journal, #dr-reseaux, #dr-arrivees, #dr-p-retenir > ul, #dr-p-seismes > .table-defile { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
-  #dr-reseaux { max-height: none; }
+  /* listes qui défilent dans leur panneau (sélecteurs à deux identifiants : ils l'emportent sur « .carte > * { flex: none } ») */
+  #poste-direct #dr-journal, #poste-direct #dr-reseaux, #poste-direct #dr-arrivees, #poste-direct #dr-p-retenir > ul,
+  #poste-direct #dr-p-seismes > .table-defile { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  #poste-direct #dr-reseaux { max-height: none; align-content: start; }
+  #poste-direct .dr-filtre-reseaux { padding: 5px 9px; font-size: 12.5px; }
   #dr-p-retenir > h2 { font-size: 14px; }
   #dr-p-retenir li { font-size: 13px; }
 
@@ -574,8 +586,8 @@ tr.hors td { color: var(--muted); }
   #dr-p-arrivees { grid-column: 3; grid-row: 8 / 14; }
   #dr-sismo { grid-column: 3; grid-row: 6 / 14; }
   #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-seismes { grid-row: 2 / 6; }
-  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-source { grid-row: 2 / 7; }
-  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-reseaux { grid-row: 7 / 9; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-source { grid-row: 2 / 5; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-reseaux { grid-row: 5 / 9; }
   #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-arrivees { grid-column: 1; grid-row: 9 / 12; }
   #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-retenir { grid-row: 12 / 14; }
   #dr-arrivees .resultats { font-size: 12px; }

@@ -146,7 +146,8 @@ src/globe-figure.js     coupe du globe (croûte, manteau, noyau externe liquide,
                         du foyer (P, pP, sP), coupe d'une zone de subduction, en SVG
 src/lecteur-station.js  banc « une station » (séisme local ou lointain)
 src/propagation-anim.js animation en boucle de la propagation : coupe du globe (téléséisme) ou de la croûte (séisme local)
-direct.html             stations sismologiques de la Méditerranée en direct, par réseau (carte, traces, séismes, arrivées)
+direct.html             stations sismologiques du monde entier en direct, par réseau (carte du monde, jusqu'à 100 traces,
+                        présence de données des stations, séismes de l'EMSC, arrivées)
 src/direct-page.js      page « En direct » : par station, relais SeedLink de son centre ou de GEOFON, sinon FDSN toutes
                         les 20 s ; sans réseau, démonstration simulée
 src/sismo/centres.js    centres de données (FDSN, SeedLink) : liste blanche des relais, serveurs à essayer par station
@@ -186,7 +187,7 @@ src/onglets.js          onglets et fil du parcours (partie, banc précédent et 
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, sismogrammes d'un séisme, versions des scripts, séisme réel dans le TP de localisation (localisation, ML, mécanisme), pointé automatique, spectre de la source en vitesse et bruit, catalogues réels, propagation en direct, zones sismogènes, mécanismes au foyer, failles actives et champ GNSS réels (251 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, sismogrammes d'un séisme, versions des scripts, séisme réel dans le TP de localisation (localisation, ML, mécanisme), pointé automatique, spectre de la source en vitesse et bruit, catalogues réels, propagation en direct, zones sismogènes, mécanismes au foyer, failles actives et champ GNSS réels (254 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)

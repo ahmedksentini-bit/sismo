@@ -1,6 +1,6 @@
 // functions/api/seedlink.js — fonction Cloudflare Pages : relais SeedLink → WebSocket pour la page « En direct ». Un
 // navigateur ne peut pas ouvrir de connexion TCP ; la fonction se connecte au serveur SeedLink demandé (?serveur=hôte:port,
-// liste blanche de src/sismo/centres.js, GEOFON par défaut), mène la poignée de main pour les flux demandés (au plus 12,
+// liste blanche de src/sismo/centres.js, GEOFON par défaut), mène la poignée de main pour les flux demandés (au plus 25,
 // validés par src/sismo/seedlink.js), puis transmet chaque enregistrement miniSEED des voies demandées (512 octets) en
 // message binaire. Messages texte (JSON) : { type: 'etat' | 'erreur' | 'fin' } ; l'état qui suit la poignée de main
 // nomme les stations refusées (STATION ou SELECT en erreur), que la page essaie ailleurs. La connexion se ferme d'elle-même
@@ -26,7 +26,7 @@ export async function onRequest(context) {
   const cible = env.SEEDLINK_SERVEUR || serveur, flux = SeedLink.lireFlux(p.get('flux'));
   if (p.has('diagnostic')) return diagnostiquer(serveur, cible, flux ? flux.slice(0, 1) : SeedLink.lireFlux('GE.MTE..BHZ'));
   if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return new Response('Connexion WebSocket attendue', { status: 426 });
-  if (!flux) return new Response('Flux invalides : RESEAU.STATION.EMPLACEMENT.VOIE, 12 au plus', { status: 400 });
+  if (!flux) return new Response(`Flux invalides : RESEAU.STATION.EMPLACEMENT.VOIE, ${SeedLink.MAX_FLUX} au plus`, { status: 400 });
   const depuis = SeedLink.lireDepuis(p.get('depuis'));
   const [client, ws] = Object.values(new WebSocketPair());
   ws.accept();

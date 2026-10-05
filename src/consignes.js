@@ -23,9 +23,9 @@ const CONSIGNES = {
       "Après chaque paire, regardez la carte (un cercle de rayon R par station) et la droite de Wadati : relevez Vp/Vs (pente + 1) et t0 (intersection avec l'axe).",
       "Lisez la localisation (épicentre, profondeur, heure d'origine, résidus) et comparez-la au séisme simulé. Expliquez pourquoi les cercles ne se coupent pas en un point.",
       "Faites glisser l'épicentre (l'étoile de la carte) hors du réseau : notez la lacune azimutale et l'allongement de la zone compatible. Comparez ensuite un foyer à 5 km et à 25 km.",
-      "En mode Exercice, localisez un séisme inconnu, puis cliquez « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme »), pointez P et S sur chaque station puis cliquez « Comparer à GEOFON » : écart d'épicentre et d'heure d'origine, arrivées prévues pour sa solution.",
+      "En mode Exercice, localisez un séisme inconnu, puis cliquez « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme »), pointez P et S sur chaque station puis cliquez « Comparer au catalogue » : écart d'épicentre et d'heure d'origine, arrivées prévues pour sa solution.",
     ],
-    rendre: "le tableau des pointés et des résidus, l'épicentre, h, t0 et Vp/Vs, avec un commentaire sur la lacune azimutale (et, pour un séisme réel, l'écart à GEOFON).",
+    rendre: "le tableau des pointés et des résidus, l'épicentre, h, t0 et Vp/Vs, avec un commentaire sur la lacune azimutale (et, pour un séisme réel, l'écart au catalogue).",
   },
   mecanisme: {
     objectif: "Retrouver le mécanisme au foyer à partir des polarités des premières arrivées P : plans nodaux, axes P et T, type de faille.",
@@ -47,9 +47,9 @@ const CONSIGNES = {
       "Réglez Ω0 sur le plateau, puis fc sur le coude ; notez M0, Mw et Δσ. Cliquez ensuite « Ajuster » et comparez à votre réglage.",
       "Recommencez pour les autres stations : la Mw spectrale reste-t-elle stable avec la distance ? Comparez-la à ML.",
       "Montez Mw à 6 : fc baisse et ML s'écarte de Mw. Puis, à Mw fixée, faites varier Δσ et observez fc.",
-      "En mode Exercice, ajustez le modèle de la station affichée, donnez Mw et fc, puis « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme ») : ajustez Brune station par station sur les bandes au-dessus du bruit, puis comparez Mw, ML et la magnitude de GEOFON.",
+      "En mode Exercice, ajustez le modèle de la station affichée, donnez Mw et fc, puis « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme ») : ajustez Brune station par station sur les bandes au-dessus du bruit, puis comparez Mw, ML et la magnitude du catalogue.",
     ],
-    rendre: "Ω0, fc, M0, Mw et Δσ par station, leur moyenne, et un commentaire sur l'écart entre ML et Mw (et, pour un séisme réel, avec la magnitude de GEOFON).",
+    rendre: "Ω0, fc, M0, Mw et Δσ par station, leur moyenne, et un commentaire sur l'écart entre ML et Mw (et, pour un séisme réel, avec la magnitude du catalogue).",
   },
   sismometre: {
     objectif: "Comprendre ce que mesure un sismomètre : selon sa fréquence propre et son amortissement, il recopie le déplacement du sol ou son accélération.",

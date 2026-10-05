@@ -21,6 +21,17 @@ test('centres : identifiants uniques, services FDSN en https, serveurs SeedLink 
   assert.ok(C.serveurPermis('geofon.gfz.de:18000') && !C.serveurPermis('evil.example:18000') && !C.serveurPermis('geofon.gfz.de:22'));
 });
 
+test('catalogues de séismes : EMSC pour le seul service event ; adresses des services', () => {
+  assert.ok(C.servicePermis('emsc', 'event'));
+  for (const sv of ['station', 'dataselect']) assert.ok(!C.servicePermis('emsc', sv), sv);
+  assert.ok(C.servicePermis('geofon', 'station') && C.servicePermis('geofon', 'event'));
+  assert.ok(!C.servicePermis('ailleurs', 'event') && !C.servicePermis('toString', 'event'));
+  assert.equal(C.adresseFdsn('emsc'), 'https://www.seismicportal.eu');
+  assert.equal(C.adresseFdsn('ingv'), 'https://webservices.ingv.it');
+  assert.equal(C.adresseFdsn('ailleurs'), null);
+  assert.ok(!C.permis('emsc'), 'un catalogue n\'est pas un centre de stations');
+});
+
 test('serveurs à essayer : celui du centre, puis GEOFON ; GEOFON une seule fois ; un centre inconnu va à GEOFON', () => {
   assert.deepEqual(C.candidats('ingv'), ['webservices.ingv.it:18000', C.GEOFON]);
   assert.deepEqual(C.candidats('geofon'), [C.GEOFON]);

@@ -23,9 +23,16 @@ const Centres = (() => {
     { id: 'earthscope', nom: 'EarthScope', organisme: 'États-Unis', fdsn: 'https://service.earthscope.org', seedlink: ['rtserve.earthscope.org:18000'], verifie: true },
   ];
   const CENTRES = Object.fromEntries(LISTE.map(c => [c.id, c]));
+  // Catalogues de séismes (service event seul) : l'EMSC réunit les solutions des réseaux nationaux (les petits séismes de
+  // la Méditerranée en quelques minutes) ; GEOFON, centre de données, sert de catalogue de secours.
+  const CATALOGUES = [{ id: 'emsc', nom: 'EMSC', organisme: 'CSEM-EMSC', fdsn: 'https://www.seismicportal.eu' }];
   const SEEDLINK = [...new Set(LISTE.flatMap(c => c.seedlink))];
 
   const permis = id => Object.prototype.hasOwnProperty.call(CENTRES, id);
+  const catalogue = id => CATALOGUES.find(c => c.id === id) || null;
+  // Le relais FDSN transmet tout service à un centre de données, le seul service event à un catalogue.
+  const servicePermis = (id, service) => permis(id) || (service === 'event' && !!catalogue(id));
+  const adresseFdsn = id => (permis(id) ? CENTRES[id].fdsn : catalogue(id) ? catalogue(id).fdsn : null);
   const serveurPermis = adresse => SEEDLINK.includes(adresse);
   // Serveurs SeedLink à essayer, dans l'ordre, pour une station d'un centre : le sien, puis GEOFON.
   const candidats = id => [...new Set([...(permis(id) ? CENTRES[id].seedlink : []), GEOFON])];
@@ -48,6 +55,6 @@ const Centres = (() => {
     return out;
   }
 
-  return { GEOFON, LISTE, CENTRES, SEEDLINK, permis, serveurPermis, candidats, centreDuServeur, temporaire, fusionner };
+  return { GEOFON, LISTE, CENTRES, CATALOGUES, SEEDLINK, permis, catalogue, servicePermis, adresseFdsn, serveurPermis, candidats, centreDuServeur, temporaire, fusionner };
 })();
 export default Centres;

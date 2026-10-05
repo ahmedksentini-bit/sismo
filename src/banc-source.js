@@ -186,7 +186,7 @@ import SeismeReel from './seisme-reel.js';
       afficheur('ML', virg(mo.ML, 2), 'Wood-Anderson simulé'),
       afficheur('fc', c ? '—' : `${virg(mo.fc, 2)} Hz`, 'moyenne géométrique'),
       afficheur('Δσ', c ? '—' : `${virg(mo.ds, 1)} MPa`, 'relation de Brune'),
-      e ? afficheur('GEOFON', `${virg(e.mag, 1)} ${e.typeMag || ''}`, 'magnitude du catalogue')
+      e ? afficheur(e.catalogue || 'GEOFON', `${virg(e.mag, 1)} ${e.typeMag || ''}`, 'magnitude du catalogue')
         : afficheur('Vérité', c ? '—' : `Mw ${virg(r.Mw, 1)}`, c ? '' : `Δσ ${virg(r.dsigma, 1)} MPa (générateur)`),
       afficheur('C = Rθφ·F/4πρβ³', sci(C), 'M0 = Ω0 / C (N·m)'),
     ].join('');
@@ -211,8 +211,8 @@ import SeismeReel from './seisme-reel.js';
     });
     if (!c) { info.textContent = 'Aucun fichier chargé : chargez-en un ici ou dans le banc « réseau ».'; return; }
     const e = c.dossier.seisme, d = new Date(e.temps).toISOString(), n = etat.stations.length, sansFit = etat.stations.filter(s => !s.a.fit).length;
-    info.innerHTML = `<b>${e.region || 'Séisme'}</b>, ${d.slice(0, 10)} à ${d.slice(11, 19)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (GEOFON) · ${n} station${n > 1 ? 's' : ''} sur ${c.dossier.stations.length} entre ${Reel.RMIN} et ${Reel.RMAX} km${sansFit ? `, dont ${sansFit} noyée${sansFit > 1 ? 's' : ''} dans le bruit` : ''}.
-      Foyer ${F.source === 'geofon' ? 'de GEOFON' : 'de votre localisation (banc « réseau »)'} à ${virg(F.h, 0)} km.${c.solution ? '' : ' Localisez-le dans le banc « réseau » pour utiliser vos pointés et votre foyer.'}`;
+    info.innerHTML = `<b>${e.region || 'Séisme'}</b>, ${d.slice(0, 10)} à ${d.slice(11, 19)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (${e.catalogue || 'GEOFON'}) · ${n} station${n > 1 ? 's' : ''} sur ${c.dossier.stations.length} entre ${Reel.RMIN} et ${Reel.RMAX} km${sansFit ? `, dont ${sansFit} noyée${sansFit > 1 ? 's' : ''} dans le bruit` : ''}.
+      Foyer ${F.source === 'geofon' ? `du catalogue (${e.catalogue || 'GEOFON'})` : 'de votre localisation (banc « réseau »)'} à ${virg(F.h, 0)} km.${c.solution ? '' : ' Localisez-le dans le banc « réseau » pour utiliser vos pointés et votre foyer.'}`;
   }
   function majControles() {
     if (!etat.stations.length) return;

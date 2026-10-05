@@ -56,8 +56,9 @@ const MiniSeed = (() => {
 
   // Un enregistrement à partir de l'octet `debut` d'un ArrayBuffer (ou d'une vue Uint8Array). Renvoie l'identifiant,
   // l'heure du premier échantillon (ms depuis 1970, UTC), la cadence, les échantillons et la longueur de
-  // l'enregistrement (pour passer au suivant) ; null si ce n'est pas un enregistrement de données.
-  function enregistrement(tampon, debut = 0) {
+  // l'enregistrement (pour passer au suivant) ; null si ce n'est pas un enregistrement de données. sansDonnees : en-tête
+  // seul (nombre d'échantillons n, heure qui suit le dernier, fin), sans décoder les échantillons.
+  function enregistrement(tampon, debut = 0, { sansDonnees = false } = {}) {
     const octets = tampon instanceof Uint8Array ? tampon : new Uint8Array(tampon);
     const vue = new DataView(octets.buffer, octets.byteOffset, octets.byteLength);
     if (octets.length - debut < 48) return null;
@@ -86,6 +87,7 @@ const MiniSeed = (() => {
     let t = Date.UTC(h.annee, 0, 1, h.heure, h.minute, h.seconde) + (h.jour - 1) * 86400000 + h.dixMillieme / 10 + micro / 1000;
     if (!(h.activite & 2)) t += h.correction / 10;
     const fs = cadence(h.facteur, h.multiplicateur), o = debut + h.donnees, fin = debut + Math.min(longueur, octets.length - debut);
+    if (sansDonnees) return { ...entete(h), debut: t, cadence: fs, codage: CODAGES[codage] || codage, longueur, n: h.n, fin: fs > 0 ? t + (h.n * 1000) / fs : t };
     const p = !ordreDonnees;
     let ech = new Float64Array(0), controle = true;
     if (h.n && codage !== null) {
@@ -119,6 +121,21 @@ const MiniSeed = (() => {
     return out;
   }
 
-  return { cadence, enregistrement, lire, CODAGES };
+  // Résumé d'une réponse dataselect, en-têtes seuls (relais du site, présence de données des stations) : pour chaque voie,
+  // heure du premier échantillon, heure qui suit le dernier et nombre d'échantillons.
+  function resumer(tampon) {
+    const octets = tampon instanceof Uint8Array ? tampon : new Uint8Array(tampon), voies = {};
+    let i = 0;
+    while (i + 48 <= octets.length) {
+      const e = enregistrement(octets, i, { sansDonnees: true });
+      if (!e) { i += 512; continue; }
+      const v = voies[e.id] || (voies[e.id] = { debut: e.debut, fin: e.fin, n: 0 });
+      v.debut = Math.min(v.debut, e.debut); v.fin = Math.max(v.fin, e.fin); v.n += e.n;
+      i += e.longueur;
+    }
+    return { voies };
+  }
+
+  return { cadence, enregistrement, lire, resumer, CODAGES };
 })();
 export default MiniSeed;
