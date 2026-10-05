@@ -12,7 +12,7 @@
 {"imports": {
   "./src/app.js": "./src/app.js?v=1cd687d721",
   "./src/ballon.js": "./src/ballon.js?v=34da25b99b",
-  "./src/banc-alea.js": "./src/banc-alea.js?v=5379a51d44",
+  "./src/banc-alea.js": "./src/banc-alea.js?v=f0e62e5949",
   "./src/banc-batiment.js": "./src/banc-batiment.js?v=947c718313",
   "./src/banc-ductilite.js": "./src/banc-ductilite.js?v=c29300a46c",
   "./src/banc-geodesie.js": "./src/banc-geodesie.js?v=34dc2cee6d",
@@ -27,7 +27,7 @@
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
   "./src/banc-source.js": "./src/banc-source.js?v=a0c137fe7c",
   "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
-  "./src/consignes.js": "./src/consignes.js?v=03516d3767",
+  "./src/consignes.js": "./src/consignes.js?v=364f176ad4",
   "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
   "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
   "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
@@ -94,10 +94,12 @@
   "./src/sismo/direct.js": "./src/sismo/direct.js?v=20fea47383",
   "./src/sismo/dossier.js": "./src/sismo/dossier.js?v=7bcc26a0b7",
   "./src/sismo/faille.js": "./src/sismo/faille.js?v=711c6bcef2",
+  "./src/sismo/failles.js": "./src/sismo/failles.js?v=ff8740515c",
   "./src/sismo/fdsn.js": "./src/sismo/fdsn.js?v=ced37285b4",
   "./src/sismo/geodesie.js": "./src/sismo/geodesie.js?v=c59d80cef9",
   "./src/sismo/globe.js": "./src/sismo/globe.js?v=dc6b2eacec",
   "./src/sismo/gmpe.js": "./src/sismo/gmpe.js?v=c3f0f1bb6b",
+  "./src/sismo/gnss.js": "./src/sismo/gnss.js?v=bd7f9dc0bd",
   "./src/sismo/inelastique.js": "./src/sismo/inelastique.js?v=90547bdcbc",
   "./src/sismo/intensite.js": "./src/sismo/intensite.js?v=26dfdc0e08",
   "./src/sismo/isolation.js": "./src/sismo/isolation.js?v=de3977e9bb",
@@ -110,7 +112,7 @@
   "./src/sismo/oscillateur.js": "./src/sismo/oscillateur.js?v=3f8504910f",
   "./src/sismo/poussee.js": "./src/sismo/poussee.js?v=a9a6aa3dd5",
   "./src/sismo/propagation.js": "./src/sismo/propagation.js?v=6b02374afd",
-  "./src/sismo/psha.js": "./src/sismo/psha.js?v=0e7f974e10",
+  "./src/sismo/psha.js": "./src/sismo/psha.js?v=058550a9d7",
   "./src/sismo/reel.js": "./src/sismo/reel.js?v=1c6e05c856",
   "./src/sismo/refraction.js": "./src/sismo/refraction.js?v=dff98ef9aa",
   "./src/sismo/seedlink.js": "./src/sismo/seedlink.js?v=d1f8330f2a",
@@ -122,7 +124,7 @@
   "./src/sismo/spectre.js": "./src/sismo/spectre.js?v=1202ae7996",
   "./src/sismo/tables.js": "./src/sismo/tables.js?v=cc48159840",
   "./src/sismo/teleseisme.js": "./src/sismo/teleseisme.js?v=548e548b4d",
-  "./src/sismo/zones.js": "./src/sismo/zones.js?v=7fe46c5410",
+  "./src/sismo/zones.js": "./src/sismo/zones.js?v=de5d4637cf",
   "./src/socle.js": "./src/socle.js?v=1931acce73",
   "./src/tableaux.js": "./src/tableaux.js?v=69a0ae895d",
   "./src/traits.js": "./src/traits.js?v=1bf04c36d8",
@@ -870,7 +872,8 @@
         <label class="bouton secondaire bouton-fichier">Charger un fichier de zones<input type="file" id="al-zones-fichier" accept=".json,application/json"></label>
         <p class="aide" id="al-zones-info"></p>
         <p class="aide">Les zones sont projetées en km autour de leur centre (projection équirectangulaire locale) et discrétisées en points ;
-          chaque zone suit sa loi de Gutenberg-Richter tronquée, de max(Mc, 4) à Mmax. Pas de vérité terrain ni de corrigé.</p>
+          chaque zone suit sa loi de Gutenberg-Richter tronquée, de max(Mc, 4) à Mmax. Les failles actives de la base GEM et un champ de
+          vitesses GNSS chargé complètent le modèle (réglages plus bas). Pas de vérité terrain ni de corrigé.</p>
       </section>
       <section class="carte" aria-label="Probabilité visée">
         <p class="sous-titre">Probabilité visée</p>
@@ -899,6 +902,27 @@
           <div class="champ" style="margin-top:12px"><label for="al-glissement">Vitesse de glissement géologique <output id="al-glissement-v"></output></label><input type="range" id="al-glissement" min="0" max="3" step="0.05"></div>
           <div class="separateur"></div>
         </div>
+        <div id="al-bloc-failles-reel" hidden>
+          <p class="sous-titre">Failles actives</p>
+          <label class="case"><input type="checkbox" id="al-failles-reel"> Failles des zones : ruptures flottantes de Mmax de leur zone à la rupture de
+            toute la faille (Wells et Coppersmith), taux de moment μ·L·W·s</label>
+          <div class="champ" style="margin-top:12px"><label for="al-glissement-defaut">Glissement des failles sans vitesse connue <output id="al-glissement-defaut-v"></output></label><input type="range" id="al-glissement-defaut" min="0" max="1" step="0.05"></div>
+          <p class="aide" id="al-failles-info"></p>
+          <div id="al-failles-table"></div>
+          <label class="bouton secondaire bouton-fichier">Charger un fichier de failles<input type="file" id="al-failles-fichier" accept=".json,.geojson,application/json,application/geo+json"></label>
+          <p class="aide" id="al-failles-source"></p>
+          <div class="separateur"></div>
+        </div>
+        <div id="al-bloc-gnss" hidden>
+          <p class="sous-titre">Géodésie : champ de vitesses GNSS</p>
+          <label class="bouton secondaire bouton-fichier">Charger un champ de vitesses GNSS<input type="file" id="al-gnss-fichier" accept=".txt,.dat,.vel,.gmt,.csv,.tsv,text/plain,text/csv"></label>
+          <p class="aide" id="al-gnss-info">Aucun champ de vitesses chargé. Fichier psvelo de GMT (lon lat ve vn σe σn corr site, en mm/an) ou tableau dont
+            l'en-tête nomme les colonnes (lon, lat, ve, vn, et si possible se, sn, site) : un champ publié (supplément d'article, produits
+            EPOS ou du laboratoire géodésique du Nevada) fait l'affaire, dans n'importe quel référentiel.</p>
+          <div class="champ"><label for="al-gnss-marge">Stations retenues autour de chaque zone <output id="al-gnss-marge-v"></output></label><input type="range" id="al-gnss-marge" min="0" max="100" step="5"></div>
+          <div id="al-gnss-table"></div>
+          <div class="separateur"></div>
+        </div>
         <p class="sous-titre">Arbre logique</p>
         <label class="case"><input type="checkbox" id="al-inc-ab"> (a, b) de chaque zone : b ± 1,645 σ (poids 0,185 / 0,63 / 0,185)</label>
         <p class="aide" id="al-ab-info" hidden></p>
@@ -908,9 +932,6 @@
           <div class="champ" style="margin-top:12px"><label for="al-poids-geo">Poids de la géodésie face au catalogue <output id="al-poids-geo-v"></output></label><input type="range" id="al-poids-geo" min="0" max="1" step="0.05"></div>
           <p class="aide" id="al-geo-source" style="margin-top:0"></p>
         </div>
-        <p class="aide" id="al-sans-faille" hidden>Ni faille ni modèle géodésique dans ce mode : un catalogue seul ne donne ni la géométrie et le
-          glissement d'une faille, ni la vitesse de déformation mesurée par GNSS ; les taux viennent du catalogue seul. La faille F et la
-          géodésie restent dans le modèle d'école (mode Explorer).</p>
         <div class="champ" style="margin-top:12px"><span class="etiquette">Lois d'atténuation (poids égaux)</span>
           <label class="case"><input type="checkbox" data-al-loi="akkar2014"> Akkar, Sandıkkaya et Bommer (2014)</label>
           <label class="case"><input type="checkbox" data-al-loi="bindi2014"> Bindi et al. (2014)</label>
@@ -1657,7 +1678,7 @@
 <script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>
 <script type="module" src="src/banc-sismicite.js?v=83a05b337f"></script>
 <script type="module" src="src/banc-geodesie.js?v=34dc2cee6d"></script>
-<script type="module" src="src/banc-alea.js?v=5379a51d44"></script>
+<script type="module" src="src/banc-alea.js?v=f0e62e5949"></script>
 <script type="module" src="src/banc-selection.js?v=fa88657041"></script>
 <script type="module" src="src/banc-site.js?v=07d6eb2b49"></script>
 <script type="module" src="src/banc-liquefaction.js?v=a209e4a6a4"></script>

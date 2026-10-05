@@ -6,8 +6,8 @@ import Sismicite from './sismicite.js';
 // analysée : b d'Aki-Utsu et σ de Shi et Bolt, ou b régional si la zone a trop peu de séismes ; taux annuel ; Mmax
 // observée ; profondeur médiane), format « sismo-zones » v1 (fichier et état partagé entre les bancs), projection locale
 // en km autour d'un point de référence et modèle PSHA (Psha.calculer : zones en km, branches (a, b), ΔMmax, lois
-// d'atténuation ; ni faille ni géodésie) ; pas de discrétisation, domaine, grille de la carte d'aléa et côtes en km du
-// banc « aléa ». Solveurs purs.
+// d'atténuation ; failles actives de src/sismo/failles.js et moments géodésiques de src/sismo/gnss.js) ; pas de
+// discrétisation, domaine, grille de la carte d'aléa et côtes en km du banc « aléa ». Solveurs purs.
 const Zones = (() => {
   'use strict';
   const FORMAT = 'sismo-zones', VERSION = 1, RAD = Math.PI / 180, KM = 6371 * RAD; // km par degré de grand cercle
@@ -94,8 +94,12 @@ const Zones = (() => {
 
   // Modèle PSHA (Psha.calculer) d'un modèle de zones : repère en km autour de `reference` (le site par défaut), site à sa
   // place dans ce repère ; loi de chaque zone : λ(≥ Mc) et b (branches b ± 1,645σ si incAB et σ > 0), tronquée de
-  // max(Mc, 4) à Mmax ; ΔMmax du modèle d'école si incMmax ; lois d'atténuation à poids égaux ; catalogue seul.
-  function modelePsha(m, { reference = m.site, site = m.site, gmpe = ['akkar2014', 'bindi2014', 'boore2014'], incAB = true, incMmax = true, pasGrille = 10 } = {}) {
+  // max(Mc, 4) à Mmax ; ΔMmax du modèle d'école si incMmax ; lois d'atténuation à poids égaux. Failles : celles de
+  // Failles.retenir (extrémités en lon, lat, zone, pendage, profondeurs, rake, glissement, Mmax), maillées au pas pasFaille.
+  // Géodésie : { poids, moments } (Ṁ0 de Kostrov par zone, null si inconnu) avec les couplages χ du modèle d'école ; sans
+  // elle, catalogue seul.
+  function modelePsha(m, { reference = m.site, site = m.site, gmpe = ['akkar2014', 'bindi2014', 'boore2014'], incAB = true, incMmax = true, pasGrille = 10,
+    failles = [], pasFaille = 1, geodesie = null } = {}) {
     const base = Psha.modeleDefaut(), pr = projection(reference.lat, reference.lon), [xs, ys] = pr.versKm([site.lon, site.lat]);
     const zones = m.zones.map(z => {
       const ajustement = { b: z.b, sigmaB: z.sigmaB || 0, lamPivot: z.lam, mPivot: z.mc };
@@ -105,9 +109,14 @@ const Zones = (() => {
         ab: incAB && ajustement.sigmaB > 0 ? Psha.branchesAB(ajustement) : [{ a: Math.log10(z.lam) + z.b * z.mc, b: z.b, poids: 1 }],
       };
     });
+    const sources = failles.map(f => ({ id: 'f' + (f.indice ?? f.id), nom: f.nom, zone: f.zone, trace: f.extremites.map(pr.versKm), pendage: f.pendage,
+      zHaut: f.zHaut, zBas: f.zBas, rake: f.rake, glissement: f.glissement, mu: 3e10, mmax: f.mmax, rapport: 1 }));
+    const wGeo = geodesie && geodesie.poids > 0 && geodesie.moments.some(Number.isFinite) ? Math.min(1, geodesie.poids) : 0;
+    const taux = [{ id: 'catalogue', nom: 'Catalogue', poids: 1 - wGeo }];
+    if (wGeo > 0) taux.push({ id: 'geodesie', nom: 'Géodésie', poids: wGeo, couplage: Psha.COUPLAGE, moments: geodesie.moments.slice() });
     return {
-      ...base, site: { x: xs, y: ys, vs30: site.vs30 ?? m.site.vs30 ?? 800 }, pasGrille, zones, failles: [],
-      dMmax: incMmax ? base.dMmax : [{ d: 0, poids: 1 }], gmpe: gmpe.map(id => ({ id, poids: 1 / gmpe.length })), taux: [{ id: 'catalogue', nom: 'Catalogue', poids: 1 }],
+      ...base, site: { x: xs, y: ys, vs30: site.vs30 ?? m.site.vs30 ?? 800 }, pasGrille, pasFaille, zones, failles: sources,
+      dMmax: incMmax ? base.dMmax : [{ d: 0, poids: 1 }], gmpe: gmpe.map(id => ({ id, poids: 1 / gmpe.length })), taux: taux.filter(t => t.poids > 0),
     };
   }
 

@@ -3,6 +3,8 @@ import Spectre from './sismo/spectre.js';
 import Psha from './sismo/psha.js';
 import Isolignes from './sismo/isolignes.js';
 import Zones from './sismo/zones.js';
+import Failles from './sismo/failles.js';
+import Gnss from './sismo/gnss.js';
 import ZonesReel from './zones-reel.js';
 
 // src/banc-alea.js — banc « aléa » : calcul probabiliste de l'aléa sismique (PSHA) sur un modèle d'école,
@@ -10,7 +12,9 @@ import ZonesReel from './zones-reel.js';
 // sensibilité aux branches. Tout le calcul est dans src/sismo/psha.js (vérifié contre OpenQuake).
 // Mode « Zones du catalogue » : les zones sismogènes tracées sur un catalogue réel au banc « sismicité » (état partagé
 // src/zones-reel.js, événement alea:zones) ou lues dans un fichier « sismo-zones », projetées en km autour de leur centre
-// (Zones.modelePsha) ; site en latitude et longitude, côtes réelles, ni faille ni géodésie.
+// (Zones.modelePsha) ; site en latitude et longitude, côtes réelles ; failles actives de la base GEM (extrait méditerranéen
+// data/failles-mediterranee.json ou GeoJSON chargé, src/sismo/failles.js) et moments géodésiques d'un champ de vitesses GNSS
+// chargé (src/sismo/gnss.js).
 (() => {
   'use strict';
   const SM = Sismo, Sp = Spectre;
@@ -252,11 +256,13 @@ import ZonesReel from './zones-reel.js';
     // km par degré de longitude et de latitude (méridiens et parallèles sont droits dans ce repère)
     const kx = pr.versKm([reference.lon + 1, reference.lat])[0], ky = pr.versKm([reference.lon, reference.lat + 1])[1];
     const zm = { modele: m, reference, pr, pas, points, n, domaine, grille: Zones.grilleAlea(domaine, { nMax: SITES_CARTE }),
-      nSigma, abPossible: nSigma > 0 && Math.pow(3, nSigma) <= MAX_VARIANTES_AB, kx, ky, fond: null };
+      nSigma, abPossible: nSigma > 0 && Math.pow(3, nSigma) <= MAX_VARIANTES_AB, kx, ky, fond: null, boite: null,
+      failles: null, traces: null, faillesSource: null, gnss: null };
     // fond de carte : côtes et frontières de la Méditerranée (plus fines) quand la vue y tient, sinon du monde ; la boîte
     // déborde du domaine, que la carte montre au-delà quand ses proportions diffèrent de celles du canevas
     const L = Math.max(domaine.x1 - domaine.x0, domaine.y1 - domaine.y0);
     const boite = { x0: domaine.x0 - L, x1: domaine.x1 + L, y0: domaine.y0 - L, y1: domaine.y1 + L };
+    zm.boite = boite;
     const med = reference.lon + boite.x0 / kx >= DOMAINE_MED.lon[0] && reference.lon + boite.x1 / kx <= DOMAINE_MED.lon[1]
       && reference.lat + boite.y0 / ky >= DOMAINE_MED.lat[0] && reference.lat + boite.y1 / ky <= DOMAINE_MED.lat[1];
     chargerFond(med ? 'mediterranee' : 'monde').then(j => {
@@ -273,15 +279,73 @@ import ZonesReel from './zones-reel.js';
       site: { x, y, lat: m.site.lat, lon: m.site.lon, vs30: m.site.vs30 },
       zones: m.zones.map(z => ({ lam: z.lam, b: z.b, mmax: z.mmax })),
       incAB: zm.abPossible, incMmax: true, lois: Object.fromEntries(BASE.gmpe.map(g => [g.id, true])),
-      geo: { ...reglagesDefaut().geo, actif: false }, faille: { ...reglagesDefaut().faille, actif: false },
+      geo: { actif: !!reel.gnss, poids: 0.5, marge: 0, moments: null, source: '' }, faille: { ...reglagesDefaut().faille, actif: false },
+      failles: { actif: true, glissementDefaut: 0 },
     };
   }
+
+  // ── Failles actives et champ de vitesses GNSS (mode « Zones du catalogue ») ──
+  // Sources chargées une fois (elles survivent aux changements de modèle de zones) : failles de l'extrait GEM livré ou d'un
+  // fichier, vitesses GNSS d'un fichier. Ce qui dépend des zones (failles retenues, traces en km, tenseurs) vit dans zm.
+  const reel = { failles: null, gnss: null, chargement: null, erreurFailles: null };
+  const CIBLE_RUPTURES = 15000;
+  function chargerFaillesDefaut() {
+    if (reel.failles) return Promise.resolve(reel.failles);
+    if (!reel.chargement) {
+      reel.chargement = fetch('data/failles-mediterranee.json').then(r => { if (!r.ok) throw new Error(`extrait des failles illisible (${r.status})`); return r.text(); })
+        .then(t => { if (!reel.failles) reel.failles = { ...Failles.lire(t), nom: 'extrait méditerranéen de la base GEM', defaut: true }; reel.erreurFailles = null; return reel.failles; })
+        .catch(err => { reel.chargement = null; reel.erreurFailles = err.message || String(err); return null; });
+    }
+    return reel.chargement;
+  }
+  // Failles du jeu chargé : traces en km de celles qui touchent la boîte de la carte (une fois par jeu et par modèle de
+  // zones), failles retenues par les zones (selon le glissement par défaut).
+  function majFaillesZones() {
+    const zm = etat.zm, F = reel.failles;
+    if (!zm) return;
+    if (!F) { zm.failles = null; zm.traces = null; zm.faillesSource = null; return; }
+    if (zm.faillesSource !== F) {
+      zm.faillesSource = F;
+      const b = zm.boite;
+      zm.traces = [];
+      F.failles.forEach((f, i) => {
+        const xy = f.trace.flatMap(q => zm.pr.versKm(q));
+        let dedans = false;
+        for (let k = 0; k < xy.length && !dedans; k += 2) dedans = xy[k] >= b.x0 && xy[k] <= b.x1 && xy[k + 1] >= b.y0 && xy[k + 1] <= b.y1;
+        if (dedans) zm.traces.push({ i, xy: Float64Array.from(xy) });
+      });
+    }
+    const r = Failles.retenir(F.failles, zm.modele.zones, { glissementDefaut: etat.r.failles.glissementDefaut });
+    zm.failles = { ...r, parIndice: new Map(r.retenues.map(f => [f.indice, f])) };
+  }
+  // Tenseur et moment géodésique de chaque zone (stations de la zone et de sa marge), flèches de la carte (vitesses des
+  // stations de la boîte, leur moyenne retirée).
+  function majGnssZones() {
+    const zm = etat.zm, G = reel.gnss;
+    if (!zm) return;
+    if (!G) { zm.gnss = null; return; }
+    const marge = etat.r.geo.marge || 0, b = zm.boite;
+    const zones = zm.modele.zones.map(z => Gnss.tenseurZone(G.stations, z.polygone, { marge }));
+    const utiles = new Set(zones.flatMap(t => t.stations));
+    const pts = G.stations.map((st, i) => ({ st, i, xy: zm.pr.versKm([st.lon, st.lat]) })).filter(p => p.xy[0] >= b.x0 && p.xy[0] <= b.x1 && p.xy[1] >= b.y0 && p.xy[1] <= b.y1);
+    const rel = Gnss.vitessesRelatives(pts.map(p => p.st));
+    zm.gnss = { source: G, marge, zones, fleches: pts.map((p, k) => ({ x: p.xy[0], y: p.xy[1], de: rel[k].de, dn: rel[k].dn, id: p.st.id, e: p.st.e, n: p.st.n, utile: utiles.has(p.i) })) };
+  }
+  const momentsGeo = zm => (zm && zm.gnss ? zm.gnss.zones.map(t => (Number.isFinite(t.moment) ? t.moment : null)) : null);
   // Modèle PSHA des zones (Zones.modelePsha), réglages du banc appliqués ; les points de chaque zone sont calculés une fois
   function construireZones(r) {
     const zm = etat.zm, m = zm.modele, ids = BASE.gmpe.map(g => g.id).filter(id => r.lois[id]);
+    // failles retenues qui agissent dans une branche au moins (Mmax de la faille au-delà de Mmax de la zone + ΔMmax le plus
+    // bas : sinon, leur moment retiré du fond de la zone dans les variantes géodésiques ne serait libéré nulle part), maillées
+    // au pas qui tient le budget de ruptures ; moments géodésiques des zones (null sans tenseur)
+    const dMin = r.incMmax ? Math.min(...BASE.dMmax.map(d => d.d)) : 0;
+    const fz = r.failles.actif && zm.failles ? zm.failles.retenues.filter(f => f.mmax > r.zones[f.zone].mmax + dMin + 1e-9) : [];
+    zm.maillage = fz.length ? Failles.pasAdapte(fz, r.zones.map(z => z.mmax), { cible: CIBLE_RUPTURES }) : null;
+    const moments = momentsGeo(zm), geodesie = r.geo.actif && moments && moments.some(Number.isFinite) ? { poids: r.geo.poids, moments } : null;
     const mod = Zones.modelePsha({ ...m, zones: m.zones.map((z, i) => ({ ...z, ...r.zones[i] })) }, {
       reference: zm.reference, site: { lat: r.site.lat, lon: r.site.lon, vs30: r.site.vs30 }, gmpe: ids,
       incAB: r.incAB && zm.abPossible, incMmax: r.incMmax, pasGrille: zm.pas,
+      failles: fz, pasFaille: zm.maillage ? zm.maillage.pas : 1, geodesie,
     });
     mod.zones.forEach((z, i) => { z.points = zm.points[i]; });
     return mod;
@@ -336,6 +400,8 @@ import ZonesReel from './zones-reel.js';
       for (const p of z.points) { ctx.beginPath(); ctx.arc(g.X(p.x), g.Y(p.y), rPt, 0, 2 * Math.PI); ctx.fill(); }
       ctx.globalAlpha = 1;
     });
+    dessinerFailles(ctx, g);
+    dessinerGnss(ctx, g, W, H);
     // cercles de distance autour du site
     for (const R of cercles()) {
       ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
@@ -353,6 +419,7 @@ import ZonesReel from './zones-reel.js';
     const xS = gauche ? Xs - 12 : Xs + 12, yS = Ys + 2 - (lignesSite.length - 1) * 7;
     lignesSite.forEach((t, k) => texte(ctx, t, xS, yS + 14 * k, COUL['pick-p'], policeSite, gauche ? 'right' : 'left'));
     places.push({ x0: gauche ? xS - lS : xS, x1: gauche ? xS : xS + lS, y0: yS - 8, y1: yS + 14 * (lignesSite.length - 1) + 8 });
+    dessinerAxes(ctx, g, W, places);
     places.push({ x0: Xs - 9, x1: Xs + 9, y0: Ys - 10, y1: Ys + 7 });
     // étiquettes des zones, au centre de leurs points : nom et statistiques (nom seul sur téléphone, ou faute de place),
     // décalées d'une ligne au plus pour ne rien chevaucher
@@ -367,7 +434,7 @@ import ZonesReel from './zones-reel.js';
         const h = avec ? 28 : 14, l = avec ? Math.max(lN, lT) : lN, x = Math.min(Math.max(xc, 4 + l / 2), W - 4 - l / 2);
         return { avec, x, y, x0: x - l / 2, x1: x + l / 2, y0: y - h / 2, y1: y + h / 2 };
       };
-      const essais = [...(etroit ? [] : [0, -30, 30].map(dy => boite(true, yc + dy))), ...[0, -16, 16].map(dy => boite(false, yc + dy))];
+      const essais = [...(etroit ? [] : [0, -30, 30, -46, 46].map(dy => boite(true, yc + dy))), ...[0, -16, 16, -30, 30, -44, 44].map(dy => boite(false, yc + dy))];
       const b = essais.find(libre) || boite(false, yc);
       places.push(b);
       if (b.avec) { texte(ctx, nom, b.x, b.y - 7, c, pNom, 'center'); texte(ctx, stat, b.x, b.y + 7, c, pStat, 'center'); }
@@ -380,6 +447,84 @@ import ZonesReel from './zones-reel.js';
     const lkm = [25, 50, 100, 200, 500].find(v => v * g.s >= 50) || 500, x1 = W - 12, x0 = x1 - lkm * g.s, yb = H - 12;
     ctx.strokeStyle = COUL.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, yb - 4); ctx.lineTo(x0, yb); ctx.lineTo(x1, yb); ctx.lineTo(x1, yb - 4); ctx.stroke();
     texte(ctx, `${lkm} km`, (x0 + x1) / 2, yb - 4, COUL.ink, `700 10.5px ${MONO}`, 'center', 'bottom');
+  }
+
+  // Flèche de (x0, y0) à (x1, y1), pointe de `t` px
+  function fleche(ctx, x0, y0, x1, y1, t = 5) {
+    const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0), tt = Math.min(t, 0.6 * L);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    if (tt < 1.5) return;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - tt * Math.cos(a - 0.45), y1 - tt * Math.sin(a - 0.45)); ctx.lineTo(x1 - tt * Math.cos(a + 0.45), y1 - tt * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+  }
+  // Failles du jeu chargé : trait épais pour celles du calcul, fin pour les autres ; c'est la trace cartographiée, le calcul
+  // la ramène à la droite de ses extrémités.
+  function dessinerFailles(ctx, g) {
+    const zm = etat.zm;
+    if (!zm || !zm.traces) return;
+    const ret = new Set(etat.modele.failles.map(f => f.id));
+    const chemin = xy => { for (let k = 0; k < xy.length; k += 2) (k ? ctx.lineTo : ctx.moveTo).call(ctx, g.X(xy[k]), g.Y(xy[k + 1])); };
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = COUL.ink;
+    ctx.globalAlpha = 0.4; ctx.lineWidth = 0.9; ctx.beginPath();
+    for (const t of zm.traces) if (!ret.has('f' + t.i)) chemin(t.xy);
+    ctx.stroke();
+    ctx.globalAlpha = 1; ctx.lineWidth = 2.4; ctx.beginPath();
+    for (const t of zm.traces) if (ret.has('f' + t.i)) chemin(t.xy);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // Vitesses GNSS (moyenne des stations de la carte retirée) et axes principaux de la déformation de chaque zone : flèches
+  // vers le centre pour un raccourcissement, vers l'extérieur pour un allongement. Les méridiens sont verticaux sur la carte :
+  // les composantes est et nord s'y dessinent telles quelles.
+  function dessinerGnss(ctx, g, W, H) {
+    const zm = etat.zm;
+    if (!zm || !zm.gnss) return;
+    const f = zm.gnss.fleches.filter(a => g.X(a.x) > -20 && g.X(a.x) < W + 20 && g.Y(a.y) > -20 && g.Y(a.y) < H + 20);
+    const v = f.map(a => Math.hypot(a.de, a.dn)).sort((a, b) => a - b), v95 = v.length ? v[Math.min(v.length - 1, Math.floor(0.95 * v.length))] : 0;
+    const k = v95 > 0 ? Math.max(16, Math.min(34, 0.05 * W)) / v95 : 0;
+    ctx.save(); ctx.strokeStyle = ctx.fillStyle = COUL.blue; ctx.lineWidth = 1.2;
+    for (const a of f) {
+      const X = g.X(a.x), Y = g.Y(a.y);
+      ctx.globalAlpha = a.utile ? 1 : 0.45;
+      ctx.beginPath(); ctx.arc(X, Y, 1.8, 0, 2 * Math.PI); ctx.fill();
+      if (k) fleche(ctx, X, Y, X + k * a.de, Y - k * a.dn, 5);
+    }
+    ctx.globalAlpha = 1;
+    // échelle des flèches, au-dessus de l'échelle des distances
+    if (k) {
+      const vr = [0.2, 0.5, 1, 2, 5, 10, 20].find(x => x * k >= 25) || 20, x1 = W - 12, x0 = x1 - vr * k, y = H - 34;
+      fleche(ctx, x0, y, x1, y, 5);
+      texte(ctx, `${virg(vr, vr < 1 ? 1 : 0)} mm/an`, (x0 + x1) / 2, y - 4, COUL.blue, `700 10.5px ${MONO}`, 'center', 'bottom');
+    }
+    ctx.restore();
+  }
+  // Axes principaux de la déformation au centre de chaque zone qui a un tenseur (liseré du fond) ; leurs boîtes rejoignent
+  // `places` pour que les étiquettes des zones s'en écartent.
+  function dessinerAxes(ctx, g, W, places) {
+    const zm = etat.zm;
+    if (!zm || !zm.gnss) return;
+    const ts = zm.gnss.zones.filter(t => t.principales), emax = Math.max(0, ...ts.flatMap(t => [Math.abs(t.principales.e1h), Math.abs(t.principales.e2h)]));
+    if (!(emax > 0)) return;
+    const Lmax = Math.max(12, Math.min(30, 0.045 * W));
+    for (const t of ts) {
+      const [x, y] = zm.pr.versKm([t.centre.lon, t.centre.lat]), X = g.X(x), Y = g.Y(y), r = Lmax + 6;
+      places.push({ x0: X - r, x1: X + r, y0: Y - r, y1: Y + r });
+    }
+    ctx.save();
+    for (const [coul, larg] of [[COUL.paper, 6], [COUL.blue, 2.8]]) {
+      ctx.strokeStyle = ctx.fillStyle = coul; ctx.lineWidth = larg;
+      for (const t of ts) {
+        const [x, y] = zm.pr.versKm([t.centre.lon, t.centre.lat]), X = g.X(x), Y = g.Y(y), az = t.principales.azimutRaccourcissement * Math.PI / 180;
+        for (const [e, ux, uy] of [[t.principales.e1h, Math.sin(az), Math.cos(az)], [t.principales.e2h, Math.cos(az), -Math.sin(az)]]) {
+          const L = (Lmax * Math.abs(e)) / emax, d = 4;
+          if (L < 3) continue;
+          for (const s of [1, -1]) {
+            const xa = X + s * ux * d, ya = Y - s * uy * d, xb = X + s * ux * (d + L), yb = Y - s * uy * (d + L);
+            if (e < 0) fleche(ctx, xb, yb, xa, ya, 8); else fleche(ctx, xa, ya, xb, yb, 8);
+          }
+        }
+      }
+    }
+    ctx.restore();
   }
 
   // Courbe d'aléa : probabilité en 50 ans en fonction du niveau, échelles logarithmiques
@@ -644,7 +789,10 @@ import ZonesReel from './zones-reel.js';
       // zones réelles : branches (a, b), points de calcul à portée du site, durée prévisible de la carte d'aléa
       const mod = etat.modele, k = etat.r.incAB && zm.abPossible ? zm.nSigma : 0;
       const proches = mod.zones.reduce((s, z) => s + z.points.filter(q => Math.hypot(q.x - mod.site.x, q.y - mod.site.y) <= mod.distanceMax).length, 0);
-      $('#al-arbre').textContent = `${n} réalisations = ${tailles.join(' × ')} : variantes (a, b) des zones (${k ? `3${exposant(k)}, b ± 1,645 σ dans ${k} zone${k > 1 ? 's' : ''}` : 'b central'}), Mmax, loi d'atténuation ; taux du catalogue seul. `
+      const geo = mod.taux.find(t => t.id === 'geodesie'), nF = mod.failles.length;
+      const taux = geo ? `taux du catalogue (poids ${virg(1 - geo.poids, 2)}) et de la géodésie (${nGeo} couplages χ, poids ${virg(geo.poids, 2)})` : 'taux du catalogue seul';
+      $('#al-arbre').textContent = `${n} réalisations = ${tailles.join(' × ')} : variantes (a, b) des zones (${k ? `3${exposant(k)}, b ± 1,645 σ dans ${k} zone${k > 1 ? 's' : ''}` : 'b central'}), Mmax, loi d'atténuation ; ${taux}`
+        + `${nF ? ` ; ${nF} faille${nF > 1 ? 's' : ''} active${nF > 1 ? 's' : ''}` : ''}. `
         + `${milliers(proches)} points de calcul sur ${milliers(zm.n)} à moins de ${mod.distanceMax} km du site. Courbes calculées en ${milliers(etat.duree)} ms.`;
       const nS = zm.grille.sites.length, tCarte = Math.max(5, Math.round((nS * etat.duree) / 12 / 5000) * 5);
       $('#al-carte-aide').textContent = `niveau moyen de la grandeur choisie à la probabilité visée, tous les ${zm.grille.pas} km (${milliers(nS)} sites, de l'ordre de ${tCarte} s)`;
@@ -679,7 +827,10 @@ import ZonesReel from './zones-reel.js';
     }
     $('#al-inc-ab').checked = r.incAB && (!zm || zm.abPossible); $('#al-inc-mmax').checked = r.incMmax; $('#al-inc-geo').checked = r.geo.actif;
     $('#al-poids-geo').value = r.geo.poids; $('#al-poids-geo-v').textContent = `${virg(r.geo.poids, 2)} / ${virg(1 - r.geo.poids, 2)}`;
-    $('#al-poids-geo').disabled = !r.geo.actif;
+    const sansGeo = !!zm && !(momentsGeo(zm) || []).some(Number.isFinite);
+    $('#al-inc-geo').disabled = sansGeo; $('#al-poids-geo').disabled = !r.geo.actif || sansGeo;
+    if (sansGeo) $('#al-inc-geo').checked = false;
+    if (zm) majPanneauxReels();
     $('#al-faille').checked = r.faille.actif; $('#al-glissement').value = r.faille.glissement; $('#al-glissement').disabled = !r.faille.actif;
     const mF = Psha.momentFaille(BASE, { ...BASE.failles[0], glissement: r.faille.glissement });
     $('#al-glissement-v').textContent = `${virg(r.faille.glissement, 2)} mm/an · Ṁ0 ${sci(mF)} N·m/an`;
@@ -688,6 +839,65 @@ import ZonesReel from './zones-reel.js';
     $('#al-lois-v').textContent = nL > 1 ? `${nL} lois, poids 1/${nL} chacune` : 'une seule loi : pas d\'incertitude épistémique sur le mouvement du sol';
     $$('[data-al-proba]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alProba === etat.proba.join('|'))));
     $$('[data-al-imt]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alImt === etat.k)));
+  }
+  // Panneaux « Failles actives » et « Géodésie » du mode « Zones du catalogue »
+  let AIDE_GNSS = '';
+  const sciTxt = x => (Number.isFinite(x) && x > 0 ? sci(x) : '—');
+  function majPanneauxReels() {
+    const zm = etat.zm, r = etat.r, m = zm.modele, F = reel.failles, fz = zm.failles;
+    // failles
+    $('#al-failles-reel').checked = r.failles.actif; $('#al-failles-reel').disabled = !fz || !fz.retenues.length;
+    $('#al-glissement-defaut').value = r.failles.glissementDefaut;
+    $('#al-glissement-defaut-v').textContent = r.failles.glissementDefaut > 0 ? `${virg(r.failles.glissementDefaut, 2)} mm/an` : '0 : ces failles sont écartées';
+    if (!F) {
+      $('#al-failles-info').textContent = reel.erreurFailles ? `Failles indisponibles : ${reel.erreurFailles}.` : 'Lecture de l\'extrait de la base GEM…';
+      $('#al-failles-table').innerHTML = '';
+    } else {
+      const e = fz.ecartees, n = fz.retenues.length, nomZ = i => m.zones[i].nom;
+      const dMin = r.incMmax ? Math.min(...BASE.dMmax.map(d => d.d)) : 0, sansEffet = fz.retenues.filter(f => f.mmax <= r.zones[f.zone].mmax + dMin + 1e-9).length;
+      const ecarts = [e.horsZones && `${milliers(e.horsZones)} hors des zones`, e.sansVitesse && `${milliers(e.sansVitesse)} sans vitesse de glissement`,
+        e.tropCourtes && `${milliers(e.tropCourtes)} de moins de 5 km`].filter(Boolean);
+      $('#al-failles-info').textContent = (n ? `${n} faille${n > 1 ? 's' : ''} retenue${n > 1 ? 's' : ''} dans les zones` : 'Aucune faille retenue dans les zones')
+        + ` sur ${milliers(F.failles.length)} du jeu${ecarts.length ? ` ; écartées : ${ecarts.join(', ')}` : ''}.`
+        + (sansEffet ? ` ${sansEffet} n'agi${sansEffet > 1 ? 'ssent' : 't'} dans aucune branche (Mmax de la faille au plus Mmax de sa zone${dMin ? ` − ${virg(-dMin, 1)}` : ''}) : hors du calcul.` : '')
+        + (n && zm.maillage ? ` Traces ramenées à la droite de leurs extrémités, maillées tous les ${zm.maillage.pas} km (${milliers(zm.maillage.n)} ruptures flottantes).` : '')
+        + (!n && F.defaut ? ' L\'extrait livré ne couvre que la Méditerranée : pour une autre région, chargez le GeoJSON de la base GEM.' : '');
+      const moment = f => 3e10 * f.L * 1e3 * f.W * 1e3 * f.glissement * 1e-3, tri = fz.retenues.slice().sort((a, b) => moment(b) - moment(a)), N = 10;
+      $('#al-failles-table').innerHTML = n ? `<div class="table-defile"><table class="resultats"><thead><tr><th>Faille</th><th>Zone</th><th>L km</th><th>s mm/an</th><th>Mmax</th></tr></thead><tbody>${
+        tri.slice(0, N).map(f => `<tr><td>${echapper(f.nom)}${f.defauts.length ? '<sup>*</sup>' : ''}</td><td>${echapper(nomZ(f.zone))}</td><td class="n">${virg(f.L, 0)}</td>`
+          + `<td class="n">${virg(f.glissement, 2)}</td><td class="n">${virg(f.mmax, 1)}</td></tr>`).join('')}</tbody></table></div>`
+        + `<p class="aide" style="margin:0">${n > N ? `Les ${N} plus grands taux de moment μ·L·W·s sur ${n}. ` : ''}* valeurs par défaut du type de glissement (pendage, rake, profondeurs 0–15 km ou vitesse).</p>` : '';
+    }
+    $('#al-failles-source').textContent = !F ? '' : F.defaut
+      ? 'Base GEM des failles actives (Styron et Pagani, 2020), extrait méditerranéen, licence CC BY-SA 4.0. Pour une autre région : GeoJSON gem_active_faults_harmonized.geojson du dépôt GEMScienceTools/gem-global-active-faults.'
+      : `Fichier « ${F.nom} » : ${milliers(F.failles.length)} failles lues${F.ecartees.type + F.ecartees.plaques ? ` (${milliers(F.ecartees.type + F.ecartees.plaques)} écartées : frontières de plaques, subductions, plis ou type absent)` : ''}.`;
+    // GNSS
+    const G = reel.gnss, gz = zm.gnss;
+    $('#al-gnss-marge').value = r.geo.marge; $('#al-gnss-marge-v').textContent = r.geo.marge ? `zone et ${r.geo.marge} km autour` : 'dans la zone';
+    if (!G) { $('#al-gnss-info').textContent = AIDE_GNSS; $('#al-gnss-table').innerHTML = ''; $('#al-geo-source').textContent = 'Chargez un champ de vitesses GNSS pour ajouter le modèle géodésique à l\'arbre.'; return; }
+    $('#al-gnss-info').textContent = `Fichier « ${G.nom} » (${G.format === 'psvelo' ? 'psvelo' : 'tableau'}, ${G.unite}) : ${milliers(G.stations.length)} stations${G.rejetees ? `, ${milliers(G.rejetees)} lignes rejetées` : ''}. `
+      + 'Déformation uniforme de chaque zone par moindres carrés, moment de Kostrov (μ = 30 GPa, H = 15 km).';
+    $('#al-gnss-table').innerHTML = `<div class="table-defile"><table class="resultats"><thead><tr><th>Zone</th><th>N</th><th>ε̇1h · ε̇2h</th><th>Ṁ0 géod.</th><th>Ṁ0 cat.</th><th>cat./géod.</th></tr></thead><tbody>${
+      m.zones.map((q, i) => {
+        const t = gz.zones[i], mc = Gnss.momentCatalogue({ ...q, ...r.zones[i] });
+        return `<tr><td>${echapper(q.nom)}</td><td class="n">${t.n}</td><td class="n">${t.principales ? `${virg(t.principales.e1h, 0)} · ${virg(t.principales.e2h, 0)}` : `<small>${echapper(t.raison)}</small>`}</td>`
+          + `<td class="n">${sciTxt(t.moment)}</td><td class="n">${sciTxt(mc)}</td><td class="n">${t.moment > 0 ? virg(mc / t.moment, 2) : '—'}</td></tr>`;
+      }).join('')}</tbody></table></div>
+      <p class="aide" style="margin:0">N : stations retenues ; ε̇1h et ε̇2h : taux de déformation principaux (ns/an, négatif en raccourcissement) ;
+      Ṁ0 en N·m/an, du catalogue pour la loi de la zone de max(Mc ; 4) à Mmax. Leur rapport est le couplage apparent : faible, il signale un moment
+      que le catalogue ne voit pas (grands séismes rares, failles) ou une déformation asismique.</p>`;
+    const sans = gz.zones.filter(t => !Number.isFinite(t.moment)).length;
+    $('#al-geo-source').textContent = sans === gz.zones.length ? 'Aucune zone n\'a assez de stations (trois au moins) : élargissez la marge.'
+      : `Moments géodésiques des zones : ${m.zones.map((q, i) => `${q.nom} ${sciTxt(gz.zones[i].moment)}`).join(', ')} N·m/an.`
+        + (sans ? ` ${sans} zone${sans > 1 ? 's' : ''} sans tenseur garde${sans > 1 ? 'nt' : ''} la loi du catalogue dans les variantes géodésiques.` : '');
+  }
+  // Légende de la carte des zones réelles : zones, failles et vitesses GNSS quand elles sont chargées
+  function majLegendeZones() {
+    const zm = etat.zm, coul = i => `var(--${PALETTE_ZONES[i % PALETTE_ZONES.length]})`;
+    const h = zm.modele.zones.map((q, i) => `<span><i style="background:${coul(i)}"></i>${echapper(q.nom)}</span>`).join('')
+      + (zm.traces ? '<span><i style="background:var(--ink)"></i>failles actives (trait épais : dans le calcul)</span>' : '')
+      + (zm.gnss ? '<span><i style="background:var(--blue)"></i>vitesses GNSS (moyenne retirée), axes de la déformation</span>' : '');
+    if (h !== etat.legendeZones) { etat.legendeZones = h; $('#al-legende-sources').innerHTML = h; }
   }
   // Vue selon le mode : panneaux, réglages sans objet (faille et géodésie pour des zones réelles), sélecteur de zones,
   // légende et titre de la carte. Les libellés du modèle d'école sont ceux de la page (lus par brancher).
@@ -699,8 +909,9 @@ import ZonesReel from './zones-reel.js';
     $('#al-panneau-explorer').hidden = etat.mode === 'exercice';
     $('#al-panneau-exercice').hidden = etat.mode !== 'exercice';
     $('#al-panneau-zones').hidden = !z;
-    $('#al-bloc-faille').hidden = z; $('#al-bloc-geo').hidden = z;
-    for (const id of ['#al-sans-faille', '#al-site-geo', '#al-zone-stats']) $(id).hidden = !z;
+    $('#al-bloc-faille').hidden = z;
+    for (const id of ['#al-site-geo', '#al-zone-stats', '#al-bloc-failles-reel', '#al-bloc-gnss']) $(id).hidden = !z;
+    if (zm) majLegendeZones();
     $('#al-zones-vide').hidden = !!zm;
     $('#al-defaut').textContent = z ? 'Revenir aux valeurs du catalogue' : 'Revenir au modèle d\'école';
     if (etat.vue === (zm || 'ecole')) return;
@@ -714,7 +925,7 @@ import ZonesReel from './zones-reel.js';
     }
     const m = zm.modele, coul = i => `var(--${PALETTE_ZONES[i % PALETTE_ZONES.length]})`;
     $('#al-zones-choix').innerHTML = m.zones.map((q, i) => `<button type="button" data-al-zone="${i}">${echapper(q.nom)}</button>`).join('');
-    $('#al-legende-sources').innerHTML = m.zones.map((q, i) => `<span><i style="background:${coul(i)}"></i>${echapper(q.nom)}</span>`).join('');
+    etat.legendeZones = null; majLegendeZones();
     $('#al-carte-titre').textContent = `Zones discrétisées en points tous les ${zm.pas} km (${milliers(zm.n)} points) ; un clic déplace le site`;
     $('#al-carte-aide').textContent = `niveau moyen de la grandeur choisie à la probabilité visée, tous les ${zm.grille.pas} km (${milliers(zm.grille.sites.length)} sites)`;
     // ce qu'est le modèle : catalogue, période, Mc, nombre de zones, b régional, puis les zones une à une
@@ -784,10 +995,19 @@ import ZonesReel from './zones-reel.js';
     const m = ZonesReel.courant();
     etat.zonesVersion = ZonesReel.version();
     annulerCalcul(); arreterCarte();
-    etat.zm = m ? preparerZones(m) : null;
+    const zm = etat.zm = m ? preparerZones(m) : null;
     etat.res = null; etat.modele = null; etat.zone = 0;
-    if (etat.zm) etat.r = reglagesZones();
-    effacer(); tout(); recalculer();
+    if (!zm) { effacer(); tout(); return; }
+    etat.r = reglagesZones();
+    majFaillesZones(); majGnssZones();
+    effacer(); tout();
+    // premier calcul quand l'extrait des failles est lu (sans lui s'il est introuvable)
+    if (reel.failles) { recalculer(); return; }
+    occupe(true);
+    chargerFaillesDefaut().then(() => {
+      if (etat.zm !== zm || !enZones()) return;
+      majFaillesZones(); tout(); recalculer();
+    });
   }
 
   // ── Exercice ────────────────────────────────────────────────────────────
@@ -867,7 +1087,7 @@ import ZonesReel from './zones-reel.js';
       recalculer();
     }));
     $('#al-defaut').addEventListener('click', () => {
-      if (enZones()) { if (etat.zm) { etat.r = reglagesZones(); recalculer(); } return; }
+      if (enZones()) { if (etat.zm) { etat.r = reglagesZones(); majFaillesZones(); majGnssZones(); recalculer(); } return; }
       etat.r = reglagesDefaut(); etat.geoRecu = null; recalculer();
     });
     $$('[data-al-dom]').forEach(b => b.addEventListener('click', () => { etat.dom = +b.dataset.alDom; $$('[data-al-dom]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
@@ -892,6 +1112,37 @@ import ZonesReel from './zones-reel.js';
         info.textContent = `Fichier refusé : ${err.message || err}.`;
       }
     });
+    // Failles et géodésie du mode « Zones du catalogue »
+    AIDE_GNSS = $('#al-gnss-info').textContent.replace(/\s+/g, ' ').trim();
+    $('#al-failles-reel').addEventListener('change', e => { etat.r.failles.actif = e.target.checked; recalculer(); });
+    $('#al-glissement-defaut').addEventListener('input', e => {
+      etat.r.failles.glissementDefaut = parseFloat(e.target.value);
+      majFaillesZones(); majControles(); dessinerCarte(); planifier();
+    });
+    $('#al-gnss-marge').addEventListener('input', e => {
+      etat.r.geo.marge = parseFloat(e.target.value);
+      majGnssZones(); majControles(); dessinerCarte(); planifier();
+    });
+    const lireFichier = async (e, taille, lecture, apres) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      try {
+        if (f.size > taille * 1024 * 1024) throw new Error(`fichier trop gros (${taille} Mo au plus)`);
+        lecture(await f.text(), f.name);
+        apres(null);
+      } catch (err) { apres(err); }
+    };
+    $('#al-failles-fichier').addEventListener('change', e => lireFichier(e, 40, (t, nom) => { reel.failles = { ...Failles.lire(t), nom }; reel.erreurFailles = null; }, err => {
+      if (err) { $('#al-failles-info').textContent = `Fichier de failles refusé : ${err.message || err}.`; return; }
+      if (!etat.zm) return;
+      etat.r.failles.actif = true; majFaillesZones(); etat.legendeZones = null; tout(); recalculer();
+    }));
+    $('#al-gnss-fichier').addEventListener('change', e => lireFichier(e, 20, (t, nom) => { reel.gnss = { ...Gnss.lire(t), nom }; }, err => {
+      if (err) { $('#al-gnss-info').textContent = `Fichier de vitesses refusé : ${err.message || err}.`; return; }
+      if (!etat.zm) return;
+      etat.r.geo.actif = true; majGnssZones(); tout(); recalculer();
+    }));
     // Carte : un clic déplace le site (pas de 5 km ; zones réelles : au centième de degré) ; le survol donne la position
     // et les distances aux zones
     const cv = $('#al-carte');
@@ -918,7 +1169,7 @@ import ZonesReel from './zones-reel.js';
         if (!zm) return;
         const [lon, lat] = zm.pr.versGeo([p.x, p.y]);
         const dz = zm.points.map((pts, i) => `${zm.modele.zones[i].nom} ${virg(Math.min(...pts.map(q => Math.hypot(q.x - p.x, q.y - p.y))), 0)} km`);
-        $('#al-curseur').textContent = `${latLon(lat, lon)} · point le plus proche : ${dz.join(', ')} — cliquer pour y placer le site`;
+        $('#al-curseur').textContent = `${latLon(lat, lon)} · ${objetProche(p) || `point le plus proche : ${dz.join(', ')}`} — cliquer pour y placer le site`;
         return;
       }
       if (p.x < DOMAINE.x0 || p.x > DOMAINE.x1 || p.y < DOMAINE.y0 || p.y > DOMAINE.y1) { $('#al-curseur').textContent = '—'; return; }
@@ -931,6 +1182,23 @@ import ZonesReel from './zones-reel.js';
     for (const id of CANEVAS) ro.observe($(id));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     new MutationObserver(redessiner).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+  // Faille retenue ou station GNSS sous le pointeur (à 8 px près) : son nom et ses valeurs
+  function objetProche(p) {
+    const zm = etat.zm, g = geoCarte($('#al-carte')), tol = 8 / g.s;
+    let best = null, dmin = tol;
+    if (zm.gnss) for (const a of zm.gnss.fleches) { const d = Math.hypot(a.x - p.x, a.y - p.y); if (d < dmin) { dmin = d; best = `station ${a.id} : ${virg(a.e, 1)} mm/an vers l'est, ${virg(a.n, 1)} vers le nord`; } }
+    if (best) return best;
+    if (zm.traces && zm.failles) for (const t of zm.traces) {
+      const f = zm.failles.parIndice.get(t.i);
+      if (!f) continue;
+      for (let k = 2; k < t.xy.length; k += 2) {
+        const ax = t.xy[k - 2], ay = t.xy[k - 1], vx = t.xy[k] - ax, vy = t.xy[k + 1] - ay, l2 = vx * vx + vy * vy;
+        const u = l2 ? Math.max(0, Math.min(1, ((p.x - ax) * vx + (p.y - ay) * vy) / l2)) : 0, d = Math.hypot(p.x - ax - u * vx, p.y - ay - u * vy);
+        if (d < dmin) { dmin = d; best = `faille ${f.nom} (${zm.modele.zones[f.zone].nom}) : ${Failles.TYPES[f.type].nom}, pendage ${virg(f.pendage, 0)}°, ${virg(f.glissement, 2)} mm/an, Mmax ${virg(f.mmax, 1)}`; }
+      }
+    }
+    return best;
   }
   // Explorer, Exercice ou Zones du catalogue. Les réglages d'Explorer sont mis de côté en le quittant et retrouvés au
   // retour des zones réelles ; au retour d'un exercice, le modèle d'école repart de ses valeurs (comme avant).

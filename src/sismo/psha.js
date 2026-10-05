@@ -105,7 +105,8 @@ const Psha = (() => {
   // conservés quand Mmax change. Géodésie : une variante par couplage χ, même χ pour toutes les zones,
   // taux de moment χ·Ṁ0 conservé quand Mmax change (a recalculé comme TruncatedGRMFD._set_a).
   // Failles : moment μ·L·W·s (glissement géologique). Catalogue : la faille libère tout ce moment.
-  // Géodésie : la faille et le fond de sa zone se partagent χ·Ṁ0 de la zone (fond = χ·(Ṁ0 − Ṁfailles)).
+  // Géodésie : la faille et le fond de sa zone se partagent χ·Ṁ0 de la zone (fond = χ·(Ṁ0 − Ṁfailles)) ; une zone sans
+  // moment géodésique (null) garde la loi centrale du catalogue et ses failles leur moment entier.
   const geomFaille = (modele, f) => Faille.geometrie(f, modele.pasFaille || 1);
   const momentFaille = (modele, f) => Faille.moment(geomFaille(modele, f), f.glissement, f.mu || 3e10);
   function variantes(modele) {
@@ -120,10 +121,13 @@ const Psha = (() => {
         });
         out.push(...l.map(v => ({ id: 'c' + v.cle.join(''), poids: v.poids, zones: v.zones, failles: mF.map(m => ({ moment: m })), etiquettes: v.etiquettes })));
       } else if (t.id === 'geodesie') {
+        // zone sans moment géodésique (null : trop peu de stations GNSS) : loi centrale du catalogue, failles entières
+        const connu = iz => Number.isFinite(t.moments[iz]);
         t.couplage.forEach((c, i) => out.push({ id: 'g' + i, poids: t.poids * c.poids,
-          zones: modele.zones.map((z, iz) => ({
-            moment: c.chi * Math.max(t.moments[iz] - failles.reduce((s, f, jf) => s + (f.zone === iz ? mF[jf] : 0), 0), 0), b: z.ajustement.b })),
-          failles: mF.map(m => ({ moment: c.chi * m })), etiquettes: { modele: 'geodesie', chi: i } }));
+          zones: modele.zones.map((z, iz) => (connu(iz) ? {
+            moment: c.chi * Math.max(t.moments[iz] - failles.reduce((s, f, jf) => s + (f.zone === iz ? mF[jf] : 0), 0), 0), b: z.ajustement.b }
+            : { a: Math.log10(z.ajustement.lamPivot) + z.ajustement.b * z.ajustement.mPivot, b: z.ajustement.b })),
+          failles: mF.map((m, jf) => ({ moment: connu(failles[jf].zone) ? c.chi * m : m })), etiquettes: { modele: 'geodesie', chi: i } }));
       }
     }
     return out.filter(v => v.poids > 0);
