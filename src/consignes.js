@@ -118,7 +118,7 @@ const CONSIGNES = {
       "Comparez l'UHS aux spectres de l'Eurocode 8 de type 1 et 2 calés sur le PGA : où l'UHS les dépasse-t-il ?",
       "Dans « Grandeur », sous la probabilité visée, choisissez Sa(1 s) : quelle zone domine la désagrégation ? Comparez au PGA, puis lisez le spectre moyen conditionnel.",
       "Graphique « Ce qui pèse dans l'arbre logique » : quelle branche pèse le plus ? Activez puis désactivez la faille F, déplacez le site près d'elle (clic sur la carte) et passez à 2 % en 50 ans.",
-      "En mode Exercice, lisez PGA et Sa(1 s) à 475 ans et désignez la zone dominante, puis « Vérifier ».",
+      "En mode Exercice, lisez PGA et Sa(1 s) à 475 ans et désignez la zone dominante, puis « Vérifier ». En mode « Zones du catalogue », calculez l'aléa d'un site réel avec les zones tracées au banc Sismicité (« Calculer l'aléa avec ces zones ») ou un fichier (« Charger un fichier de zones ») : déplacez le site sur la carte et refaites ces lectures, sans corrigé.",
     ],
     rendre: "PGA, Sa(0,2 s) et Sa(1 s) avec leurs fractiles, le scénario dominant pour deux périodes, la branche la plus influente.",
     prerequis: "le banc Géodésie peut fournir les taux de moment des zones (bouton « Utiliser ces moments dans le banc Aléa »).",

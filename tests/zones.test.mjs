@@ -66,3 +66,30 @@ test('modèle PSHA d\'une zone circulaire tracée en longitude et latitude : l\'
   const loin = Z.modelePsha(m, { site: { ...m.site, lon: pr.versGeo([150, 0])[0] } });
   assert.ok(Math.abs(loin.site.x - 150) < 1e-9 && Math.abs(loin.site.y) < 1e-9);
 });
+
+test('banc « aléa », zones du catalogue : pas de discrétisation adapté, domaine, grille de la carte, côtes en km', () => {
+  const pr = Z.projection(37, 12);
+  // un carré de 400 km de côté et un petit triangle de 3 km
+  const carre = [[-200, -200], [200, -200], [200, 200], [-200, 200]], petit = [[300, 0], [303, 0], [301, 3]];
+  const a = Z.pasAdapte([carre, petit]);
+  assert.ok(a.n <= 1500 && a.points[0].length === P.discretiser(carre, a.pas).length);
+  assert.equal(a.pas, 12); // 33² = 1 089 points ; au pas de 10 km, 1 600 : trop
+  assert.equal(a.points[1].length, 1); // zone sans point de grille : la moyenne de ses sommets
+  assert.ok(Math.abs(a.points[1][0].x - 301.333) < 1e-3 && Math.abs(a.points[1][0].y - 1) < 1e-9);
+  assert.equal(Z.pasAdapte([petit, [[0, 0], [40, 0], [40, 40], [0, 40]]]).pas, 5); // petites zones : le pas le plus fin
+  // domaine : zones et site, avec une marge
+  const d = Z.domaine([carre, petit], [-350, 0]);
+  assert.ok(d.x0 < -350 && d.x1 > 303 && d.y0 < -200 && d.y1 > 200);
+  assert.ok(Math.abs(d.x1 - 303 - 0.08 * 653) < 1e-9);
+  // grille de la carte : au plus 250 sites, le pas rond le plus fin, tout le domaine couvert
+  const g = Z.grilleAlea(d);
+  assert.ok(g.sites.length <= 250 && Z.grilleAlea(d, { pas: [40], nMax: Infinity }).sites.length > 250 && g.pas === 50);
+  assert.ok(g.x0 <= d.x0 && g.x0 + (g.nx - 1) * g.pas >= d.x1 && g.y0 <= d.y0 && g.y0 + (g.ny - 1) * g.pas >= d.y1);
+  // côtes : projetées, gardées si elles touchent la boîte, coupées à l'antiméridien de la référence (−168°)
+  const lignes = [[12, 37, 12.5, 37.2, 13, 37], [60, 10, 61, 10], [-169.5, 37, -169, 37.1, -167, 37.1, -166.5, 37]];
+  const k = Z.lignesKm(lignes, pr, { x0: -500, x1: 500, y0: -500, y1: 500 });
+  assert.equal(k.length, 1); assert.deepEqual(Array.from(k[0].slice(0, 2)), [0, 0]);
+  const tout = Z.lignesKm(lignes, pr, { x0: -1e5, x1: 1e5, y0: -1e5, y1: 1e5 });
+  assert.equal(tout.length, 4); // la troisième ligne est coupée en deux morceaux, de part et d'autre de −168°
+  assert.ok(tout.every(l => l.length === 4 || l.length === 6) && Math.abs(tout[2][0] - tout[3][0]) > 30000);
+});

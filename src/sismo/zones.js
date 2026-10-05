@@ -6,7 +6,8 @@ import Sismicite from './sismicite.js';
 // analysée : b d'Aki-Utsu et σ de Shi et Bolt, ou b régional si la zone a trop peu de séismes ; taux annuel ; Mmax
 // observée ; profondeur médiane), format « sismo-zones » v1 (fichier et état partagé entre les bancs), projection locale
 // en km autour d'un point de référence et modèle PSHA (Psha.calculer : zones en km, branches (a, b), ΔMmax, lois
-// d'atténuation ; ni faille ni géodésie). Solveurs purs.
+// d'atténuation ; ni faille ni géodésie) ; pas de discrétisation, domaine, grille de la carte d'aléa et côtes en km du
+// banc « aléa ». Solveurs purs.
 const Zones = (() => {
   'use strict';
   const FORMAT = 'sismo-zones', VERSION = 1, RAD = Math.PI / 180, KM = 6371 * RAD; // km par degré de grand cercle
@@ -109,6 +110,65 @@ const Zones = (() => {
     };
   }
 
-  return { FORMAT, VERSION, MMIN_CALCUL, contient, statistiques, mmaxPropose, ecrire, lire, projection, centre, modelePsha };
+  // ── Aides au calcul et à la carte du banc « aléa » (mode « Zones du catalogue ») ──
+  // Pas de discrétisation (km) : le plus petit pas de la liste qui donne au plus `cible` points en tout. Le temps d'un
+  // calcul croît avec le nombre de points à moins de distanceMax du site (≈ 1 ms par point pour 13 grandeurs et 3 lois)
+  // et avec le nombre de réalisations (≈ 1 ms chacune) : 1 500 points et 729 réalisations font 1 à 2 s. Une zone trop
+  // petite pour recevoir un point du pas retenu garde un point unique, la moyenne de ses sommets.
+  const PAS_ZONES = [5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50];
+  function pasAdapte(polygones, { cible = 1500, pas = PAS_ZONES } = {}) {
+    let choix = null;
+    for (const p of pas) {
+      const points = polygones.map(poly => {
+        const pts = Psha.discretiser(poly, p);
+        return pts.length ? pts : [{ x: poly.reduce((s, q) => s + q[0], 0) / poly.length, y: poly.reduce((s, q) => s + q[1], 0) / poly.length }];
+      });
+      choix = { pas: p, points, n: points.reduce((s, l) => s + l.length, 0) };
+      if (choix.n <= cible) break;
+    }
+    return choix;
+  }
+  // Domaine de la carte (km) : boîte des sommets des zones et du site [x, y], élargie de `marge` fois sa plus grande
+  // dimension (30 km au moins).
+  function domaine(polygones, site, { marge = 0.08, min = 30 } = {}) {
+    const pts = [...polygones.flat(), site], xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const m = Math.max(min, marge * Math.max(x1 - x0, y1 - y0));
+    return { x0: x0 - m, x1: x1 + m, y0: y0 - m, y1: y1 + m };
+  }
+  // Grille de la carte d'aléa (Psha.grilleCarte) sur un domaine : le plus petit pas rond qui donne au plus nMax sites
+  // (chaque site refait le calcul pour une grandeur), bornes arrondies au pas pour que la grille couvre tout le domaine.
+  const PAS_CARTE = [10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 150, 200];
+  function grilleAlea(d, { nMax = 250, pas = PAS_CARTE } = {}) {
+    let g = null;
+    for (const p of pas) {
+      g = Psha.grilleCarte({ x0: Math.floor(d.x0 / p) * p, x1: Math.ceil(d.x1 / p) * p, y0: Math.floor(d.y0 / p) * p, y1: Math.ceil(d.y1 / p) * p, pas: p });
+      if (g.sites.length <= nMax) break;
+    }
+    return g;
+  }
+  // Lignes de côte ou frontières de Natural Earth ([lon, lat, lon, lat…]) projetées en km ([x, y, x, y…]) ; seules restent
+  // celles qui touchent la boîte { x0, x1, y0, y1 } ; une ligne est coupée là où un segment saute de plus de `saut` km
+  // (antiméridien de la référence).
+  function lignesKm(lignes, pr, boite, { saut = 1500 } = {}) {
+    const out = [];
+    for (const l of lignes) {
+      let cour = [], px = 0, py = 0, a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+      const fin = () => {
+        if (cour.length >= 4 && b >= boite.x0 && a <= boite.x1 && d >= boite.y0 && c <= boite.y1) out.push(Float64Array.from(cour));
+        cour = []; a = c = Infinity; b = d = -Infinity;
+      };
+      for (let i = 0; i + 1 < l.length; i += 2) {
+        const [x, y] = pr.versKm([l[i], l[i + 1]]);
+        if (cour.length && Math.hypot(x - px, y - py) > saut) fin();
+        cour.push(x, y); px = x; py = y;
+        a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, y); d = Math.max(d, y);
+      }
+      fin();
+    }
+    return out;
+  }
+
+  return { FORMAT, VERSION, MMIN_CALCUL, contient, statistiques, mmaxPropose, ecrire, lire, projection, centre, modelePsha, pasAdapte, domaine, grilleAlea, lignesKm };
 })();
 export default Zones;
