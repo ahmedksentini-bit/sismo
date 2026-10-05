@@ -52,6 +52,11 @@ la virgule décimale.
     à partir de 30 séismes, sinon b régional ; λ(≥ Mc) ; Mmax proposée = Mmax observée + 0,5 ; fichier « sismo-zones » v1 ;
     « Calculer l'aléa avec ces zones » publie le modèle (`src/zones-reel.js`), émet `alea:zones` et ouvre le banc « aléa ».
     `Zones.modelePsha` : projection équirectangulaire locale (km), Mmin du calcul max(Mc, 4), branches b ± 1,645σ.
+    **Mécanismes au foyer** (`src/sismo/mecanismes.js`, testé) pour guider le tracé : ndk du Global CMT (Mw du moment
+    scalaire, premier plan nodal), QuakeML (nodalPlane1, profondeur en m), tableaux à colonnes strike, dip, rake (ISC ;
+    `Catalogue.lire` les attache aux séismes en `mec`) ; régimes de Zoback (1992) par les plongements de P, B et T ; sphères
+    focales sur la carte (hémisphère inférieur, cache de canevas) ; chaque zone se voit proposer le mécanisme dominant de
+    ses mécanismes tant que l'étudiant n'a pas choisi le sien. Le site ne télécharge pas les mécanismes : fichier à charger.
 12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et le
     moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le

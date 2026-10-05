@@ -126,6 +126,10 @@ const Catalogue = (() => {
     mag: ['magnitude', 'mag', 'm', 'mag value', 'magnitude value', 'preferred magnitude', 'magnitude preferee', 'valeur magnitude'],
     typeMag: ['magtype', 'mag type', 'magnitude type', 'magnitudetype', 'type mag', 'typemag', 'type magnitude', 'type de magnitude', 'type de la magnitude'],
     typeEv: ['eventtype', 'event type', 'type evenement', 'type d evenement', 'type de l evenement', 'nature'],
+    // mécanisme au foyer (facultatif) : un plan nodal, azimut, pendage et glissement (strike, dip, rake)
+    azimut: ['strike', 'strike1', 'strike 1', 'azimut', 'azimut 1', 'direction', 'azimut du plan'],
+    pendage: ['dip', 'dip1', 'dip 1', 'pendage', 'pendage 1'],
+    glissement: ['rake', 'rake1', 'rake 1', 'glissement', 'glissement 1', 'slip', 'angle de glissement'],
   };
   // Colonne nommée d'après une échelle (Mw, ML, mb, Ms, Md…) : ses valeurs sont des magnitudes de ce type.
   const NOM_ECHELLE = /^(mw[a-z]*|ml[a-z]*|mb[a-z]*|ms[a-z]*|md[a-z]*|mc|mjma)$/;
@@ -139,7 +143,7 @@ const Catalogue = (() => {
     const prendre = (cle, liste) => {
       for (const nom of liste) { const i = n.indexOf(nom); if (i >= 0 && !pris.has(i)) { c[cle] = i; pris.add(i); return; } }
     };
-    for (const cle of ['id', 'lat', 'lon', 'h', 'mag', 'typeMag', 'typeEv', 'annee', 'mois', 'jour', 'heure', 'minute', 'seconde']) prendre(cle, NOMS[cle]);
+    for (const cle of ['id', 'lat', 'lon', 'h', 'mag', 'typeMag', 'typeEv', 'annee', 'mois', 'jour', 'heure', 'minute', 'seconde', 'azimut', 'pendage', 'glissement']) prendre(cle, NOMS[cle]);
     // noms ambigus : « mm » (mois ou minutes), « h » (heure ou profondeur), « type » (de magnitude ou d'événement)
     if (c.mois === undefined) prendre('mois', ['mm']); else prendre('minute', ['mm']);
     if (c.minute !== undefined && c.heure === undefined && c.annee !== undefined) prendre('heure', ['h']);
@@ -260,15 +264,20 @@ const Catalogue = (() => {
       if (!Number.isFinite(mag)) { rejeter(ligne, 'magnitude manquante'); continue; }
       const type = val(v, c.typeEv);
       if (!SEISME.test(type)) { ecartes[type] = (ecartes[type] || 0) + 1; continue; }
-      const h = nombreDe(v, c.h);
-      lus.push({ t, lat, lon: lon > 180 ? lon - 360 : lon, h: Number.isFinite(h) ? (metres ? h / 1000 : h) : null, mag, typeMag: c.typeMag !== undefined ? val(v, c.typeMag) : nomEchelle, id: val(v, c.id) });
+      const h = nombreDe(v, c.h), e = { t, lat, lon: lon > 180 ? lon - 360 : lon, h: Number.isFinite(h) ? (metres ? h / 1000 : h) : null, mag, typeMag: c.typeMag !== undefined ? val(v, c.typeMag) : nomEchelle, id: val(v, c.id) };
+      // mécanisme au foyer, quand le tableau en donne un plan nodal
+      if (c.azimut !== undefined && c.pendage !== undefined && c.glissement !== undefined) {
+        const az = nombreDe(v, c.azimut), pd = nombreDe(v, c.pendage), gl = nombreDe(v, c.glissement);
+        if ([az, pd, gl].every(Number.isFinite) && pd >= 0 && pd <= 90 && Math.abs(gl) <= 360) e.mec = { azimut: ((az % 360) + 360) % 360, pendage: pd, glissement: ((((gl + 180) % 360) + 360) % 360) - 180 };
+      }
+      lus.push(e);
     }
     // colonnes lues, dans l'ordre date, position, profondeur, magnitude (noms du fichier, sans « # » de tête)
     const lues = {}, nom = i => noms[i].replace(/^#\s*/, '');
     if (plan.date !== undefined) lues.date = nom(plan.date);
     if (plan.heureTexte !== undefined) lues.heure = nom(plan.heureTexte);
     if (plan.hms) for (const cle of ['annee', 'mois', 'jour', 'heure', 'minute', 'seconde']) if (c[cle] !== undefined && !(plan.date !== undefined && cle === 'annee')) lues[cle] = nom(c[cle]);
-    for (const cle of ['lat', 'lon', 'h', 'mag', 'typeMag', 'id', 'typeEv']) if (c[cle] !== undefined) lues[cle] = nom(c[cle]);
+    for (const cle of ['lat', 'lon', 'h', 'mag', 'typeMag', 'id', 'typeEv', 'azimut', 'pendage', 'glissement']) if (c[cle] !== undefined) lues[cle] = nom(c[cle]);
     return finir({ format, separateur: sep, colonnes: lues, lignes: donnees.length, rejetees, rejets, ecartes, tMin }, lus);
   }
   // GeoJSON de l'USGS (properties.time en ms, coordonnées [lon, lat, profondeur]) ou de l'EMSC (heure ISO, lat, lon, depth).

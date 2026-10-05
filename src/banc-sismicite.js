@@ -3,6 +3,8 @@ import Sismicite from './sismo/sismicite.js';
 import Catalogue from './sismo/catalogue.js';
 import Centres from './sismo/centres.js';
 import Zones from './sismo/zones.js';
+import Mecanismes from './sismo/mecanismes.js';
+import Mecanisme from './sismo/mecanisme.js';
 import ZonesReel from './zones-reel.js';
 
 // src/banc-sismicite.js — banc « sismicité » : un catalogue simulé, sa complétude, le déclusterage,
@@ -41,6 +43,8 @@ import ZonesReel from './zones-reel.js';
     dom: DOMAINE_SIMULE, reel: null, fonds: {}, telechargement: false,
     // zones sismogènes tracées sur la carte (gardées d'un catalogue à l'autre), tracé en cours, outil de la carte, site
     zones: [], trace: null, outil: null, site: null, numero: 0,
+    // mécanismes au foyer (fichier chargé, ou colonnes strike, dip, rake du catalogue), affichés sur la carte
+    mecs: null, afficherMecs: true,
   };
   const reel = () => etat.mode === 'reel';
   const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
@@ -397,6 +401,7 @@ import ZonesReel from './zones-reel.js';
       }
     }
     ctx.globalAlpha = 1;
+    dessinerMecs(ctx, p, o);
     dessinerZones(ctx, p, o);
     // étiquettes du graticule, par-dessus
     ctx.font = `10px ${MONO}`;
@@ -445,6 +450,65 @@ import ZonesReel from './zones-reel.js';
       ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + 8, y + 6); ctx.lineTo(x - 8, y + 6); ctx.closePath(); ctx.stroke(); ctx.fill();
       texte(ctx, etat.site ? 'Site' : 'Site (centre des zones)', x + 11, y + 1, COUL['pick-p'], `800 11.5px ${POLICE}`);
     }
+  }
+  // Sphères focales (hémisphère inférieur, quadrants en compression de la couleur du mécanisme), taille selon la magnitude,
+  // dessinées une fois dans de petits canevas mis en cache.
+  const COULEUR_TYPE = { normale: 'blue', inverse: 'pick-p', decrochement: 'teal' };
+  const rayonMec = m => Math.round(Math.max(5, Math.min(14, 5 + 2.5 * ((m.mag || 4) - 4))));
+  const cacheMecs = new Map();
+  function imageMec(m) {
+    const r = rayonMec(m), coul = COUL[COULEUR_TYPE[Mecanismes.REGIMES[m.regime].type] || 'muted'], cle = `${m.cle}|${r}|${coul}|${COUL.paper}`;
+    if (cacheMecs.has(cle)) return cacheMecs.get(cle);
+    const dpr = window.devicePixelRatio || 1, n = Math.ceil((2 * r + 2) * dpr), cv = document.createElement('canvas');
+    cv.width = n; cv.height = n;
+    const ctx = cv.getContext('2d'), M = Mecanisme.tenseur(m.azimut, m.pendage, m.glissement), R = r * dpr, c = n / 2;
+    ctx.fillStyle = COUL.paper; ctx.beginPath(); ctx.arc(c, c, R, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = coul;
+    for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) {
+      const d = Mecanisme.projectionInverse(x / R, -y / R);
+      if (d && Mecanisme.rayonnementP(M, d.i, d.phi) > 0) ctx.fillRect(c + x - 0.5, c + y - 0.5, 1, 1);
+    }
+    ctx.strokeStyle = COUL.ink; ctx.lineWidth = Math.max(1, dpr); ctx.beginPath(); ctx.arc(c, c, R, 0, 2 * Math.PI); ctx.stroke();
+    cacheMecs.set(cle, cv);
+    return cv;
+  }
+  function dessinerMecs(ctx, p, o) {
+    if (!etat.mecs || !etat.afficherMecs) return;
+    const v = p.vue;
+    for (const m of etat.mecs.liste) {
+      const lon = Cat.lonDans(m.lon, o);
+      if (lon < v.lon[0] || lon > v.lon[1] || m.lat < v.lat[0] || m.lat > v.lat[1]) continue;
+      const im = imageMec(m), r = rayonMec(m) + 1;
+      ctx.drawImage(im, p.X(lon) - r, p.Y(m.lat) - r, 2 * r, 2 * r);
+    }
+  }
+  // Mécanismes lus (fichier ou colonnes du catalogue) : régime de chacun, carte et zones redessinées.
+  function installerMecs(r, nom) {
+    etat.mecs = { nom, format: r.format, rejetees: r.rejetees, liste: r.mecanismes.map((m, i) => ({ ...m, regime: Mecanismes.regime(m), cle: `${i}|${m.azimut}|${m.pendage}|${m.glissement}` })) };
+    cacheMecs.clear();
+    const b = Mecanismes.bilan(etat.mecs.liste), t = b.parType, pl = n => (n > 1 ? 's' : '');
+    $('#sc-mec-info').innerHTML = `<b>${echapper(nom)}</b> : ${milliers(b.n)} mécanisme${pl(b.n)} au foyer (${t.normale} normale${pl(t.normale)}, ${t.inverse} inverse${pl(t.inverse)}, ${t.decrochement} décrochement${pl(t.decrochement)}${t.indetermine ? `, ${t.indetermine} indéterminé${pl(t.indetermine)}` : ''}, régimes de Zoback 1992)${r.rejetees ? ` ; ${milliers(r.rejetees)} séisme${pl(r.rejetees)} sans mécanisme lisible` : ''}. Touchez une sphère focale pour lire ses plans nodaux.`;
+    majZones(); dessinerCarte();
+  }
+  async function chargerMecs(fichier) {
+    try {
+      if (fichier.size > 50 * 1024 * 1024) throw new Error('fichier trop gros (50 Mo au plus)');
+      installerMecs(Mecanismes.lire(new Uint8Array(await fichier.arrayBuffer())), `« ${fichier.name} »`);
+    } catch (err) { $('#sc-mec-info').textContent = `Fichier refusé : ${err.message || err}.`; }
+  }
+  // Mécanisme dont la sphère est sous le point (x, y) du canevas, ou null.
+  function mecProche(x, y) {
+    const p = etat.reel && etat.reel.projection;
+    if (!p || !etat.mecs || !etat.afficherMecs) return null;
+    const o = etat.reel.cadre.lon[0];
+    let best = null, dmin = Infinity;
+    for (const m of etat.mecs.liste) { const d = Math.hypot(p.X(Cat.lonDans(m.lon, o)) - x, p.Y(m.lat) - y); if (d <= rayonMec(m) + 3 && d < dmin) { dmin = d; best = m; } }
+    return best;
+  }
+  function infoMec(m) {
+    const aux = Mecanisme.planAuxiliaire(m.azimut, m.pendage, m.glissement), reg = Mecanismes.REGIMES[m.regime];
+    $('#sc-carte-info').innerHTML = `<b>${new Date(m.t).toISOString().slice(0, 16).replace('T', ' ')} UTC</b> · ${echapper(m.typeMag || 'M')} ${virg(m.mag, 1)} · h ${m.h === null ? '—' : virg(m.h, 0) + ' km'}`
+      + ` · plans ${Math.round(m.azimut)}/${Math.round(m.pendage)}/${Math.round(m.glissement)} et ${Math.round(aux.azimut)}/${Math.round(aux.pendage)}/${Math.round(aux.glissement)} (azimut/pendage/glissement) · ${reg.nom}`;
   }
   // Site du calcul d'aléa : placé par l'étudiant, sinon au centre des zones.
   const siteCalcul = () => etat.site || (etat.zones.length ? { ...Zones.centre(etat.zones), vs30: 800 } : null);
@@ -532,7 +596,8 @@ import ZonesReel from './zones-reel.js';
       t.push([lon, lat]); majZones(); dessinerCarte(); return;
     }
     if (etat.outil === 'site') { etat.site = { lat, lon, vs30: 800 }; etat.outil = null; majZones(); dessinerCarte(); return; }
-    infoSeisme(seismeProche(x, y, 22));
+    const m = mecProche(x, y);
+    if (m) infoMec(m); else infoSeisme(seismeProche(x, y, 22));
   }
 
   // ── Zones sismogènes : tracé, statistiques (Zones.statistiques), modèle passé au banc « aléa » ────────────
@@ -578,18 +643,23 @@ import ZonesReel from './zones-reel.js';
       : etat.outil === 'site' ? 'Touchez la carte à l\'endroit du site.'
         : etat.zones.length ? `Statistiques des zones par la méthode d'Aki sur les réglages de l'analyse (depuis ${annee(etat.debutAnalyse)}, Mc = ${virg(etat.Mc, 1)}, ${etat.declus ? 'déclusteré' : 'sans déclusterage'}) ; b propre à la zone à partir de 30 séismes, sinon b régional (rég.). Mmax proposée : Mmax observée + 0,5.`
           : 'Aucune zone : « Tracer une zone », puis touchez la carte pour en poser les sommets.';
-    const st = statsZones();
-    $('#sc-zones-table').innerHTML = etat.zones.length ? `<thead><tr><th>Zone</th><th>Mécanisme</th><th>N ≥ Mc</th><th>b</th><th>λ(≥ Mc) /an</th><th>Mmax obs.</th><th>Mmax</th><th>h (km)</th><th></th></tr></thead><tbody>${etat.zones.map((z, i) => {
+    const st = statsZones(), bil = etat.zones.map(z => (etat.mecs ? Mecanismes.bilan(etat.mecs.liste.filter(m => Zones.contient(z.polygone, m.lon, m.lat))) : null));
+    // mécanisme proposé par les mécanismes au foyer de la zone, tant que l'étudiant ne l'a pas choisi
+    etat.zones.forEach((z, i) => { if (!z.rakeChoisi && bil[i] && bil[i].dominant) z.rake = bil[i].rake; });
+    const abr = { normale: 'norm.', inverse: 'inv.', decrochement: 'déc.' };
+    $('#sc-legende-mec').hidden = !(etat.mecs && etat.afficherMecs);
+    $('#sc-zones-table').innerHTML = etat.zones.length ? `<thead><tr><th>Zone</th><th>Mécanisme</th>${etat.mecs ? '<th>Mécanismes au foyer</th>' : ''}<th>N ≥ Mc</th><th>b</th><th>λ(≥ Mc) /an</th><th>Mmax obs.</th><th>Mmax</th><th>h (km)</th><th></th></tr></thead><tbody>${etat.zones.map((z, i) => {
       const s = st[i], mm = z.mmax ?? (s ? Zones.mmaxPropose(s.mmaxObs, etat.Mc) : null);
       return `<tr><td><span class="pastille" style="background:${couleurZone(i)}"></span><input type="text" data-sc-zone-nom="${i}" value="${echapper(z.nom)}" aria-label="Nom de la zone"></td>
         <td><select data-sc-zone-rake="${i}" aria-label="Mécanisme de la zone">${RAKES.map(([v, t]) => `<option value="${v}"${v === z.rake ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+        ${etat.mecs ? `<td>${bil[i].n ? `${bil[i].n} : ${['inverse', 'normale', 'decrochement'].filter(t => bil[i].parType[t]).map(t => `${bil[i].parType[t]} ${abr[t]}`).join(', ')}${bil[i].parType.indetermine ? `, ${bil[i].parType.indetermine} ind.` : ''}${!z.rakeChoisi && bil[i].dominant ? ' <small>(proposé)</small>' : ''}` : '—'}</td>` : ''}
         <td class="n">${s ? milliers(s.n) : '—'}</td><td class="n">${s && s.b ? `${virg(s.b, 2)} ± ${virg(s.sigmaB, 2)}${s.bPropre ? '' : ' <small>rég.</small>'}` : '—'}</td>
         <td class="n">${s ? virg(s.lam, s.lam < 1 ? 3 : 2) : '—'}</td><td class="n">${s && s.mmaxObs !== null ? virg(s.mmaxObs, 1) : '—'}</td>
         <td><input type="number" data-sc-zone-mmax="${i}" min="4.5" max="9.5" step="0.1" value="${mm !== null ? mm.toFixed(1) : ''}" aria-label="Mmax retenue"></td>
         <td class="n">${s ? virg(s.profondeur, 0) : '—'}</td><td><button type="button" class="outil neutre" data-sc-zone-suppr="${i}" aria-label="Supprimer la zone">×</button></td></tr>`;
     }).join('')}</tbody>` : '';
     $$('[data-sc-zone-nom]').forEach(x => x.addEventListener('change', () => { etat.zones[+x.dataset.scZoneNom].nom = x.value.trim() || `Zone ${+x.dataset.scZoneNom + 1}`; dessinerCarte(); }));
-    $$('[data-sc-zone-rake]').forEach(x => x.addEventListener('change', () => { etat.zones[+x.dataset.scZoneRake].rake = +x.value; }));
+    $$('[data-sc-zone-rake]').forEach(x => x.addEventListener('change', () => { const z = etat.zones[+x.dataset.scZoneRake]; z.rake = +x.value; z.rakeChoisi = true; majZones(); }));
     $$('[data-sc-zone-mmax]').forEach(x => x.addEventListener('change', () => { const v = parseFloat(String(x.value).replace(',', '.')); etat.zones[+x.dataset.scZoneMmax].mmax = Number.isFinite(v) ? v : null; majZones(); }));
     $$('[data-sc-zone-suppr]').forEach(x => x.addEventListener('click', () => { etat.zones.splice(+x.dataset.scZoneSuppr, 1); majZones(); dessinerCarte(); }));
     const s = siteCalcul();
@@ -616,7 +686,7 @@ import ZonesReel from './zones-reel.js';
   async function chargerZones(fichier) {
     try {
       const m = Zones.lire(await fichier.text());
-      etat.zones = m.zones.map(z => ({ id: z.id, nom: z.nom, polygone: z.polygone, rake: z.rake, mmax: z.mmax }));
+      etat.zones = m.zones.map(z => ({ id: z.id, nom: z.nom, polygone: z.polygone, rake: z.rake, rakeChoisi: true, mmax: z.mmax }));
       etat.numero = Math.max(etat.numero, etat.zones.length); etat.site = m.site; etat.trace = null; etat.outil = null;
       message(`${m.zones.length} zone${m.zones.length > 1 ? 's' : ''} chargée${m.zones.length > 1 ? 's' : ''} : statistiques recalculées sur le catalogue chargé.`);
       majZones(); dessinerCarte();
@@ -782,6 +852,8 @@ import ZonesReel from './zones-reel.js';
   function installer(lu, evts, periode, nom, tronque) {
     const cadre = Cat.cadre(evts);
     etat.reel = { lu, evts, periode, nom, tronque, famille: 'tous', resume: Cat.resume(evts), cadre, vue: vueEnsemble(cadre) };
+    const avecMec = evts.filter(e => e.mec);
+    if (avecMec.length) installerMecs({ format: 'catalogue', mecanismes: avecMec.map(e => ({ t: e.t, lat: e.lat, lon: e.lon, h: e.h, mag: e.mag, typeMag: e.typeMag, id: e.id, ...e.mec })), rejetees: 0 }, `${nom} (colonnes du catalogue)`);
     const ec = Object.entries(lu.ecartes || {}), rej = lu.rejets && lu.rejets.length ? ` (ligne ${lu.rejets[0].ligne} : ${lu.rejets[0].raison}${lu.rejetees > 1 ? '…' : ''})` : '';
     const col = Object.values(lu.colonnes || {});
     $('#sc-reel-info').innerHTML = `<b>${echapper(nom)}</b> : ${echapper(lu.nom)}, ${milliers(evts.length)} séismes lus`
@@ -893,7 +965,9 @@ import ZonesReel from './zones-reel.js';
     });
     // Survol de la carte : le séisme le plus proche du pointeur
     const carte = $('#sc-carte');
-    carte.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) infoSeisme(seismeProche(e.offsetX, e.offsetY)); });
+    carte.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) { const m = mecProche(e.offsetX, e.offsetY); if (m) infoMec(m); else infoSeisme(seismeProche(e.offsetX, e.offsetY)); } });
+    $('#sc-mec-fichier').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) chargerMecs(f); });
+    $('#sc-mec-afficher').addEventListener('change', e => { etat.afficherMecs = e.target.checked; majZones(); dessinerCarte(); });
     gestes(carte, { zoomer: zoomerCarte, glisser: deplacerCarte, toucher: toucherCarte });
     $('#sc-carte-plus').addEventListener('click', () => zoomerCarte(2));
     $('#sc-carte-moins').addEventListener('click', () => zoomerCarte(0.5));
