@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Travaux pratiques de sismologie et d'aléa sismique : dix-sept bancs interactifs, de la lecture d'un sismogramme à l'isolation à la base">
 <title>Travaux pratiques — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=d222fc3ad5">
+<link rel="stylesheet" href="lecteur.css?v=7038ece979">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -27,7 +27,7 @@
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
   "./src/banc-source.js": "./src/banc-source.js?v=f844666ceb",
   "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
-  "./src/consignes.js": "./src/consignes.js?v=1998b5bbf8",
+  "./src/consignes.js": "./src/consignes.js?v=951a6f4e8d",
   "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
   "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
   "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=de803ba1f7",
+  "./src/direct-page.js": "./src/direct-page.js?v=7ed29e05ad",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -74,7 +74,7 @@
   "./src/globe-figure.js": "./src/globe-figure.js?v=3dab247c58",
   "./src/gmpe-notes.js": "./src/gmpe-notes.js?v=0c33f8c35b",
   "./src/impression.js": "./src/impression.js?v=b8f76b944a",
-  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=dffb63d545",
+  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=68d7f9d7f8",
   "./src/lecteur-station.js": "./src/lecteur-station.js?v=2c4aacd228",
   "./src/onglets.js": "./src/onglets.js?v=869ae39f99",
   "./src/parcours.js": "./src/parcours.js?v=0576a3a1d5",
@@ -90,6 +90,7 @@
   "./src/sismo/coefficients/bindi2014.js": "./src/sismo/coefficients/bindi2014.js?v=75d65799f7",
   "./src/sismo/coefficients/boore2014.js": "./src/sismo/coefficients/boore2014.js?v=61fd6969f4",
   "./src/sismo/direct.js": "./src/sismo/direct.js?v=50be7b1701",
+  "./src/sismo/dossier.js": "./src/sismo/dossier.js?v=9e85556796",
   "./src/sismo/faille.js": "./src/sismo/faille.js?v=711c6bcef2",
   "./src/sismo/fdsn.js": "./src/sismo/fdsn.js?v=2cd2e7bb50",
   "./src/sismo/geodesie.js": "./src/sismo/geodesie.js?v=c59d80cef9",
@@ -100,8 +101,9 @@
   "./src/sismo/isolation.js": "./src/sismo/isolation.js?v=de3977e9bb",
   "./src/sismo/isolignes.js": "./src/sismo/isolignes.js?v=46595a3d75",
   "./src/sismo/liquefaction.js": "./src/sismo/liquefaction.js?v=2fa95a312e",
+  "./src/sismo/localisation.js": "./src/sismo/localisation.js?v=4e06535217",
   "./src/sismo/mecanisme.js": "./src/sismo/mecanisme.js?v=9ddc2d867b",
-  "./src/sismo/miniseed.js": "./src/sismo/miniseed.js?v=001779fa85",
+  "./src/sismo/miniseed.js": "./src/sismo/miniseed.js?v=e89719161b",
   "./src/sismo/oscillateur.js": "./src/sismo/oscillateur.js?v=3f8504910f",
   "./src/sismo/poussee.js": "./src/sismo/poussee.js?v=a9a6aa3dd5",
   "./src/sismo/propagation.js": "./src/sismo/propagation.js?v=6b02374afd",
@@ -340,7 +342,7 @@
             <button type="button" class="outil neutre" id="r-effacer">Effacer les pointés</button>
           </div>
           <label class="filtre-court" for="r-filtre">Filtre
-            <select id="r-filtre"><option value="aucun">Aucun</option><option value="local">1 – 10 Hz</option><option value="etroit">2 – 8 Hz</option></select></label>
+            <select id="r-filtre"><option value="aucun">Aucun</option><option value="large">0,5 – 5 Hz</option><option value="local">1 – 10 Hz</option><option value="etroit">2 – 8 Hz</option></select></label>
           <span class="curseur-lecture" id="r-curseur">t = —</span>
         </div>
         <p class="voie" id="r-voie"></p>
@@ -362,6 +364,7 @@
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
         <button type="button" id="r-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="r-mode-exercice" aria-pressed="false">Exercice</button>
+        <button type="button" id="r-mode-reel" aria-pressed="false">Séisme réel</button>
       </div>
       <section class="carte" id="r-panneau-explorer" aria-label="Séisme">
         <p class="sous-titre">Séisme simulé</p>
@@ -382,6 +385,18 @@
           se met à jour à chaque pointé. Vérifiez quand vous êtes satisfait des résidus.</p>
         <div class="actions"><button type="button" class="bouton primaire" id="r-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="r-nouvel-exo">Nouvel exercice</button></div>
         <div id="r-corrige"></div>
+      </section>
+      <section class="carte" id="r-panneau-reel" aria-label="Séisme réel" hidden>
+        <p class="sous-titre">Séisme réel</p>
+        <p class="enonce">Localisez un vrai séisme. Sur la page <a href="direct.html">En direct</a>, ouvrez la fiche d'un séisme, ses
+          sismogrammes, puis enregistrez-les pour le TP : un fichier .json se télécharge. Chargez-le ici, pointez P et S sur chaque
+          station (S sur les horizontales), puis comparez votre localisation à celle de GEOFON.</p>
+        <label class="bouton secondaire bouton-fichier">Charger un fichier de séisme<input type="file" id="r-fichier" accept=".json,application/json"></label>
+        <p class="aide" id="r-reel-info">Aucun fichier chargé.</p>
+        <p class="aide">Localisation sur la Terre ronde : temps de trajet de la croûte du cours jusqu'à 1° (110 km), du modèle ak135
+          au-delà de 2°, profondeur cherchée de 0 à 40 km. Les distances se lisent en degrés : 1° ≈ 111 km.</p>
+        <div class="actions"><button type="button" class="bouton primaire" id="r-comparer">Comparer à GEOFON</button></div>
+        <div id="r-corrige-reel"></div>
       </section>
       <section class="carte" aria-label="Carte" style="--o:22">
         <h2>Carte du réseau<small id="r-carte-legende">Cercles : distance hypocentrale tirée de S − P</small></h2>
@@ -1485,7 +1500,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript>Activez JavaScript pour utiliser le lecteur.</noscript>
 <script type="module" src="src/lecteur-station.js?v=2c4aacd228"></script>
-<script type="module" src="src/lecteur-reseau.js?v=dffb63d545"></script>
+<script type="module" src="src/lecteur-reseau.js?v=68d7f9d7f8"></script>
 <script type="module" src="src/banc-sismometre.js?v=97df4b1e82"></script>
 <script type="module" src="src/banc-profil.js?v=6a420e2770"></script>
 <script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>

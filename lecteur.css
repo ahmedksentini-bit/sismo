@@ -427,3 +427,6 @@ aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; 
 #poste-direct { min-width: 0; max-width: 100%; }
 .dr-centres summary { color: var(--muted); font-size: 12.5px; font-weight: 800; cursor: pointer; }
 #dr-centres { margin: 6px 0 0; padding: 0; list-style: none; font: 11.5px/1.45 var(--mono); color: var(--muted); }
+/* banc « réseau », mode « Séisme réel » : choix du fichier par un bouton */
+.bouton-fichier { position: relative; display: inline-block; margin: 4px 0 6px; overflow: hidden; }
+.bouton-fichier input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

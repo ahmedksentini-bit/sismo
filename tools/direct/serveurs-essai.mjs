@@ -91,7 +91,9 @@ http.createServer((req, res) => {
     const t0 = Date.parse(q.get('starttime') + 'Z'), t1 = Date.parse(q.get('endtime') + 'Z'), out = [];
     for (const sta of q.get('station').split(',')) for (const r of q.get('network').split(',')) {
       if (!c || !c.voies.some(l => l.startsWith(`${r}|${sta}|`))) continue;
-      for (let t = t0, k = 0; t + duree[k % enregs.length] < t1; t += duree[k % enregs.length], k++) out.push(etiqueter(enregs[k % enregs.length], { reseau: r, station: sta, emplacement: '', voie: q.get('channel').split(',')[0] }, t));
+      // « BH? » : les trois composantes (Z, N, E), comme un centre
+      const voies = q.get('channel').split(',').flatMap(c => (c.endsWith('?') ? ['Z', 'N', 'E'].map(x => c.slice(0, 2) + x) : [c])).slice(0, 3);
+      for (const v of voies) for (let t = t0, k = 0; t + duree[k % enregs.length] < t1; t += duree[k % enregs.length], k++) out.push(etiqueter(enregs[k % enregs.length], { reseau: r, station: sta, emplacement: '', voie: v }, t));
     }
     if (!out.length) { res.writeHead(204); res.end(); return; }
     res.writeHead(200, { 'Content-Type': 'application/vnd.fdsn.mseed' }); res.end(Buffer.concat(out.map(o => Buffer.from(o))));

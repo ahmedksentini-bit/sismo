@@ -1,6 +1,11 @@
 import Sismo from './sismo/signal.js';
+import Direct from './sismo/direct.js';
+import Dossier from './sismo/dossier.js';
+import Localisation from './sismo/localisation.js';
 
 // src/lecteur-reseau.js — banc « réseau » : quatre stations, pointés P/S, cercles, Wadati, localisation sur grille.
+// Mode « Séisme réel » : un fichier enregistré par la page « En direct » (src/sismo/dossier.js) remplace les quatre
+// stations simulées ; la localisation se fait sur la sphère (src/sismo/localisation.js) et se compare à GEOFON.
 (() => {
   'use strict';
   const SM = Sismo;
@@ -9,11 +14,13 @@ import Sismo from './sismo/signal.js';
   const signe = (x, d = 2) => Number.isFinite(x) ? (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d).replace('.', ',') : '—';
   const POLICE = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const MONO = 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace';
-  const FILTRES = { aucun: null, local: [1, 10], etroit: [2, 8] };
-  // Stations en km : x vers l'est, y vers le nord, origine en SIM1.
-  const STATIONS = [
+  const FILTRES = { aucun: null, large: [0.5, 5], local: [1, 10], etroit: [2, 8] };
+  // Stations en km : x vers l'est, y vers le nord, origine en SIM1. En mode « Séisme réel », STATIONS devient la liste
+  // des stations du fichier (latitude, longitude, voies).
+  const SIMULEES = [
     { nom: 'SIM1', x: 0, y: 0 }, { nom: 'SIM2', x: 58, y: 22 }, { nom: 'SIM3', x: 22, y: -52 }, { nom: 'SIM4', x: -46, y: -14 },
   ];
+  let STATIONS = SIMULEES;
   const CARTE = { cx: 6, cy: -12, demi: 130 };
 
   const etat = {
@@ -22,7 +29,9 @@ import Sismo from './sismo/signal.js';
     exo: null, auto: false, phases: true, // pointés automatiques décochés : l'étudiant pointe lui-même
     filtre: 'aucun', outil: 'P', vue: [0, 1], pointes: STATIONS.map(() => ({ P: null, S: null })), evs: [], recs: [], series: [],
     t0: 0, n: 0, dt: 0.01, debutUTC: 0, loc: null, wad: null, verifie: false, curseurX: null,
+    reel: null, table: null, cotes: null,
   };
+  const reel = () => etat.mode === 'reel';
   const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
   const bruitCourant = () => (etat.mode === 'explorer' ? etat.explo.bruit : etat.exo.bruit);
   const duree = () => etat.n * etat.dt;
@@ -66,12 +75,16 @@ import Sismo from './sismo/signal.js';
   }
   function reconvertir() {
     const f = FILTRES[etat.filtre];
-    etat.series = etat.recs.map(rec => ['Z', 'N', 'E'].map(c => SM.convertir(rec.series[c], etat.dt, 'HH', 'vitesse', f)));
+    if (reel()) {
+      // séisme réel : vitesse du sol déjà en m/s ; filtre de Butterworth causal (ordre 2), borné sous la fréquence de Nyquist
+      const fs = 1 / etat.dt, sos = f ? Direct.butterPasseBande(2, f[0], Math.min(f[1], 0.45 * fs), fs) : null;
+      etat.series = etat.reel.stations.map(st => st.series.map(x => (sos ? Direct.filtrer(x, sos) : x)));
+    } else etat.series = etat.recs.map(rec => ['Z', 'N', 'E'].map(c => SM.convertir(rec.series[c], etat.dt, 'HH', 'vitesse', f)));
     relocaliser();
   }
   function relocaliser() {
     const lec = etat.pointes.map(p => ({ tP: p.P, tS: p.S !== null && p.P !== null && p.S > p.P ? p.S : null }));
-    etat.loc = SM.localiser(STATIONS, lec);
+    etat.loc = reel() ? (etat.table ? Localisation.localiser(STATIONS, lec, etat.table) : null) : SM.localiser(STATIONS, lec);
     etat.wad = SM.wadati(lec);
     tout();
   }
@@ -159,13 +172,19 @@ import Sismo from './sismo/signal.js';
       const yc = g.y0 + g.hT * (j + 0.5);
       tracerSerie(ctx, xs[j], g, yc, ech);
       ctx.font = `700 11px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      texteHalo(ctx, 'HH' + nom, g.x0 + 4, yc - g.hT / 2 + 8, COUL.muted);
+      texteHalo(ctx, reel() ? STATIONS[k].voies[j] || `${nom} absente` : 'HH' + nom, g.x0 + 4, yc - g.hT / 2 + 8, COUL.muted);
     });
     ctx.font = `10.5px ${MONO}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     texteHalo(ctx, `max ${virg(a * 1e6, a * 1e6 < 10 ? 2 : a * 1e6 < 100 ? 1 : 0)} µm/s`, g.x1 - 4, g.y0 + 7, COUL.muted);
     // Phases théoriques (exploration) ou arrivées vraies (après vérification)
     const ev = etat.evs[k];
-    if ((etat.mode === 'explorer' && etat.phases) || etat.verifie) {
+    if (reel()) {
+      if (etat.verifie) for (const [nom, t] of Object.entries(prevuesGeofon()[k])) {
+        if (t === null) continue;
+        const x = tVersX(t, g);
+        if (x >= g.x0 && x <= g.x1) { ligne(ctx, Math.round(x) + 0.5, g, COUL.vrai, 1.5, [2, 3]); etiquette(ctx, nom, x, 0, COUL.vrai, false); }
+      }
+    } else if ((etat.mode === 'explorer' && etat.phases) || etat.verifie) {
       const L = [];
       if (etat.mode === 'explorer') {
         if (ev.tt.tPn !== null) L.push(['Pn', ev.tt.tPn]);
@@ -215,6 +234,7 @@ import Sismo from './sismo/signal.js';
     ctx.lineWidth = 1.5; ctx.strokeStyle = COUL.paper; ctx.stroke();
   }
   function dessinerCarte() {
+    if (reel()) { dessinerCarteReelle(); return; }
     lireCouleurs();
     const cv = $('#r-carte'), { ctx, W, H } = preparer(cv), c = carteGeo(cv);
     ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
@@ -267,6 +287,75 @@ import Sismo from './sismo/signal.js';
     $('#r-carte-legende').innerHTML = `Cercles bleus : R tirée de S − P · <span style="color:var(--amp)">★ solution</span>${montrerVrai ? ' · <span style="color:var(--vrai)">★ épicentre vrai</span>' : ''}${etat.mode === 'explorer' ? ' (glissez-la)' : ''}`;
   }
 
+  // ── Séisme réel : carte en latitude et longitude, arrivées prévues à la solution de GEOFON ─────────────────
+  // Heure d'origine de GEOFON dans l'échelle des traces (s depuis le début du fichier) et arrivées P et S prévues à
+  // chaque station pour sa solution (table de la localisation).
+  const origineGeofon = () => (etat.reel.seisme.temps - etat.reel.debut) / 1000;
+  function prevuesGeofon() {
+    const e = etat.reel.seisme, t0 = origineGeofon(), h = Math.max(0, Math.min(40, e.h || 10));
+    return STATIONS.map(s => {
+      const d = Localisation.distanceAzimut(e.lat, e.lon, s.lat, s.lon).distance, p = etat.table && Localisation.temps(etat.table, 'P', h, d), q = etat.table && Localisation.temps(etat.table, 'S', h, d);
+      return { P: p ? t0 + p : null, S: q ? t0 + q : null };
+    });
+  }
+  // Point à la distance d (°) et à l'azimut az (°) d'un point (sphère).
+  function destination(lat, lon, d, az) {
+    const r = Math.PI / 180, p1 = lat * r, l1 = lon * r, dr = d * r, a = az * r;
+    const p2 = Math.asin(Math.sin(p1) * Math.cos(dr) + Math.cos(p1) * Math.sin(dr) * Math.cos(a));
+    return [p2 / r, (l1 + Math.atan2(Math.sin(a) * Math.sin(dr) * Math.cos(p1), Math.cos(dr) - Math.sin(p1) * Math.sin(p2))) / r];
+  }
+  function dessinerCarteReelle() {
+    lireCouleurs();
+    const cv = $('#r-carte'), { ctx, W, H } = preparer(cv), L = etat.loc, e = etat.reel ? etat.reel.seisme : null;
+    ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
+    if (!etat.reel) { ctx.fillStyle = COUL.muted; ctx.font = `700 12px ${POLICE}`; ctx.textAlign = 'center'; ctx.fillText('Chargez un fichier de séisme.', W / 2, H / 2); return; }
+    // cadre : stations, solution et (après comparaison) GEOFON, avec une marge
+    const pts = [...STATIONS.map(s => [s.lat, s.lon]), ...(L ? [[L.lat, L.lon]] : []), ...(etat.verifie ? [[e.lat, e.lon]] : [])];
+    let la0 = Math.min(...pts.map(p => p[0])), la1 = Math.max(...pts.map(p => p[0])), lo0 = Math.min(...pts.map(p => p[1])), lo1 = Math.max(...pts.map(p => p[1]));
+    const latc = (la0 + la1) / 2, kx = Math.cos((latc * Math.PI) / 180), m = 26;
+    const etendue = Math.max(2, (la1 - la0) * 1.25, (lo1 - lo0) * kx * 1.25);
+    const k = Math.min(W - 2 * m, H - 2 * m) / etendue, cx = (lo0 + lo1) / 2, cy = latc;
+    const X = lon => W / 2 + (lon - cx) * kx * k, Y = lat => H / 2 - (lat - cy) * k;
+    // graticule
+    const pas = etendue > 30 ? 10 : etendue > 12 ? 5 : etendue > 5 ? 2 : 1;
+    ctx.font = `10px ${MONO}`; ctx.fillStyle = COUL.muted; ctx.lineWidth = 1;
+    const la = [cy - (H / 2) / k, cy + (H / 2) / k], lo = [cx - (W / 2) / (kx * k), cx + (W / 2) / (kx * k)];
+    for (let v = Math.ceil(lo[0] / pas) * pas; v <= lo[1]; v += pas) { ctx.strokeStyle = COUL.grid; ctx.beginPath(); ctx.moveTo(Math.round(X(v)) + 0.5, 0); ctx.lineTo(Math.round(X(v)) + 0.5, H); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(`${Math.abs(v)}°${v < 0 ? 'O' : 'E'}`, X(v), H - 3); }
+    for (let v = Math.ceil(la[0] / pas) * pas; v <= la[1]; v += pas) { ctx.strokeStyle = COUL.grid; ctx.beginPath(); ctx.moveTo(0, Math.round(Y(v)) + 0.5); ctx.lineTo(W, Math.round(Y(v)) + 0.5); ctx.stroke(); ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(`${Math.abs(v)}°${v < 0 ? 'S' : 'N'}`, 3, Y(v) - 1); }
+    // côtes (Natural Earth, bassin méditerranéen)
+    if (etat.cotes) {
+      ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1; ctx.beginPath();
+      for (const l of etat.cotes.cotes) for (let i = 0; i < l.length; i += 2) (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(l[i]), Y(l[i + 1]));
+      ctx.stroke();
+    }
+    // zone compatible
+    if (L) {
+      ctx.fillStyle = COUL.amp; ctx.globalAlpha = 0.22;
+      const c = Math.max(1, 0.05 * k);
+      for (const [a, b] of L.zone) ctx.fillRect(X(b) - (c * kx) / 2, Y(a) - c / 2, Math.max(1, c * kx), c);
+      ctx.globalAlpha = 1;
+    }
+    // cercles : distance épicentrale tirée de S − P (table, foyer à la profondeur trouvée, 10 km sinon)
+    STATIONS.forEach((s, j) => {
+      const p = etat.pointes[j];
+      if (p.P === null || p.S === null || p.S <= p.P) return;
+      const d = Localisation.distanceSP(etat.table, p.S - p.P, L ? L.h : 10);
+      if (d === null) return;
+      ctx.save(); ctx.strokeStyle = COUL.blue; ctx.globalAlpha = 0.75; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4; ctx.beginPath();
+      for (let i = 0; i <= 120; i++) { const [a, b] = destination(s.lat, s.lon, d, i * 3); (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(b), Y(a)); }
+      ctx.stroke(); ctx.restore();
+    });
+    if (L) etoile(ctx, X(L.lon), Y(L.lat), 9, COUL.amp);
+    if (etat.verifie) etoile(ctx, X(e.lon), Y(e.lat), 9, COUL.vrai);
+    STATIONS.forEach(s => {
+      const x = X(s.lon), y = Y(s.lat);
+      ctx.fillStyle = COUL.ink; ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x - 7, y + 5); ctx.lineTo(x + 7, y + 5); ctx.closePath(); ctx.fill();
+      ctx.font = `800 11px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      texteHalo(ctx, s.nom, x + 9, y - 1, COUL.ink);
+    });
+    $('#r-carte-legende').innerHTML = `Cercles bleus : distance épicentrale tirée de S − P · <span style="color:var(--amp)">★ votre solution</span>${etat.verifie ? ' · <span style="color:var(--vrai)">★ GEOFON</span>' : ''}`;
+  }
+
   // ── Wadati ──────────────────────────────────────────────────────────────
   function dessinerWadati() {
     lireCouleurs();
@@ -311,26 +400,46 @@ import Sismo from './sismo/signal.js';
     const L = etat.loc, w = etat.wad;
     const qualiteGap = g => (g <= 180 ? 'séisme dans le réseau' : 'séisme hors du réseau');
     $('#r-afficheurs').innerHTML = [
-      afficheur('Épicentre (x ; y)', L ? `${virg(L.x, 1)} ; ${virg(L.y, 1)}` : '—', L ? 'km depuis SIM1, x vers l\'est' : 'P sur 3 stations au moins'),
-      afficheur('Profondeur', L ? virg(L.h, 1) + ' km' : '—', L ? 'souvent mal contrainte' : ''),
+      reel()
+        ? afficheur('Épicentre', L ? `${virg(L.lat, 2)}° N ; ${virg(L.lon, 2)}° E` : '—', L ? 'latitude ; longitude' : 'P sur 3 stations au moins')
+        : afficheur('Épicentre (x ; y)', L ? `${virg(L.x, 1)} ; ${virg(L.y, 1)}` : '—', L ? 'km depuis SIM1, x vers l\'est' : 'P sur 3 stations au moins'),
+      afficheur('Profondeur', L ? virg(L.h, 1) + ' km' : '—', L ? (reel() ? 'cherchée de 0 à 40 km, mal contrainte' : 'souvent mal contrainte') : ''),
       afficheur("Heure d'origine", L ? horloge(L.t0) : '—', L ? 'UTC, ajustée' : ''),
       afficheur('Résidu quadratique', L ? virg(L.rms, 2) + ' s' : '—', L ? `${L.nObs} lectures` : ''),
       afficheur('Gap azimutal', L ? Math.round(L.gap) + '°' : '—', L ? qualiteGap(L.gap) : ''),
       afficheur('Vp/Vs (Wadati)', w ? virg(w.vpvs, 2) : '—', w ? 'modèle : 1,71' : '2 stations P et S'),
       afficheur('t₀ (Wadati)', w ? horloge(w.t0) : '—', w ? 'UTC' : ''),
-      afficheur('Stations pointées', `${etat.pointes.filter(p => p.P !== null).length} P · ${etat.pointes.filter(p => p.S !== null).length} S`, 'sur 4'),
+      afficheur('Stations pointées', `${etat.pointes.filter(p => p.P !== null).length} P · ${etat.pointes.filter(p => p.S !== null).length} S`, `sur ${STATIONS.length}`),
     ].join('');
     const lignes = STATIONS.map((s, k) => {
       const p = etat.pointes[k], r = L ? L.residus[k] : null, dts = p.P !== null && p.S !== null && p.S > p.P ? p.S - p.P : null;
       const ecart = v => (v !== null && Math.abs(v) > 0.5 ? ' class="n ecart"' : ' class="n"');
       return `<tr><td><b>${s.nom}</b></td><td class="n">${p.P !== null ? virg(p.P, 2) : '—'}</td><td class="n">${p.S !== null ? virg(p.S, 2) : '—'}</td>`
-        + `<td class="n">${dts !== null ? virg(dts, 2) : '—'}</td><td class="n">${dts !== null ? virg(SM.distanceSP(dts), 1) : '—'}</td>`
+        + `<td class="n">${dts !== null ? virg(dts, 2) : '—'}</td><td class="n">${dts !== null ? virg(distanceSP(dts), dts > 30 ? 0 : 1) : '—'}</td>`
         + `<td${ecart(r && r.dP)}>${r && r.dP !== null ? signe(r.dP) : '—'}</td><td${ecart(r && r.dS)}>${r && r.dS !== null ? signe(r.dS) : '—'}</td></tr>`;
     });
-    $('#r-residus').innerHTML = `<thead><tr><th>Station</th><th>tP (s)</th><th>tS (s)</th><th>S − P</th><th>R (km)</th><th>Résidu P</th><th>Résidu S</th></tr></thead><tbody>${lignes.join('')}</tbody>`;
+    $('#r-residus').innerHTML = `<thead><tr><th>Station</th><th>tP (s)</th><th>tS (s)</th><th>S − P</th><th>${reel() ? 'Δ (km)' : 'R (km)'}</th><th>Résidu P</th><th>Résidu S</th></tr></thead><tbody>${lignes.join('')}</tbody>`;
+  }
+  // Distance tirée de S − P : hypocentrale par la croûte du cours (réseau simulé), épicentrale par la table (réel).
+  function distanceSP(dts) {
+    if (!reel()) return SM.distanceSP(dts);
+    const d = etat.table ? Localisation.distanceSP(etat.table, dts, etat.loc ? etat.loc.h : 10) : null;
+    return d === null ? null : Localisation.km(d);
   }
   function majVoie() {
     const f = FILTRES[etat.filtre];
+    if (reel()) {
+      const r = etat.reel;
+      if (!r) { $('#r-voie').innerHTML = '<span>Aucun fichier chargé</span>'; return; }
+      $('#r-voie').innerHTML = `<span><b>${[...new Set(STATIONS.map(st => st.reseau))].join(', ')} · ${STATIONS.length} stations</b></span><span>vitesse du sol, trois composantes</span><span>${f ? `filtre ${virg(f[0], f[0] < 1 ? 1 : 0)}–${virg(f[1], 0)} Hz` : 'sans filtre'}</span><span>début ${new Date(r.debut).toISOString().slice(0, 10)} ${horloge(0)} UTC</span>`;
+      STATIONS.forEach((st, k) => {
+        const el = $(`#r-info-${k}`);
+        if (!el) return;
+        const d = etat.verifie ? Localisation.distanceAzimut(r.seisme.lat, r.seisme.lon, st.lat, st.lon).distance : null;
+        el.textContent = `${st.pays || ''}${st.pays ? ' · ' : ''}${virg(st.lat, 2)}° N, ${virg(st.lon, 2)}° E${d !== null ? ` · Δ = ${virg(d, 2)}° (${Math.round(Localisation.km(d))} km) de GEOFON` : ''}`;
+      });
+      return;
+    }
     $('#r-voie').innerHTML = `<span><b>XX.SIM1…SIM4.00.HH?</b></span><span>vélocimètres large bande, vitesse</span><span>${f ? `filtre ${virg(f[0], 0)}–${virg(f[1], 0)} Hz` : 'sans filtre'}</span><span>début ${horloge(0)} UTC</span>`;
     STATIONS.forEach((s, k) => {
       const ev = etat.evs[k], el = $(`#r-info-${k}`);
@@ -346,6 +455,11 @@ import Sismo from './sismo/signal.js';
     $('#r-aide').innerHTML = t;
   }
   function majVerite() {
+    if (reel()) {
+      const r = etat.reel;
+      $('#r-reel-info').innerHTML = r ? `<b>Fichier chargé :</b> séisme du ${new Date(r.seisme.temps).toISOString().slice(0, 10)} (${r.seisme.region || 'région inconnue'}), ${STATIONS.length} stations${r.ecartees.length ? ` (${r.ecartees.join(', ')} sans verticale, écartée${r.ecartees.length > 1 ? 's' : ''})` : ''}. Fenêtre de ${Math.round((r.fin - r.debut) / 60000)} min.` : 'Aucun fichier chargé.';
+      return;
+    }
     if (etat.mode !== 'explorer') return;
     const p = etat.explo, t0 = etat.t0;
     $('#r-verite').innerHTML = `<b>Vérité terrain.</b> Épicentre (${virg(p.x, 1)} ; ${virg(p.y, 1)}) km, h = ${p.h} km, Mw ${virg(p.Mw, 1)}, origine à <b>${horloge(-t0)} UTC</b>.`
@@ -391,9 +505,58 @@ import Sismo from './sismo/signal.js';
     tout();
   }
 
+  // ── Séisme réel : chargement du fichier, comparaison à GEOFON ─────────────────────────────────────────────
+  async function chargerFichier(fichier) {
+    const info = $('#r-reel-info');
+    try {
+      if (fichier.size > 40 * 1024 * 1024) throw new Error('fichier trop gros (40 Mo au plus)');
+      info.textContent = 'Lecture du fichier…';
+      const [f, table, cotes] = await Promise.all([
+        fichier.text().then(t => Dossier.lire(t)),
+        etat.table || fetch('data/temps-localisation.json').then(r => r.json()),
+        etat.cotes || fetch('data/cotes-mediterranee.json').then(r => r.json()).catch(() => null),
+      ]);
+      etat.table = table; etat.cotes = cotes; etat.reel = f;
+      activerReel();
+    } catch (err) {
+      info.textContent = `Fichier refusé : ${err.message || err}.`;
+    }
+  }
+  function activerReel() {
+    const f = etat.reel;
+    STATIONS = f.stations.map(st => ({ nom: st.station, reseau: st.reseau, lat: st.lat, lon: st.lon, pays: st.pays, voies: st.voies }));
+    etat.dt = f.dt; etat.n = f.n; etat.t0 = 0; etat.evs = [];
+    etat.debutUTC = (((f.debut % 86400000) + 86400000) % 86400000) / 1000;
+    etat.vue = [0, duree()]; etat.pointes = vide(); etat.verifie = false; etat.outil = 'P';
+    $('#r-corrige-reel').innerHTML = '';
+    construireTraces(); reconvertir();
+  }
+  function comparer() {
+    const r = etat.reel, L = etat.loc;
+    if (!r) return;
+    const e = r.seisme, t0 = origineGeofon(), prev = prevuesGeofon();
+    const lignes = STATIONS.map((st, k) => {
+      const q = etat.pointes[k], cel = (t, v) => `<td class="n">${t !== null && v !== null ? signe(t - v) + ' s' : '—'}</td>`;
+      return `<tr><td><b>${st.nom}</b></td>${cel(q.P, prev[k].P)}${cel(q.S, prev[k].S)}</tr>`;
+    });
+    const dEpi = L ? Localisation.km(Localisation.distanceAzimut(L.lat, L.lon, e.lat, e.lon).distance) : null, dT0 = L ? L.t0 - t0 : null;
+    const okEpi = dEpi !== null && dEpi <= 30, okT0 = dT0 !== null && Math.abs(dT0) <= 3;
+    etat.verifie = true;
+    $('#r-corrige-reel').innerHTML = `<div class="separateur"></div><p class="sous-titre">Comparaison à GEOFON</p>
+      <div class="table-defile"><table class="resultats"><thead><tr><th>Station</th><th>P − P prévue</th><th>S − S prévue</th></tr></thead><tbody>${lignes.join('')}
+      <tr class="${okEpi ? 'ok' : 'ko'}"><td><span class="verdict ${okEpi ? 'ok' : 'ko'}">${okEpi ? '✓' : '✗'}</span> Épicentre</td><td class="n" colspan="2">${dEpi !== null ? `${Math.round(dEpi)} km de celui de GEOFON` : '—'}<br><small style="color:var(--muted)">repère : 30 km</small></td></tr>
+      <tr class="${okT0 ? 'ok' : 'ko'}"><td><span class="verdict ${okT0 ? 'ok' : 'ko'}">${okT0 ? '✓' : '✗'}</span> Heure d'origine</td><td class="n" colspan="2">${dT0 !== null ? signe(dT0, 1) + ' s' : '—'}<br><small style="color:var(--muted)">repère : 3 s</small></td></tr>
+      </tbody></table></div>
+      <p class="verite"><b>GEOFON :</b> ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E, h = ${virg(e.h, 0)} km, origine à ${horloge(t0)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (${e.region || ''}, identifiant ${e.id}).
+      Les arrivées prévues pour cette solution (table de la croûte du cours puis ak135) sont maintenant tracées en vert : un écart de quelques
+      secondes est normal (modèle de Terre moyen, pointés). GEOFON localise avec bien plus de stations : sa solution n'est pas exacte non plus.</p>`;
+    tout();
+  }
+
   // ── Construction et événements ──────────────────────────────────────────
   function construireTraces() {
-    $('#r-traces').innerHTML = STATIONS.map((s, k) => `<div class="r-station"><p class="voie"><b>XX.${s.nom}</b><span id="r-info-${k}"></span></p>`
+    if (!STATIONS.length) { $('#r-traces').innerHTML = '<p class="aide">Chargez un fichier de séisme dans le panneau « Séisme réel ».</p>'; return; }
+    $('#r-traces').innerHTML = STATIONS.map((s, k) => `<div class="r-station"><p class="voie"><b>${s.reseau || 'XX'}.${s.nom}</b><span id="r-info-${k}"></span></p>`
       + `<canvas class="r-canvas" id="r-cv-${k}" data-k="${k}" tabindex="0" aria-label="Station ${s.nom}, trois composantes"></canvas></div>`).join('');
     $$('.r-canvas').forEach(cv => brancherTrace(cv, parseInt(cv.dataset.k, 10)));
   }
@@ -426,7 +589,7 @@ import Sismo from './sismo/signal.js';
         const t = Math.max(0, Math.min(duree(), xVersT(e.offsetX, geometrie(cv))));
         etat.pointes[k][etat.outil] = t;
         etat.outil = etat.outil === 'P' ? 'S' : 'P';
-        if (etat.verifie) { etat.verifie = false; $('#r-corrige').innerHTML = ''; }
+        if (etat.verifie) { etat.verifie = false; $('#r-corrige').innerHTML = ''; $('#r-corrige-reel').innerHTML = ''; }
         relocaliser();
       }
       glisse = null; cv.classList.remove('glisse');
@@ -476,11 +639,14 @@ import Sismo from './sismo/signal.js';
     $('#r-effacer').addEventListener('click', () => {
       etat.pointes = vide(); etat.outil = 'P';
       if (etat.mode === 'explorer') { etat.auto = false; $('#r-auto').checked = false; }
-      if (etat.verifie) { etat.verifie = false; $('#r-corrige').innerHTML = ''; }
+      if (etat.verifie) { etat.verifie = false; $('#r-corrige').innerHTML = ''; $('#r-corrige-reel').innerHTML = ''; }
       relocaliser();
     });
     $('#r-mode-explorer').addEventListener('click', () => changerMode('explorer'));
     $('#r-mode-exercice').addEventListener('click', () => changerMode('exercice'));
+    $('#r-mode-reel').addEventListener('click', () => changerMode('reel'));
+    $('#r-fichier').addEventListener('change', e => { if (e.target.files && e.target.files[0]) chargerFichier(e.target.files[0]); e.target.value = ''; });
+    $('#r-comparer').addEventListener('click', comparer);
     $('#r-verifier').addEventListener('click', verifier);
     $('#r-nouvel-exo').addEventListener('click', nouvelExercice);
 
@@ -502,7 +668,7 @@ import Sismo from './sismo/signal.js';
     carte.addEventListener('pointerup', lacher);
     carte.addEventListener('pointercancel', lacher);
 
-    const redessiner = () => { if (etat.evs.length && !$('#banc-reseau').hidden) tout(); };
+    const redessiner = () => { if ((etat.evs.length || reel()) && !$('#banc-reseau').hidden) tout(); };
     const ro = new ResizeObserver(redessiner);
     ro.observe($('#r-traces')); ro.observe($('#r-carte'));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
@@ -510,12 +676,22 @@ import Sismo from './sismo/signal.js';
   }
   function changerMode(m) {
     if (etat.mode === m) return;
+    const quitteReel = etat.mode === 'reel';
     etat.mode = m;
     $('#r-mode-explorer').setAttribute('aria-pressed', String(m === 'explorer'));
     $('#r-mode-exercice').setAttribute('aria-pressed', String(m === 'exercice'));
+    $('#r-mode-reel').setAttribute('aria-pressed', String(m === 'reel'));
     $('#r-panneau-explorer').hidden = m !== 'explorer';
     $('#r-panneau-exercice').hidden = m !== 'exercice';
+    $('#r-panneau-reel').hidden = m !== 'reel';
     $('#r-carte').classList.toggle('deplacable', m === 'explorer');
+    etat.verifie = false;
+    if (m === 'reel') {
+      if (etat.reel) activerReel();
+      else { STATIONS = []; etat.series = []; etat.pointes = []; etat.evs = []; etat.loc = null; construireTraces(); tout(); }
+      return;
+    }
+    if (quitteReel) { STATIONS = SIMULEES; construireTraces(); }
     if (m === 'exercice') nouvelExercice();
     else { etat.outil = 'P'; plusTard(regenerer); }
   }

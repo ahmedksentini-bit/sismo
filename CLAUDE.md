@@ -239,3 +239,14 @@ la virgule décimale.
     d'anciens modules (la page « En direct » appelait un relais disparu). À relancer après toute modification d'un
     script ou d'une feuille de style, ne jamais modifier la carte à la main ; un script d'entrée n'est importé par aucun
     module (testé).
+36. **Séisme réel** (banc « réseau », mode « Séisme réel ») : la page « En direct » enregistre un séisme (« Enregistrer
+    pour le TP de localisation ») dans un fichier `sismo-seisme` v1 (`src/sismo/dossier.js`) : séisme du catalogue de
+    GEOFON (la référence), stations (position, sensibilité de la verticale, bande), enregistrements miniSEED tels que
+    livrés (base64), trois composantes, d'une minute avant l'origine à cinq minutes après la S de la plus lointaine. La
+    relecture assemble chaque composante sur une grille commune (trous à zéro, moyenne retirée), passe en m/s par la
+    sensibilité de la verticale (amplitudes des horizontales indicatives) et rééchantillonne à la plus petite cadence. La
+    localisation (`src/sismo/localisation.js`) se fait sur la sphère avec la table `data/temps-localisation.json`
+    (`npm run temps-localisation` : croûte du cours jusqu'à 1°, ak135 au-delà de 2°, raccord linéaire ; premières P et S,
+    0 à 100°, h de 0 à 40 km) ; P pondérée 1, S 0,5, t0 analytique, grille ±25° puis ±1° puis ±0,06°. « Comparer à
+    GEOFON » montre l'écart d'épicentre et d'heure d'origine (repères 30 km et 3 s) et trace les arrivées prévues pour
+    la solution de GEOFON, jamais avant.

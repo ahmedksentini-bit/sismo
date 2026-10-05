@@ -23,9 +23,9 @@ const CONSIGNES = {
       "Après chaque paire, regardez la carte (un cercle de rayon R par station) et la droite de Wadati : relevez Vp/Vs (pente + 1) et t0 (intersection avec l'axe).",
       "Lisez la localisation (épicentre, profondeur, heure d'origine, résidus) et comparez-la au séisme simulé. Expliquez pourquoi les cercles ne se coupent pas en un point.",
       "Faites glisser l'épicentre (l'étoile de la carte) hors du réseau : notez la lacune azimutale et l'allongement de la zone compatible. Comparez ensuite un foyer à 5 km et à 25 km.",
-      "En mode Exercice, localisez un séisme inconnu, puis cliquez « Vérifier ».",
+      "En mode Exercice, localisez un séisme inconnu, puis cliquez « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme »), pointez P et S sur chaque station puis cliquez « Comparer à GEOFON » : écart d'épicentre et d'heure d'origine, arrivées prévues pour sa solution.",
     ],
-    rendre: "le tableau des pointés et des résidus, l'épicentre, h, t0 et Vp/Vs, avec un commentaire sur la lacune azimutale.",
+    rendre: "le tableau des pointés et des résidus, l'épicentre, h, t0 et Vp/Vs, avec un commentaire sur la lacune azimutale (et, pour un séisme réel, l'écart à GEOFON).",
   },
   mecanisme: {
     objectif: "Retrouver le mécanisme au foyer à partir des polarités des premières arrivées P : plans nodaux, axes P et T, type de faille.",
