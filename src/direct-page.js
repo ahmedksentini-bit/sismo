@@ -782,7 +782,7 @@ import Sismo from './sismo/signal.js';
   // ── Sismogrammes d'un séisme passé : archives des centres (dataselect), stations réparties en distance ────────
   async function chargerSismogrammes(e) {
     const carte = $('#dr-sismo'), cands = [...new Map([...visibles(), ...etat.suivies].map(s => [ident(s), s])).values()];
-    const lignes = Direct.stationsSeisme(cands, e, 10), { debut, fin } = Direct.fenetreSeisme(e, lignes.map(l => l.distance));
+    const lignes = Direct.stationsSeisme(cands, e, 12), { debut, fin } = Direct.fenetreSeisme(e, lignes.map(l => l.distance));
     const ev = { seisme: e, debut, fin, vue: { t0: debut, t1: fin }, lignes: lignes.map(l => ({ ...l, voie: Direct.voie(3 * 3600 * 1000) })), etat: 'lecture' };
     etat.ev = ev;
     carte.hidden = false;
@@ -826,9 +826,14 @@ import Sismo from './sismo/signal.js';
     const parCentre = new Map(), enregistrements = [], recues = new Set();
     for (const l of avec) { if (!parCentre.has(l.s.centre)) parCentre.set(l.s.centre, []); parCentre.get(l.s.centre).push(l.s); }
     try {
+      const meta = new Map();
       await Promise.all([...parCentre].map(async ([centre, ss]) => {
         const uniq = f => [...new Set(ss.map(f))].join(',');
-        const r = await fetch(api('dataselect', { network: uniq(s => s.reseau), station: uniq(s => s.station), channel: uniq(s => `${s.voie.slice(0, 2)}?`), starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }, centre));
+        const q = { network: uniq(s => s.reseau), station: uniq(s => s.station), channel: uniq(s => `${s.voie.slice(0, 2)}?`) };
+        // sensibilité et orientation de chaque composante (les horizontales ont les leurs)
+        const rm = await fetch(api('station', { ...q, level: 'channel', format: 'text', starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }, centre)).catch(() => null);
+        if (rm && rm.ok && rm.status !== 204) for (const v of Fdsn.voies(await rm.text())) if (!v.unite || /^m\/s$/i.test(v.unite)) meta.set(`${v.reseau}.${v.station}.${v.emplacement}.${v.voie}`, { sensibilite: v.sensibilite, azimut: v.azimut, pendage: v.pendage });
+        const r = await fetch(api('dataselect', { ...q, starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }, centre));
         if (r.status === 204) return;
         if (!r.ok) throw new Error(`${nomCentre(centre)} : HTTP ${r.status}`);
         const voulues = new Map(ss.map(s => [`${s.reseau}.${s.station}.${s.emplacement}`, s.voie.slice(0, 2)]));
@@ -837,7 +842,11 @@ import Sismo from './sismo/signal.js';
           if (voulues.get(cle) === enr.voie.slice(0, 2)) { enregistrements.push(enr.brut.slice()); recues.add(cle); }
         }
       }));
-      const stations = avec.map(l => l.s).filter(s => recues.has(`${s.reseau}.${s.station}.${s.emplacement}`));
+      const stations = avec.map(l => l.s).filter(s => recues.has(`${s.reseau}.${s.station}.${s.emplacement}`)).map(s => {
+        const composantes = {};
+        for (const [cle, m] of meta) if (cle.startsWith(`${s.reseau}.${s.station}.${s.emplacement}.${s.voie.slice(0, 2)}`)) composantes[cle.split('.')[3]] = m;
+        return Object.keys(composantes).length ? { ...s, composantes } : s;
+      });
       if (stations.length < 3) throw new Error('moins de trois stations reçues');
       const texte = Dossier.ecrire({ seisme: { ...e, catalogue: 'GEOFON' }, debut, fin, stations, enregistrements });
       const nom = `seisme-${new Date(e.temps).toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-')}-${(e.region || 'region').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 40)}.json`;

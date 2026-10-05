@@ -430,3 +430,10 @@ aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; 
 /* banc « réseau », mode « Séisme réel » : choix du fichier par un bouton */
 .bouton-fichier { position: relative; display: inline-block; margin: 4px 0 6px; overflow: hidden; }
 .bouton-fichier input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+/* banc « réseau », séisme réel : polarités et sphère focale */
+.pol-stations { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 14px; margin: 10px 0; }
+.pol-ligne { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pol-ligne small { flex: 1; color: var(--muted); font: 11.5px var(--mono); }
+.pol-ligne .outil { min-width: 34px; padding: 4px 8px; }
+#r-sphere { display: block; width: 100%; max-width: 380px; height: 360px; margin: 0 auto; }
+tr.hors td { color: var(--muted); }

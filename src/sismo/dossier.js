@@ -1,9 +1,12 @@
 // src/sismo/dossier.js — fichier d'un séisme réel (format « sismo-seisme », version 1), écrit par la page « En
 // direct » (bouton « Enregistrer pour le TP ») et relu par le banc « réseau » (mode « Séisme réel ») : le séisme du
 // catalogue (la référence), la fenêtre lue, les stations (position, sensibilité, bande de la voie) et leurs
-// enregistrements miniSEED tels que les centres les ont livrés (base64), trois composantes par station. La lecture
-// assemble chaque composante sur une grille commune (trous à zéro, valeur moyenne retirée), convertit les coups en m/s
-// par la sensibilité de la verticale et rééchantillonne toutes les stations à la plus petite cadence. Solveurs purs.
+// enregistrements miniSEED tels que les centres les ont livrés (base64), trois composantes par station, avec la
+// sensibilité et l'orientation de chacune (composantes, facultatif : sans elles, la sensibilité de la verticale sert aux
+// trois et les amplitudes des horizontales ne sont qu'indicatives). La lecture assemble chaque composante sur une grille
+// commune (trous à zéro, valeur moyenne retirée), convertit les coups en m/s par sa sensibilité, remet la verticale vers
+// le haut (pendage −90°), tourne les horizontales vers le nord et l'est quand leurs azimuts sont connus, et rééchantillonne
+// toutes les stations à la plus petite cadence. Solveurs purs.
 import MiniSeed from './miniseed.js';
 
 const Dossier = (() => {
@@ -34,7 +37,11 @@ const Dossier = (() => {
       format: FORMAT, version: VERSION, source,
       seisme: { id: e.id, temps: iso(e.temps), lat: e.lat, lon: e.lon, h: e.h, mag: e.mag, typeMag: e.typeMag || '', region: e.region || '', catalogue: e.catalogue || 'GEOFON' },
       debut: iso(debut), fin: iso(fin),
-      stations: stations.map(s => ({ reseau: s.reseau, station: s.station, emplacement: s.emplacement || '', bande: s.voie.slice(0, 2), lat: s.lat, lon: s.lon, altitude: s.altitude ?? null, sensibilite: s.sensibilite, centre: s.centre || '', pays: s.pays ? s.pays.nom || s.pays : '' })),
+      stations: stations.map(s => ({
+        reseau: s.reseau, station: s.station, emplacement: s.emplacement || '', bande: s.voie.slice(0, 2), lat: s.lat, lon: s.lon, altitude: s.altitude ?? null,
+        sensibilite: s.sensibilite, centre: s.centre || '', pays: s.pays ? s.pays.nom || s.pays : '',
+        ...(s.composantes ? { composantes: s.composantes } : {}),
+      })),
       miniseed: versBase64(tout),
     });
   }
@@ -87,7 +94,7 @@ const Dossier = (() => {
       }
       return { fs, x, voie: recs[0].voie };
     };
-    const stations = [], ecartees = [];
+    const stations = [], ecartees = [], RAD = Math.PI / 180;
     for (const s of j.stations) {
       const comps = parCle.get(`${s.reseau}.${s.station}.${s.emplacement || ''}`), bande = String(s.bande || '');
       const garder = l => l.filter(r => r.voie.startsWith(bande));
@@ -97,18 +104,39 @@ const Dossier = (() => {
     if (!stations.length) throw new Error('aucune station du fichier n\'a de composante verticale');
     const fsc = Math.min(...stations.map(s => s.brut[0].fs)), dt = 1 / fsc, n = Math.round(((fin - debut) / 1000) * fsc);
     for (const s of stations) {
+      const meta = v => (s.composantes && v && s.composantes[v]) || {};
       s.voies = s.brut.map(b => (b ? b.voie : null));
-      s.series = s.brut.map(b => {
+      // sensibilité propre à chaque composante, sinon celle de la verticale (amplitudes approchées)
+      s.sensibilites = s.voies.map(v => (meta(v).sensibilite > 0 ? meta(v).sensibilite : null));
+      s.approchee = s.voies.some((v, c) => v && s.sensibilites[c] === null);
+      s.series = s.brut.map((b, c) => {
         const out = new Float64Array(n);
         if (!b) return out;
         // moyenne retirée sur les échantillons présents, trous à zéro, coups → m/s
-        let m = 0, c = 0;
-        for (const v of b.x) if (!Number.isNaN(v)) { m += v; c++; }
-        m = c ? m / c : 0;
-        const y = reechantillonner(Float64Array.from(b.x, v => (Number.isNaN(v) ? 0 : (v - m) / s.sensibilite)), b.fs, fsc);
+        let m = 0, k = 0;
+        for (const v of b.x) if (!Number.isNaN(v)) { m += v; k++; }
+        m = k ? m / k : 0;
+        const sens = s.sensibilites[c] || s.sensibilite;
+        const y = reechantillonner(Float64Array.from(b.x, v => (Number.isNaN(v) ? 0 : (v - m) / sens)), b.fs, fsc);
         out.set(y.subarray(0, n));
         return out;
       });
+      // verticale orientée vers le bas (pendage +90°) : remise vers le haut, pour que la polarité se lise directement
+      const pz = meta(s.voies[0]).pendage;
+      s.retournee = Number.isFinite(pz) && pz > 0;
+      if (s.retournee) s.series[0] = s.series[0].map(v => -v);
+      // horizontales d'azimuts connus (1 et 2, ou N et E décalés) : rotation vers le nord et l'est
+      const a1 = meta(s.voies[1]).azimut, a2 = meta(s.voies[2]).azimut;
+      s.tournee = false;
+      if (s.voies[1] && s.voies[2] && Number.isFinite(a1) && Number.isFinite(a2) && (a1 % 360 !== 0 || a2 % 360 !== 90)) {
+        const ecart = (((a2 - a1) % 360) + 360) % 360;
+        if (Math.abs(ecart - 90) < 5 || Math.abs(ecart - 270) < 5) {
+          const [h1, h2] = [s.series[1], s.series[2]], N = new Float64Array(n), E = new Float64Array(n);
+          for (let i = 0; i < n; i++) { N[i] = h1[i] * Math.cos(a1 * RAD) + h2[i] * Math.cos(a2 * RAD); E[i] = h1[i] * Math.sin(a1 * RAD) + h2[i] * Math.sin(a2 * RAD); }
+          s.series[1] = N; s.series[2] = E; s.tournee = true;
+          s.voies = [s.voies[0], `${s.voies[1].slice(0, 2)}N`, `${s.voies[2].slice(0, 2)}E`];
+        }
+      }
       delete s.brut;
     }
     return {

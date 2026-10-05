@@ -84,6 +84,8 @@ http.createServer((req, res) => {
     if (centre === 'geofon' && PANNE === 'lent' && !q.get('network')) { setTimeout(() => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end(`${ENTETE}\n${c.voies.join('\n')}\n`); }, 40000); return; }
     if (!c) { res.writeHead(204); res.end(); return; }
     if (q.get('level') === 'network') texte(`#Network | Description | StartTime | EndTime | TotalStations\n${c.reseaux.join('\n')}\n`);
+    // « BH? » : les trois composantes, avec leur azimut et leur pendage
+    else if ((q.get('channel') || '').includes('?')) texte(`${ENTETE}\n${c.voies.flatMap(l => [['Z', '0.0', '-90.0'], ['N', '0.0', '0.0'], ['E', '90.0', '0.0']].map(([x, az, dip]) => { const f = l.split('|'); f[3] = 'BH' + x; f[8] = az; f[9] = dip; return f.join('|'); })).join('\n')}\n`);
     else texte(`${ENTETE}\n${c.voies.join('\n')}\n`);
   } else if (u.pathname.includes('/event/')) texte(SEISMES);
   else if (u.pathname.includes('/dataselect/')) {

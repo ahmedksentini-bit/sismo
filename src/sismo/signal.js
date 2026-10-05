@@ -482,6 +482,17 @@ const Sismo = (() => {
     return { baz, rectilinearite: l1 > 0 ? 1 - l2 / l1 : 0 };
   }
 
+  // Wood-Anderson depuis une vitesse du sol mesurée (m/s, pas dt) : déplacement du Wood-Anderson (m, grandissement
+  // statique 1), par l'accélération i·2πf·V ; valeur moyenne retirée, complétée par des zéros jusqu'à une puissance de 2.
+  function woodAndersonVitesse(v, dt) {
+    const n = v.length, N = puissance2(Math.ceil(n * 1.25)), x = new Float64Array(N);
+    let m = 0;
+    for (let i = 0; i < n; i++) m += v[i];
+    m /= n || 1;
+    for (let i = 0; i < n; i++) x[i] = v[i] - m;
+    return versTemps(versSpectre(x), f => cmul(deriver(f), woodAndersonAcc(f)), dt).subarray(0, n);
+  }
+
   // Vérité terrain de la magnitude locale : mesure sur le Wood-Anderson sans bruit.
   function mlVraie(ev) {
     const { n, dt } = ev, N = puissance2(Math.ceil(n * 1.25)), res = {};
@@ -575,7 +586,7 @@ const Sismo = (() => {
   return {
     predicteur, localiser, wadati, gapAzimutal, azimut,
     aleatoire, fft, MODELE, kmS, WA, NIVEAUX, CAPTEURS, temps, source,
-    generer, enregistrer, convertir, distanceSP, origineDepuis, ML, azimutP, mlVraie, passeBande,
+    generer, enregistrer, convertir, distanceSP, origineDepuis, ML, azimutP, mlVraie, woodAndersonVitesse, passeBande,
     stochastique, saragoniHart, puissance2, etalement: G, Q, ampSite, Reff, compenserDC, versSpectre, versTemps, integrer,
   };
 })();

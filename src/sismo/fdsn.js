@@ -47,7 +47,7 @@ const Fdsn = (() => {
   function voies(texte) {
     return tableau(texte).map(o => ({
       reseau: o.network, station: o.station, emplacement: o.location === '--' ? '' : o.location, voie: o.channel,
-      lat: +o.latitude, lon: +o.longitude, altitude: +o.elevation, capteur: o.sensordescription || '',
+      lat: +o.latitude, lon: +o.longitude, altitude: +o.elevation, capteur: o.sensordescription || '', azimut: o.azimuth === '' ? null : +o.azimuth, pendage: o.dip === '' ? null : +o.dip,
       sensibilite: +o.scale, frequenceSensibilite: +o.scalefreq, unite: o.scaleunits || '', cadence: +o.samplerate,
       debut: iso(o.starttime), fin: o.endtime ? iso(o.endtime) : null,
     })).filter(v => v.reseau && v.station && Number.isFinite(v.lat) && Number.isFinite(v.lon));

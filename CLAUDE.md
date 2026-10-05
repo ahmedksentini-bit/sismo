@@ -244,9 +244,17 @@ la virgule décimale.
     GEOFON (la référence), stations (position, sensibilité de la verticale, bande), enregistrements miniSEED tels que
     livrés (base64), trois composantes, d'une minute avant l'origine à cinq minutes après la S de la plus lointaine. La
     relecture assemble chaque composante sur une grille commune (trous à zéro, moyenne retirée), passe en m/s par la
-    sensibilité de la verticale (amplitudes des horizontales indicatives) et rééchantillonne à la plus petite cadence. La
+    sensibilité de chaque composante (celle de la verticale à défaut) et rééchantillonne à la plus petite cadence. La
     localisation (`src/sismo/localisation.js`) se fait sur la sphère avec la table `data/temps-localisation.json`
     (`npm run temps-localisation` : croûte du cours jusqu'à 1°, ak135 au-delà de 2°, raccord linéaire ; premières P et S,
     0 à 100°, h de 0 à 40 km) ; P pondérée 1, S 0,5, t0 analytique, grille ±25° puis ±1° puis ±0,06°. « Comparer à
     GEOFON » montre l'écart d'épicentre et d'heure d'origine (repères 30 km et 3 s) et trace les arrivées prévues pour
-    la solution de GEOFON, jamais avant.
+    la solution de GEOFON, jamais avant. Le fichier porte la sensibilité, l'azimut et le pendage de chaque composante
+    (`composantes`, facultatif : sans eux, sensibilité de la verticale et amplitudes marquées « ≈ ») ; la relecture remet la
+    verticale vers le haut et tourne 1/2 vers N/E. Magnitude (`src/sismo/reel.js`) : Wood-Anderson depuis la vitesse
+    (`Sismo.woodAndersonVitesse`, identique à la vérité du générateur depuis l'accélération, testé), amplitude maximale de
+    P − 1 s à S + max(30 s ; 1,5 (S − P)), `Sismo.ML` du cours, moyenne N/E puis des stations de 10 à 600 km. Mécanisme :
+    polarités C/D de la première P (à la main, ou « Lire les polarités » : premier écart de plus de 3 σ du bruit dans la
+    seconde qui suit le pointé), placées par l'azimut et l'angle de départ (table `iP` : croûte du cours sous 2°, départ
+    ak135 au-delà, nœud le plus proche) pour la solution de l'étudiant ; `Mecanisme.inverser` au pas de 10°, 6 polarités
+    au moins.

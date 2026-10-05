@@ -10,6 +10,7 @@ import L from '../src/sismo/localisation.js';
 import M from '../src/sismo/miniseed.js';
 import G from '../src/sismo/globe.js';
 import S from '../src/sismo/signal.js';
+import R from '../src/sismo/reel.js';
 
 const T = JSON.parse(readFileSync(new URL('../data/temps-localisation.json', import.meta.url), 'utf-8'));
 const brut = new Uint8Array(readFileSync(new URL('./references/miniseed/steim2.mseed', import.meta.url)));
@@ -77,4 +78,53 @@ test('localisation sur la sphère : un séisme synthétique est retrouvé (épic
   assert.ok(r.gap > 0 && r.gap < 360);
   // trop peu de lectures
   assert.equal(L.localiser(st.slice(0, 2), lec.slice(0, 2), T), null);
+});
+
+test('composantes : sensibilité propre, verticale remise vers le haut, horizontales tournées vers le nord et l\'est', () => {
+  const recs = M.lire(brut), debut = recs[0].debut, fin = debut + 20000, enregistrements = [];
+  for (const r of recs) enregistrements.push(r.brut, voie(r.brut, 'BH1'), voie(r.brut, 'BH2'));
+  const f = D.lire(D.ecrire({
+    seisme: { id: 'essai', temps: debut, lat: 37, lon: 22, h: 10, mag: 4 }, debut, fin, enregistrements,
+    stations: [{ reseau: 'GE', station: 'TEST', emplacement: '00', voie: 'BHZ', lat: 38, lon: 23, sensibilite: 2e9,
+      composantes: { BHZ: { sensibilite: 2e9, azimut: 0, pendage: 90 }, BH1: { sensibilite: 1e9, azimut: 30, pendage: 0 }, BH2: { sensibilite: 1e9, azimut: 120, pendage: 0 } } }],
+  }));
+  const s = f.stations[0], x = Float64Array.from(recs.flatMap(r => Array.from(r.echantillons))).subarray(0, 400), m = x.reduce((a, b) => a + b, 0) / x.length;
+  assert.ok(s.retournee && s.tournee && !s.approchee);
+  assert.deepEqual(s.voies, ['BHZ', 'BHN', 'BHE']);
+  const c = Math.PI / 180;
+  for (const i of [5, 120, 333]) {
+    const y = (x[i] - m) / 1e9;
+    assert.ok(Math.abs(s.series[0][i] + (x[i] - m) / 2e9) < 1e-15, 'verticale');
+    assert.ok(Math.abs(s.series[1][i] - y * (Math.cos(30 * c) + Math.cos(120 * c))) < 1e-15, 'nord');
+    assert.ok(Math.abs(s.series[2][i] - y * (Math.sin(30 * c) + Math.sin(120 * c))) < 1e-15, 'est');
+  }
+});
+
+test('magnitude locale d\'une station : Wood-Anderson depuis la vitesse = vérité du générateur (depuis l\'accélération)', () => {
+  const ev = S.generer({ Mw: 3.8, delta: 60, h: 10, baz: 40, graine: 5 }), vrai = S.mlVraie(ev);
+  const wa = ['N', 'E'].map(c => S.woodAndersonVitesse(ev.vit[c], ev.dt));
+  const r = R.magnitudeStation(wa, ev.dt, 0, ev.n * ev.dt, ev.tt.R);
+  assert.ok(Math.abs(r.N.Anm / vrai.N.A - 1) < 1e-6 && Math.abs(r.E.Anm / vrai.E.A - 1) < 1e-6); // arrondis des FFT
+  assert.ok(Math.abs(r.ML - vrai.ML) < 1e-6 && r.domaine);
+  const reseau = R.magnitudeReseau([r, { ...r, ML: r.ML + 0.2 }, { ...r, R: 900, domaine: false, ML: 9 }]);
+  assert.equal(reseau.n, 2);
+  assert.ok(Math.abs(reseau.ML - (r.ML + 0.1)) < 1e-12);
+});
+
+test('polarité de la première P : sens du premier écart qui sort du bruit, 0 si rien ne sort', () => {
+  const u = S.aleatoire(3), dt = 0.01, n = 1000, tP = 6;
+  const trace = signe => Float64Array.from({ length: n }, (_, i) => 0.01 * u.gauss() + (i * dt >= tP ? signe * (1 - Math.exp(-(i * dt - tP) / 0.05)) : 0));
+  assert.equal(R.polarite(trace(1), dt, tP), 1);
+  assert.equal(R.polarite(trace(-1), dt, tP), -1);
+  assert.equal(R.polarite(trace(0), dt, tP), 0);
+});
+
+test('angle de départ de la première P : croûte du cours sous 2°, ak135 au-delà', () => {
+  const Me = { emergence: (d, h) => import('../src/sismo/mecanisme.js').then(m => m.default.emergence(d, h)) };
+  return Me.emergence(0.5 * G.R * Math.PI / 180, 10).then(e => {
+    assert.ok(Math.abs(L.emergence(T, 10, 0.5) - e.i) < 0.01);
+    const p = G.arrivees('P', 10, 30)[0];
+    assert.ok(Math.abs(L.emergence(T, 10, 30) - p.depart) < 0.01);
+    assert.ok(L.emergence(T, 10, 0.5) > 90 && L.emergence(T, 10, 30) < 90, 'Pg monte, P télésismique descend');
+  });
 });
