@@ -277,7 +277,12 @@ la virgule décimale.
     heures, ou au temps d'un rejeu (« Rejouer la propagation » : × 1 à × 60, pause, curseur, jusqu'aux ondes de Rayleigh à la
     station la plus lointaine) ; les stations de la carte s'allument au passage de la P et de la S prévues dans la même table ;
     un séisme réel de moins de 30 min, nouveau et plus récent que le choisi, est choisi tout seul (jamais pendant un rejeu) ;
-    pendant un rejeu, un trait rouge suit le temps sur les sismogrammes du même séisme.
+    pendant un rejeu, un trait rouge suit le temps sur les sismogrammes du même séisme. **Tableau de bord** : à partir de
+    1 200 × 600 px (même requête dans `lecteur.css` et `TABLEAU` de `src/direct-page.js`), la page tient dans l'écran sans
+    défilement : grille de trois colonnes (source, réseaux, à retenir | carte, traces | séismes, arrivées ; un séisme ouvert
+    met ses sismogrammes à droite et les arrivées à gauche, par `:has`), chaque panneau défile à l'intérieur ; les canevas
+    prennent la hauteur de leur cadre `.dr-defile` (`hauteurCanevas`, au moins une hauteur de lisibilité, le cadre défile
+    alors) ; consigne, légende de la carte et fiche s'ouvrent par-dessus (Échap les ferme). Téléphone et tablette : inchangés.
 35. **Versions** (`tools/versions.mjs`, `npm run versions`) : chaque page qui charge des modules porte en tête une carte
     d'import (`<script type="importmap">`) qui donne à chaque module de `src/` l'empreinte de son contenu (`?v=`, 10
     caractères de SHA-256) ; scripts d'entrée et feuilles de style la portent dans leur attribut. Les pages HTML ne sont

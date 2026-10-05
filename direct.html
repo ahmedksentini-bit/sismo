@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=17f7f606d6">
+<link rel="stylesheet" href="lecteur.css?v=dc984b5d0e">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=9aad13dfd7",
+  "./src/direct-page.js": "./src/direct-page.js?v=b4f1857e46",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -133,7 +133,7 @@
 }}
 </script>
 </head>
-<body>
+<body class="page-direct">
 
 <header class="topbar">
   <div class="brand">
@@ -158,12 +158,13 @@
 
   <div class="poste" id="poste-direct">
     <section class="carte consigne" aria-label="Ce que vous allez faire">
-      <details open><summary><h2>Ce que vous allez faire<small>Observation libre · données réelles des réseaux de la Méditerranée</small></h2></summary>
+      <details open id="dr-consigne"><summary><h2>Ce que vous allez faire<small>Observation libre · données réelles des réseaux de la Méditerranée</small></h2></summary>
+        <div class="consigne-corps">
         <p><b>Objectif.</b> Voir arriver les ondes de vrais séismes aux stations de la Méditerranée et les relier à ce que les
           travaux pratiques simulent : P, S et ondes de surface, temps de trajet ak135, détection automatique.</p>
         <ol class="experiences">
           <li>Attendez que les traces se remplissent (quelques minutes de données récentes arrivent d'abord). Repérez la latence de chaque station et le bruit de la houle (microséisme) sans filtre, puis avec le filtre « 0,5 – 5 Hz ».</li>
-          <li>Touchez une station (triangle) sur la carte : sa fiche s'ouvre sous la carte, avec sa trace ; « Suivre cette station » l'ajoute aux traces (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
+          <li>Touchez une station (triangle) sur la carte : sa fiche s'ouvre, avec sa trace ; « Suivre cette station » l'ajoute aux traces (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
           <li>Touchez un séisme (disque) sur la carte, ou une ligne de « Séismes » : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et, s'il date de moins de deux heures, les fronts de ses ondes P, S et de Rayleigh s'étendent sur la carte en temps réel ; les stations s'allument au passage de la P et de la S. Un séisme publié par GEOFON pendant que la page est ouverte est choisi tout seul. Comparez les arrivées prévues aux arrivées observées.</li>
           <li>Pour un séisme plus ancien, « Rejouer la propagation » (dans sa fiche ou au-dessus de ses sismogrammes) rejoue ses fronts en accéléré : vitesse, pause, curseur du temps ; ses sismogrammes suivent avec un trait rouge.</li>
           <li>Pour un séisme lointain (« Monde, M ≥ 5,5 »), passez la fenêtre à 60 minutes et le filtre à « 18 – 22 s » : les ondes de surface arrivent bien après P et S.</li>
@@ -172,18 +173,20 @@
         <p class="a-rendre"><b>À noter.</b> Les données viennent des centres de données (GEOFON, INGV, Epos-France…) à travers un
           relais du site ; sans connexion, la page passe en mode « Démo (simulée) » (séisme fictif, signaux simulés), clairement
           signalé.</p>
+        </div>
       </details>
     </section>
 
     <div class="colonne">
-      <section class="carte" aria-label="Carte des stations">
-        <h2>Carte des stations<small>Triangles : stations sismologiques, colorées par la vitesse maximale du sol des 60 dernières secondes (filtrée de 0,5 à 5 Hz). Disques : séismes des 7 derniers jours. Cercles : fronts des ondes P, S et de Rayleigh du séisme choisi, en temps réel ou en rejeu. Touchez un triangle ou un disque : sa fiche s'ouvre sous la carte</small></h2>
-        <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte ; pincer ou la molette zooment, glisser déplace la carte"></canvas>
+      <section class="carte" aria-label="Carte des stations" id="dr-p-carte">
+        <h2>Carte des stations<small>Triangles : stations sismologiques, colorées par la vitesse maximale du sol des 60 dernières secondes (filtrée de 0,5 à 5 Hz). Disques : séismes des 7 derniers jours. Cercles : fronts des ondes P, S et de Rayleigh du séisme choisi, en temps réel ou en rejeu. Touchez un triangle ou un disque : sa fiche s'ouvre sous la carte (par-dessus sur grand écran)</small></h2>
+        <div class="dr-defile"><canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte ; pincer ou la molette zooment, glisser déplace la carte"></canvas></div>
         <div class="outils outils-zoom">
           <div class="segments compact" role="group" aria-label="Zoom de la carte">
             <button type="button" id="dr-carte-plus" aria-label="Zoomer la carte">+</button><button type="button" id="dr-carte-moins" aria-label="Dézoomer la carte">−</button><button type="button" id="dr-carte-tout">Vue d'ensemble</button>
           </div>
-          <span class="aide">Pincez (ou molette) pour zoomer, glissez pour déplacer, double-touchez pour agrandir.</span>
+          <button type="button" class="outil neutre" id="dr-legende-bouton" aria-expanded="false" aria-controls="dr-legende-carte">Légende</button>
+          <span class="aide explication">Pincez (ou molette) pour zoomer, glissez pour déplacer, double-touchez pour agrandir.</span>
         </div>
         <div class="outils outils-rejeu" id="dr-rejeu" hidden>
           <button type="button" class="outil" id="dr-rejeu-pause">Pause</button>
@@ -198,7 +201,7 @@
         <p class="legende legende-carte" id="dr-legende-carte"></p>
         <div class="fiche" id="dr-fiche" hidden aria-live="polite"></div>
       </section>
-      <section class="carte" aria-label="Traces en temps réel">
+      <section class="carte" aria-label="Traces en temps réel" id="dr-p-traces">
         <h2>Traces en temps réel<small>Composante verticale, vitesse du sol (µm/s) ; traits verticaux : arrivées prévues du séisme choisi ; triangles : déclenchements STA/LTA</small></h2>
         <div class="outils">
           <div class="segments compact" role="group" aria-label="Fenêtre">
@@ -214,12 +217,12 @@
           <button type="button" class="outil" id="dr-direct" hidden>Revenir au direct</button>
           <span class="curseur-lecture" id="dr-curseur">—</span>
         </div>
-        <canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas>
-        <p class="aide">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite. Zoom : boutons + et −, pincement ou Ctrl + molette ; glissez de côté pour remonter dans le temps (70 minutes au plus), « Revenir au direct » pour suivre de nouveau.</p>
+        <div class="dr-defile"><canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas></div>
+        <p class="aide explication">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite. Zoom : boutons + et −, pincement ou Ctrl + molette ; glissez de côté pour remonter dans le temps (70 minutes au plus), « Revenir au direct » pour suivre de nouveau.</p>
       </section>
       <section class="carte" aria-label="Sismogrammes du séisme" id="dr-sismo" hidden>
         <h2>Sismogrammes du séisme choisi<small id="dr-ev-titre"></small></h2>
-        <p class="aide">Enregistrements lus dans les archives des centres de données (services FDSN), pour des stations réparties
+        <p class="aide explication">Enregistrements lus dans les archives des centres de données (services FDSN), pour des stations réparties
           en distance : composante verticale, vitesse du sol (µm/s), une échelle par trace, temps comptés depuis l'origine du
           séisme. Traits verticaux : arrivées prévues par le modèle ak135 (P, S, ondes de surface LR). Zoom : boutons, pincement ou
           Ctrl + molette, double toucher ; glissez de côté pour vous déplacer.</p>
@@ -235,12 +238,12 @@
           <button type="button" class="outil neutre" id="dr-ev-fermer">Fermer</button>
         </div>
         <p class="aide" id="dr-ev-etat"></p>
-        <div class="ev-cadre"><canvas id="dr-ev-traces" aria-label="Sismogrammes du séisme choisi, rangés par distance"></canvas><div id="dr-ev-curseur" hidden></div></div>
+        <div class="dr-defile"><div class="ev-cadre"><canvas id="dr-ev-traces" aria-label="Sismogrammes du séisme choisi, rangés par distance"></canvas><div id="dr-ev-curseur" hidden></div></div></div>
       </section>
     </div>
 
     <aside class="colonne">
-      <section class="carte" aria-label="Connexion">
+      <section class="carte" aria-label="Connexion" id="dr-p-source">
         <p class="sous-titre">Source des données</p>
         <div class="segments" role="group" aria-label="Source des données">
           <button type="button" data-dr-mode="seedlink" aria-pressed="true">Temps réel</button>
@@ -252,15 +255,15 @@
         <p class="sous-titre" style="margin-top:14px">Journal de connexion</p>
         <ul class="journal" id="dr-journal"></ul>
       </section>
-      <section class="carte" aria-label="Réseaux">
+      <section class="carte" aria-label="Réseaux" id="dr-p-reseaux">
         <p class="sous-titre">Réseaux</p>
-        <p class="aide">Stations en service et en libre accès des centres de données européens et américains (services web FDSN).
+        <p class="aide explication">Stations en service et en libre accès des centres de données européens et américains (services web FDSN).
           Cochez un réseau pour afficher ses stations sur la carte ; deux d'entre elles rejoignent les traces.</p>
         <p class="aide" id="dr-tunisie"></p>
         <div id="dr-reseaux"><p class="aide">Recherche des stations…</p></div>
         <details class="dr-centres"><summary>Centres interrogés</summary><ul class="journal" id="dr-centres"></ul></details>
       </section>
-      <section class="carte" aria-label="Séismes">
+      <section class="carte" aria-label="Séismes" id="dr-p-seismes">
         <p class="sous-titre">Séismes</p>
         <div class="segments" role="group" aria-label="Catalogue" style="margin-bottom:10px">
           <button type="button" data-dr-catalogue="med" aria-pressed="true">Méditerranée, M ≥ 2,5</button>
@@ -270,11 +273,11 @@
         <div class="table-defile"><table class="resultats" id="dr-seismes"></table></div>
         <p class="aide" id="dr-seismes-info"></p>
       </section>
-      <section class="carte" aria-label="Arrivées prévues">
+      <section class="carte" aria-label="Arrivées prévues" id="dr-p-arrivees">
         <p class="sous-titre">Arrivées prévues aux stations suivies</p>
         <div id="dr-arrivees"><p class="aide">Choisissez un séisme.</p></div>
       </section>
-      <section class="carte retenir" aria-label="À retenir">
+      <section class="carte retenir" aria-label="À retenir" id="dr-p-retenir">
         <h2>À retenir</h2>
         <ul class="notes-loc">
           <li><b>SeedLink</b> : les stations envoient leurs données en paquets miniSEED de 512 octets ; un centre (GEOFON, INGV…) les redistribue en quelques secondes. Un navigateur ne parle pas SeedLink : une petite fonction du site sert de relais.</li>
@@ -289,6 +292,6 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="src/direct-page.js?v=9aad13dfd7"></script>
+<script type="module" src="src/direct-page.js?v=b4f1857e46"></script>
 </body>
 </html>
