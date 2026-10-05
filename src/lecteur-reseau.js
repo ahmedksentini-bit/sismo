@@ -1,8 +1,8 @@
 import Sismo from './sismo/signal.js';
 import Direct from './sismo/direct.js';
-import Dossier from './sismo/dossier.js';
 import Localisation from './sismo/localisation.js';
 import Reel from './sismo/reel.js';
+import SeismeReel from './seisme-reel.js';
 import Mecanisme from './sismo/mecanisme.js';
 
 // src/lecteur-reseau.js — banc « réseau » : quatre stations, pointés P/S, cercles, Wadati, localisation sur grille.
@@ -31,7 +31,7 @@ import Mecanisme from './sismo/mecanisme.js';
     exo: null, auto: false, phases: true, // pointés automatiques décochés : l'étudiant pointe lui-même
     filtre: 'aucun', outil: 'P', vue: [0, 1], pointes: STATIONS.map(() => ({ P: null, S: null })), evs: [], recs: [], series: [],
     t0: 0, n: 0, dt: 0.01, debutUTC: 0, loc: null, wad: null, verifie: false, curseurX: null,
-    reel: null, table: null, cotes: null, wa: null, polarites: [], meca: null, messageMeca: '',
+    reel: null, table: null, cotes: null, wa: null, polarites: [], meca: null, messageMeca: '', version: 0, // version lue de l'état partagé
   };
   const reel = () => etat.mode === 'reel';
   const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
@@ -87,7 +87,10 @@ import Mecanisme from './sismo/mecanisme.js';
   function relocaliser() {
     const lec = etat.pointes.map(p => ({ tP: p.P, tS: p.S !== null && p.P !== null && p.S > p.P ? p.S : null }));
     etat.loc = reel() ? (etat.table ? Localisation.localiser(STATIONS, lec, etat.table) : null) : SM.localiser(STATIONS, lec);
-    if (reel()) etat.meca = null; // la géométrie des rais a changé : inversion à refaire
+    if (reel()) {
+      etat.meca = null; // la géométrie des rais a changé : inversion à refaire
+      etat.version = SeismeReel.publier({ pointes: etat.pointes, polarites: etat.polarites, solution: etat.loc });
+    }
     etat.wad = SM.wadati(lec);
     tout();
   }
@@ -514,26 +517,36 @@ import Mecanisme from './sismo/mecanisme.js';
     try {
       if (fichier.size > 40 * 1024 * 1024) throw new Error('fichier trop gros (40 Mo au plus)');
       info.textContent = 'Lecture du fichier…';
-      const [f, table, cotes] = await Promise.all([
-        fichier.text().then(t => Dossier.lire(t)),
-        etat.table || fetch('data/temps-localisation.json').then(r => r.json()),
-        etat.cotes || fetch('data/cotes-mediterranee.json').then(r => r.json()).catch(() => null),
-      ]);
-      etat.table = table; etat.cotes = cotes; etat.reel = f;
+      // fichier partagé avec les bancs « mécanisme » et « source » (src/seisme-reel.js)
+      const [c, cotes] = await Promise.all([SeismeReel.charger(fichier), etat.cotes || chargerCotes()]);
+      etat.table = c.table; etat.cotes = cotes; etat.reel = c.dossier;
       activerReel();
     } catch (err) {
       info.textContent = `Fichier refusé : ${err.message || err}.`;
     }
   }
+  const chargerCotes = () => fetch('data/cotes-mediterranee.json').then(r => r.json()).catch(() => null);
+  // Séisme chargé ou polarités modifiées dans un autre banc : reprise de l'état partagé (pointés et polarités compris).
+  function reprendre() {
+    const c = SeismeReel.courant();
+    if (!c || c.version === etat.version) return false;
+    if (c.dossier !== etat.reel) {
+      etat.reel = c.dossier; etat.table = c.table;
+      if (!etat.cotes) chargerCotes().then(x => { etat.cotes = x; if (reel()) dessinerCarte(); });
+      activerReel();
+    } else { etat.pointes = c.pointes.map(p => ({ ...p })); etat.polarites = c.polarites.slice(); etat.version = c.version; relocaliser(); }
+    return true;
+  }
   function activerReel() {
-    const f = etat.reel;
+    const f = etat.reel, c = SeismeReel.courant(), partage = c && c.dossier === f;
     STATIONS = f.stations.map(st => ({ nom: st.station, reseau: st.reseau, lat: st.lat, lon: st.lon, pays: st.pays, voies: st.voies }));
     etat.dt = f.dt; etat.n = f.n; etat.t0 = 0; etat.evs = [];
     etat.debutUTC = (((f.debut % 86400000) + 86400000) % 86400000) / 1000;
-    etat.vue = [0, duree()]; etat.pointes = vide(); etat.verifie = false; etat.outil = 'P';
+    etat.vue = [0, duree()]; etat.pointes = partage ? c.pointes.map(p => ({ ...p })) : vide(); etat.verifie = false; etat.outil = 'P';
     // Wood-Anderson des horizontales, sans filtre (ML se mesure ainsi), une fois pour toutes
     etat.wa = f.stations.map(st => [SM.woodAndersonVitesse(st.series[1], f.dt), SM.woodAndersonVitesse(st.series[2], f.dt)]);
-    etat.polarites = STATIONS.map(() => 0); etat.meca = null;
+    etat.polarites = partage ? c.polarites.slice() : STATIONS.map(() => 0); etat.meca = null;
+    if (partage) etat.version = c.version;
     $('#r-corrige-reel').innerHTML = '';
     construireTraces(); reconvertir();
   }
@@ -562,13 +575,7 @@ import Mecanisme from './sismo/mecanisme.js';
   // ── Séisme réel : magnitude locale et mécanisme au foyer ─────────────────────────────────────────────────
   // Distance (°), distance hypocentrale (km), azimut depuis l'épicentre et arrivées prévues d'une station, pour la
   // solution de l'étudiant (ou, faute de solution, rien).
-  function geometrieReelle(k) {
-    const L = etat.loc;
-    if (!L || !etat.table) return null;
-    const st = STATIONS[k], { distance, azimut } = Localisation.distanceAzimut(L.lat, L.lon, st.lat, st.lon);
-    const tp = Localisation.temps(etat.table, 'P', L.h, distance), ts = Localisation.temps(etat.table, 'S', L.h, distance);
-    return { distance, azimut, R: Math.hypot(Localisation.km(distance), L.h), i: Localisation.emergence(etat.table, L.h, distance), tP: tp === null ? null : L.t0 + tp, tS: ts === null ? null : L.t0 + ts };
-  }
+  const geometrieReelle = k => (etat.loc && etat.table ? Localisation.rai(etat.table, etat.loc, STATIONS[k]) : null);
   function majReel() {
     const r = reel();
     $('#r-carte-ml').hidden = !r; $('#r-carte-meca').hidden = !r;
@@ -606,9 +613,10 @@ import Mecanisme from './sismo/mecanisme.js';
       const b = (v, t) => `<button type="button" class="outil${v === 1 ? ' p' : v === -1 ? ' s' : ' neutre'}" data-r-pol="${k}" data-v="${v}" aria-pressed="${p === v}">${t}</button>`;
       return `<div class="pol-ligne"><b>${st.nom}</b><small>${g ? `az. ${Math.round(g.azimut)}° · i ${g.i !== null ? Math.round(g.i) : '—'}°` : 'localisez d\'abord'}</small><span>${b(1, 'C')}${b(-1, 'D')}${b(0, '?')}</span></div>`;
     }).join('');
-    div.querySelectorAll('[data-r-pol]').forEach(x => x.addEventListener('click', () => { etat.polarites[+x.dataset.rPol] = +x.dataset.v; etat.meca = null; etat.messageMeca = ''; majMecanisme(); }));
+    div.querySelectorAll('[data-r-pol]').forEach(x => x.addEventListener('click', () => { etat.polarites[+x.dataset.rPol] = +x.dataset.v; etat.meca = null; etat.messageMeca = ''; publierPolarites(); majMecanisme(); }));
     dessinerSphereReelle();
   }
+  const publierPolarites = () => { etat.version = SeismeReel.publier({ polarites: etat.polarites }); };
   function lirePolarites() {
     let n = 0, pointees = 0;
     STATIONS.forEach((st, k) => {
@@ -618,7 +626,7 @@ import Mecanisme from './sismo/mecanisme.js';
       etat.polarites[k] = Reel.polarite(etat.reel.stations[k].series[0], etat.dt, p);
       if (etat.polarites[k]) n++;
     });
-    etat.meca = null;
+    etat.meca = null; publierPolarites();
     etat.messageMeca = !pointees ? 'Pointez d\'abord P : la polarité se lit juste après le pointé.'
       : `${n} polarité${n > 1 ? 's' : ''} lue${n > 1 ? 's' : ''} sur ${pointees} pointé${pointees > 1 ? 's' : ''} P (premier écart de plus de trois fois le bruit, dans la seconde qui suit)${n < pointees ? ' ; ailleurs rien ne sort du bruit : pointez P au tout début de l\'arrivée, ou lisez à l\'œil' : ''}. Vérifiez chacune en zoomant sur l'arrivée.`;
     majMecanisme();
@@ -810,6 +818,8 @@ import Mecanisme from './sismo/mecanisme.js';
     $('#r-carte').classList.toggle('deplacable', m === 'explorer');
     etat.verifie = false;
     if (m === 'reel') {
+      const c = SeismeReel.courant();
+      if (c && c.dossier !== etat.reel) { etat.reel = c.dossier; etat.table = c.table; if (!etat.cotes) chargerCotes().then(x => { etat.cotes = x; if (reel()) dessinerCarte(); }); }
       if (etat.reel) activerReel();
       else { STATIONS = []; etat.series = []; etat.pointes = []; etat.evs = []; etat.loc = null; construireTraces(); tout(); }
       return;
@@ -827,7 +837,7 @@ import Mecanisme from './sismo/mecanisme.js';
       construireTraces(); brancher(); majCurseurs();
       $('#r-carte').classList.add('deplacable');
       plusTard(regenerer);
-    } else {
+    } else if (!(reel() && reprendre())) {
       tout();
     }
   });

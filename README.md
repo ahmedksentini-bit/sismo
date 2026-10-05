@@ -142,7 +142,9 @@ tools/carte/pays.py     pays Natural Earth découpés à la Méditerranée (data
 tools/versions.mjs      versions des scripts et feuilles de style (cartes d'import des pages) : npm run versions
 src/sismo/dossier.js    fichier d'un séisme réel (format sismo-seisme) : écriture par « En direct », relecture par le TP
 src/sismo/localisation.js localisation d'un séisme réel sur la sphère (table croûte du cours + ak135)
-src/sismo/reel.js       séisme réel : magnitude locale ML (Wood-Anderson des horizontales), polarité de la première P
+src/sismo/reel.js       séisme réel : magnitude locale ML (Wood-Anderson des horizontales), polarité de la première P,
+                        pointé automatique de la P (critère d'Akaike)
+src/seisme-reel.js      séisme réel partagé par les bancs « réseau », « mécanisme » et « source » (fichier, pointés, foyer)
 tools/temps-localisation.mjs table des premières arrivées P et S de la localisation (data/temps-localisation.json)
 tools/direct/           serveurs SeedLink et FDSN d'essai, pour essayer les fonctions sans réseau (wrangler pages dev)
 src/lecteur-reseau.js   banc « réseau »
@@ -159,14 +161,14 @@ src/banc-ductilite.js   banc « ductilité »
 src/banc-batiment.js    banc « bâtiment »
 src/banc-poussee.js     banc « poussée progressive »
 src/banc-isolation.js   banc « isolation »
-src/banc-mecanisme.js   banc « mécanisme »
-src/banc-source.js      banc « source »
+src/banc-mecanisme.js   banc « mécanisme » (mode « Séisme réel » : polarités d'un vrai séisme)
+src/banc-source.js      banc « source » (mode « Séisme réel » : spectre S d'un vrai séisme, bruit, Mw)
 src/parcours.js         plan des travaux pratiques : quatre parties, ordre des bancs, ancres, chapitre du cours de chaque banc
 src/onglets.js          onglets et fil du parcours (partie, banc précédent et suivant, chapitre du cours) ; chaque banc se construit à sa première ouverture
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, sismogrammes d'un séisme, versions des scripts, séisme réel dans le TP de localisation (localisation, ML, mécanisme) (209 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, sismogrammes d'un séisme, versions des scripts, séisme réel dans le TP de localisation (localisation, ML, mécanisme), pointé automatique, spectre de la source en vitesse et bruit (212 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
