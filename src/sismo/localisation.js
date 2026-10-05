@@ -30,6 +30,15 @@ const Localisation = (() => {
     if (a === null || b === null || c === null || e === null) return null;
     return (1 - wh) * ((1 - wd) * a + wd * b) + wh * ((1 - wd) * c + wd * e);
   }
+  // Angle de départ de la première P (degrés depuis la verticale descendante, > 90° vers le haut), au nœud le plus
+  // proche de la table : entre Pg (vers le haut) et Pn (vers le bas), une interpolation n'aurait pas de sens.
+  function emergence(table, h, d) {
+    if (!table.iP || !(d >= 0) || d > table.dmax) return null;
+    const hs = table.profondeurs;
+    let k = 0;
+    for (let j = 1; j < hs.length; j++) if (Math.abs(hs[j] - h) < Math.abs(hs[k] - h)) k = j;
+    return table.iP[k][Math.round(d / table.pas)];
+  }
   // Distance (°) qui donne l'écart S − P observé, pour un foyer à h km (la table est croissante en S − P).
   function distanceSP(table, dSP, h = 10) {
     if (!(dSP > 0)) return null;
@@ -113,6 +122,6 @@ const Localisation = (() => {
     return { ...b, zone, residus, gap: gap(b.lat, b.lon, stations), nObs: obs.length };
   }
 
-  return { distanceAzimut, km, temps, distanceSP, gap, localiser };
+  return { distanceAzimut, km, temps, emergence, distanceSP, gap, localiser };
 })();
 export default Localisation;

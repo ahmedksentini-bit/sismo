@@ -2,6 +2,8 @@ import Sismo from './sismo/signal.js';
 import Direct from './sismo/direct.js';
 import Dossier from './sismo/dossier.js';
 import Localisation from './sismo/localisation.js';
+import Reel from './sismo/reel.js';
+import Mecanisme from './sismo/mecanisme.js';
 
 // src/lecteur-reseau.js — banc « réseau » : quatre stations, pointés P/S, cercles, Wadati, localisation sur grille.
 // Mode « Séisme réel » : un fichier enregistré par la page « En direct » (src/sismo/dossier.js) remplace les quatre
@@ -29,7 +31,7 @@ import Localisation from './sismo/localisation.js';
     exo: null, auto: false, phases: true, // pointés automatiques décochés : l'étudiant pointe lui-même
     filtre: 'aucun', outil: 'P', vue: [0, 1], pointes: STATIONS.map(() => ({ P: null, S: null })), evs: [], recs: [], series: [],
     t0: 0, n: 0, dt: 0.01, debutUTC: 0, loc: null, wad: null, verifie: false, curseurX: null,
-    reel: null, table: null, cotes: null,
+    reel: null, table: null, cotes: null, wa: null, polarites: [], meca: null, messageMeca: '',
   };
   const reel = () => etat.mode === 'reel';
   const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
@@ -85,6 +87,7 @@ import Localisation from './sismo/localisation.js';
   function relocaliser() {
     const lec = etat.pointes.map(p => ({ tP: p.P, tS: p.S !== null && p.P !== null && p.S > p.P ? p.S : null }));
     etat.loc = reel() ? (etat.table ? Localisation.localiser(STATIONS, lec, etat.table) : null) : SM.localiser(STATIONS, lec);
+    if (reel()) etat.meca = null; // la géométrie des rais a changé : inversion à refaire
     etat.wad = SM.wadati(lec);
     tout();
   }
@@ -466,7 +469,7 @@ import Localisation from './sismo/localisation.js';
       + (etat.evs.some(ev => ev.tt.tPn !== null && ev.tt.tPn < ev.tt.tPg) ? ' <br><b>Attention :</b> une station au moins reçoit la Pn en premier ; Wadati et S − P en sont faussés.' : '');
   }
   function majOutils() { $$('[data-r-outil]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rOutil === etat.outil))); }
-  function tout() { majOutils(); majVoie(); dessinerTraces(); dessinerCarte(); dessinerWadati(); majResultats(); majAide(); majVerite(); }
+  function tout() { majOutils(); majVoie(); dessinerTraces(); dessinerCarte(); dessinerWadati(); majResultats(); majAide(); majVerite(); majReel(); }
 
   // ── Exercice ────────────────────────────────────────────────────────────
   function nouvelExercice() {
@@ -528,6 +531,9 @@ import Localisation from './sismo/localisation.js';
     etat.dt = f.dt; etat.n = f.n; etat.t0 = 0; etat.evs = [];
     etat.debutUTC = (((f.debut % 86400000) + 86400000) % 86400000) / 1000;
     etat.vue = [0, duree()]; etat.pointes = vide(); etat.verifie = false; etat.outil = 'P';
+    // Wood-Anderson des horizontales, sans filtre (ML se mesure ainsi), une fois pour toutes
+    etat.wa = f.stations.map(st => [SM.woodAndersonVitesse(st.series[1], f.dt), SM.woodAndersonVitesse(st.series[2], f.dt)]);
+    etat.polarites = STATIONS.map(() => 0); etat.meca = null;
     $('#r-corrige-reel').innerHTML = '';
     construireTraces(); reconvertir();
   }
@@ -551,6 +557,121 @@ import Localisation from './sismo/localisation.js';
       Les arrivées prévues pour cette solution (table de la croûte du cours puis ak135) sont maintenant tracées en vert : un écart de quelques
       secondes est normal (modèle de Terre moyen, pointés). GEOFON localise avec bien plus de stations : sa solution n'est pas exacte non plus.</p>`;
     tout();
+  }
+
+  // ── Séisme réel : magnitude locale et mécanisme au foyer ─────────────────────────────────────────────────
+  // Distance (°), distance hypocentrale (km), azimut depuis l'épicentre et arrivées prévues d'une station, pour la
+  // solution de l'étudiant (ou, faute de solution, rien).
+  function geometrieReelle(k) {
+    const L = etat.loc;
+    if (!L || !etat.table) return null;
+    const st = STATIONS[k], { distance, azimut } = Localisation.distanceAzimut(L.lat, L.lon, st.lat, st.lon);
+    const tp = Localisation.temps(etat.table, 'P', L.h, distance), ts = Localisation.temps(etat.table, 'S', L.h, distance);
+    return { distance, azimut, R: Math.hypot(Localisation.km(distance), L.h), i: Localisation.emergence(etat.table, L.h, distance), tP: tp === null ? null : L.t0 + tp, tS: ts === null ? null : L.t0 + ts };
+  }
+  function majReel() {
+    const r = reel();
+    $('#r-carte-ml').hidden = !r; $('#r-carte-meca').hidden = !r;
+    if (!r) return;
+    majMagnitude(); majMecanisme();
+  }
+  // ML : Wood-Anderson des deux horizontales, de P à la fin de la coda de S (S + 1,5 (S − P), 30 s au moins) ; pointés
+  // de l'étudiant, sinon arrivées prévues pour sa solution.
+  function majMagnitude() {
+    const div = $('#r-ml');
+    if (!etat.reel || !etat.loc) { div.innerHTML = '<p class="aide">Localisez d\'abord le séisme (pointés P et S) : la magnitude demande la distance de chaque station.</p>'; return; }
+    const res = STATIONS.map((st, k) => {
+      const g = geometrieReelle(k), p = etat.pointes[k], tP = p.P ?? g.tP, tS = p.S ?? g.tS;
+      if (tP === null || tS === null) return null;
+      return { st, ...Reel.magnitudeStation(etat.wa[k], etat.dt, tP - 1, tS + Math.max(30, 1.5 * (tS - tP)), g.R) };
+    });
+    const reseau = Reel.magnitudeReseau(res), e = etat.reel.seisme, mil = x => Math.round(x).toLocaleString('fr-FR');
+    const lignes = res.map((m, k) => (m ? `<tr class="${m.domaine ? '' : 'hors'}"><td><b>${STATIONS[k].nom}</b>${etat.reel.stations[k].approchee ? ' <small title="sensibilité de la verticale">≈</small>' : ''}</td><td class="n">${mil(m.R)}</td><td class="n">${mil(m.N.Anm)}</td><td class="n">${mil(m.E.Anm)}</td><td class="n">${m.domaine ? virg(m.ML, 2) : `<small>hors domaine (${virg(m.ML, 1)})</small>`}</td></tr>` : `<tr><td><b>${STATIONS[k].nom}</b></td><td class="n" colspan="4">—</td></tr>`));
+    div.innerHTML = `<div class="afficheurs deux">${afficheur('ML du réseau', reseau ? virg(reseau.ML, 1) : '—', reseau ? `${reseau.n} station${reseau.n > 1 ? 's' : ''}${reseau.ecart !== null ? `, écart type ${virg(reseau.ecart, 2)}` : ''}` : `aucune station entre ${Reel.RMIN} et ${Reel.RMAX} km`)}${afficheur('GEOFON', etat.verifie ? `${virg(e.mag, 1)} ${e.typeMag || ''}` : '—', etat.verifie ? 'magnitude du catalogue' : 'après « Comparer à GEOFON »')}</div>
+      <div class="table-defile" style="margin-top:10px"><table class="resultats"><thead><tr><th>Station</th><th>R (km)</th><th>A N (nm)</th><th>A E (nm)</th><th>ML</th></tr></thead><tbody>${lignes.join('')}</tbody></table></div>
+      <p class="formule">ML = log A + 1,11 log R + 0,00189 R − 2,09 (A : amplitude maximale du Wood-Anderson en nm, R : distance hypocentrale en km), moyenne des deux horizontales, puis des stations de ${Reel.RMIN} à ${Reel.RMAX} km.</p>
+      ${etat.verifie ? '<p class="aide">GEOFON publie souvent mb ou Mw, pas ML : quelques dixièmes d\'écart sont normaux. Au-delà de 600 km, la loi de ML ne vaut plus.</p>' : ''}`;
+  }
+  // Mécanisme : polarités de la première P (C : le sol monte, D : il descend) placées sur la sphère focale par l'azimut et
+  // l'angle de départ de chaque rai (solution de l'étudiant), puis recherche exhaustive des plans nodaux.
+  const lecturesMeca = () => STATIONS.map((st, k) => {
+    const g = geometrieReelle(k), p = etat.polarites[k];
+    return g && g.i !== null && p ? { az: g.azimut, i: g.i, polarite: p, k } : null;
+  }).filter(Boolean);
+  function majMecanisme() {
+    const div = $('#r-meca-stations');
+    if (!etat.reel) return;
+    div.innerHTML = STATIONS.map((st, k) => {
+      const g = geometrieReelle(k), p = etat.polarites[k];
+      const b = (v, t) => `<button type="button" class="outil${v === 1 ? ' p' : v === -1 ? ' s' : ' neutre'}" data-r-pol="${k}" data-v="${v}" aria-pressed="${p === v}">${t}</button>`;
+      return `<div class="pol-ligne"><b>${st.nom}</b><small>${g ? `az. ${Math.round(g.azimut)}° · i ${g.i !== null ? Math.round(g.i) : '—'}°` : 'localisez d\'abord'}</small><span>${b(1, 'C')}${b(-1, 'D')}${b(0, '?')}</span></div>`;
+    }).join('');
+    div.querySelectorAll('[data-r-pol]').forEach(x => x.addEventListener('click', () => { etat.polarites[+x.dataset.rPol] = +x.dataset.v; etat.meca = null; etat.messageMeca = ''; majMecanisme(); }));
+    dessinerSphereReelle();
+  }
+  function lirePolarites() {
+    let n = 0, pointees = 0;
+    STATIONS.forEach((st, k) => {
+      const p = etat.pointes[k].P;
+      if (p === null) return;
+      pointees++;
+      etat.polarites[k] = Reel.polarite(etat.reel.stations[k].series[0], etat.dt, p);
+      if (etat.polarites[k]) n++;
+    });
+    etat.meca = null;
+    etat.messageMeca = !pointees ? 'Pointez d\'abord P : la polarité se lit juste après le pointé.'
+      : `${n} polarité${n > 1 ? 's' : ''} lue${n > 1 ? 's' : ''} sur ${pointees} pointé${pointees > 1 ? 's' : ''} P (premier écart de plus de trois fois le bruit, dans la seconde qui suit)${n < pointees ? ' ; ailleurs rien ne sort du bruit : pointez P au tout début de l\'arrivée, ou lisez à l\'œil' : ''}. Vérifiez chacune en zoomant sur l'arrivée.`;
+    majMecanisme();
+  }
+  function inverserMeca() {
+    const l = lecturesMeca();
+    if (l.length < 6) { etat.messageMeca = `Il faut au moins 6 polarités (${l.length} pour l'instant), autour du foyer.`; dessinerSphereReelle(); return; }
+    etat.meca = Mecanisme.inverser(l, 10); etat.messageMeca = '';
+    dessinerSphereReelle();
+  }
+  function dessinerSphereReelle() {
+    lireCouleurs();
+    const cv = $('#r-sphere');
+    if (!cv || cv.clientWidth < 50) return;
+    const { ctx, W, H } = preparer(cv), R = Math.min(W, H) / 2 - 26, cx = W / 2, cy = H / 2 + 4, RAD = Math.PI / 180;
+    ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
+    const planNodal = mec => {
+      const f = mec.azimut * RAD, d = mec.pendage * RAD, a = [Math.cos(f), Math.sin(f), 0], b = [-Math.cos(d) * Math.sin(f), Math.cos(d) * Math.cos(f), Math.sin(d)];
+      ctx.beginPath();
+      for (let k = 0; k <= 90; k++) {
+        const th = (k * Math.PI) / 90, v = [0, 1, 2].map(j => Math.cos(th) * a[j] + Math.sin(th) * b[j]);
+        const p = Mecanisme.projection(Math.acos(Math.max(-1, Math.min(1, v[2]))) / RAD, Math.atan2(v[1], v[0]) / RAD);
+        (k ? ctx.lineTo : ctx.moveTo).call(ctx, cx + R * p.x, cy - R * p.y);
+      }
+      ctx.stroke();
+    };
+    const m = etat.meca, l = lecturesMeca(), best = m && m.solutions.length ? m.solutions[0] : null;
+    if (best) {
+      // quadrants en compression de la première solution (trame), famille des solutions équivalentes, plans nodaux
+      const M = Mecanisme.tenseur(best.azimut, best.pendage, best.glissement);
+      ctx.fillStyle = COUL.blue; ctx.globalAlpha = 0.2;
+      for (let y = -R; y <= R; y += 3) for (let x = -R; x <= R; x += 3) { const q = Mecanisme.projectionInverse(x / R, -y / R); if (q && Mecanisme.rayonnementP(M, q.i, q.phi) > 0) ctx.fillRect(cx + x - 1.5, cy + y - 1.5, 3, 3); }
+      ctx.globalAlpha = 0.3; ctx.strokeStyle = COUL.amp; ctx.lineWidth = 0.6;
+      for (const sol of m.solutions.slice(0, 150)) { planNodal(sol); planNodal(Mecanisme.planAuxiliaire(sol.azimut, sol.pendage, sol.glissement)); }
+      ctx.globalAlpha = 1; ctx.strokeStyle = COUL.blue; ctx.lineWidth = 2;
+      planNodal(best); planNodal(Mecanisme.planAuxiliaire(best.azimut, best.pendage, best.glissement));
+      const ax = Mecanisme.axes(M);
+      ctx.font = `900 14px ${POLICE}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const [nom, a] of [['P', ax.P], ['T', ax.T]]) { const p = Mecanisme.projection(90 - a.plongement, a.azimut); texteHalo(ctx, nom, cx + R * p.x, cy - R * p.y, COUL.ink); }
+    }
+    ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.stroke();
+    ctx.font = `800 12px ${POLICE}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; texteHalo(ctx, 'N', cx, cy - R - 6, COUL.ink);
+    for (const q of l) {
+      const p = Mecanisme.projection(q.i, q.az), x = cx + R * p.x, y = cy - R * p.y;
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI);
+      if (q.polarite > 0) { ctx.fillStyle = COUL.ink; ctx.fill(); } else { ctx.fillStyle = COUL.paper; ctx.fill(); ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.6; ctx.stroke(); }
+      ctx.font = `700 10px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; texteHalo(ctx, STATIONS[q.k].nom, x + 8, y, COUL.muted);
+    }
+    const txt = $('#r-meca-texte');
+    if (best) {
+      const aux = Mecanisme.planAuxiliaire(best.azimut, best.pendage, best.glissement);
+      txt.innerHTML = `<b>${m.desaccords} désaccord${m.desaccords > 1 ? 's' : ''}</b> sur ${l.length} polarités ; ${m.solutions.length} mécanisme${m.solutions.length > 1 ? 's' : ''} les atteignent au pas de 10° (traits orangés). Premier : plan ${best.azimut}° / ${best.pendage}° / ${best.glissement}°, plan auxiliaire ${Math.round(aux.azimut)}° / ${Math.round(aux.pendage)}° / ${Math.round(aux.glissement)}° : faille <b>${Mecanisme.typeFaille(best.glissement)}</b>${m.solutions.length > 20 ? '. Les solutions sont nombreuses : ajoutez des polarités, surtout dans les directions vides' : ''}.`;
+    } else txt.textContent = etat.messageMeca || (l.length ? `${l.length} polarité${l.length > 1 ? 's' : ''} sur la sphère (hémisphère inférieur, projection de Schmidt). « Inverser » cherche les plans nodaux.` : 'Indiquez la polarité de la première P à chaque station (C : le sol monte, D : il descend), ou « Lire les polarités ».');
   }
 
   // ── Construction et événements ──────────────────────────────────────────
@@ -647,6 +768,8 @@ import Localisation from './sismo/localisation.js';
     $('#r-mode-reel').addEventListener('click', () => changerMode('reel'));
     $('#r-fichier').addEventListener('change', e => { if (e.target.files && e.target.files[0]) chargerFichier(e.target.files[0]); e.target.value = ''; });
     $('#r-comparer').addEventListener('click', comparer);
+    $('#r-lire-pol').addEventListener('click', lirePolarites);
+    $('#r-inverser').addEventListener('click', inverserMeca);
     $('#r-verifier').addEventListener('click', verifier);
     $('#r-nouvel-exo').addEventListener('click', nouvelExercice);
 
@@ -670,7 +793,7 @@ import Localisation from './sismo/localisation.js';
 
     const redessiner = () => { if ((etat.evs.length || reel()) && !$('#banc-reseau').hidden) tout(); };
     const ro = new ResizeObserver(redessiner);
-    ro.observe($('#r-traces')); ro.observe($('#r-carte'));
+    ro.observe($('#r-traces')); ro.observe($('#r-carte')); ro.observe($('#r-sphere'));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     new MutationObserver(redessiner).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }

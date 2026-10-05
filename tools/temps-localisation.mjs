@@ -2,15 +2,24 @@
 // « Séisme réel ») : premières arrivées P et S en fonction de la distance épicentrale (0 à 100°, pas de 0,25°) et de la
 // profondeur (0 à 40 km). Jusqu'à 1° : croûte du cours (Sismo.temps : P = Pg ou Pn, S = Sg ou Sn, la première) ; au-delà
 // de 2° : ak135 (Globe, vérifié contre TauP) ; entre les deux, raccord linéaire (les deux modèles diffèrent de moins
-// d'une seconde en P et de quelques secondes en S vers 1,5°). Écrit data/temps-localisation.json (fichier produit).
+// d'une seconde en P et de quelques secondes en S vers 1,5°). Angle de départ de la première P (iP, degrés depuis la
+// verticale descendante, > 90° vers le haut) pour le mécanisme au foyer : croûte du cours (Mecanisme.emergence) sous
+// 2°, ak135 au-delà. Écrit data/temps-localisation.json (fichier produit).
 // Usage : npm run temps-localisation
 import { writeFileSync } from 'node:fs';
 import Sismo from '../src/sismo/signal.js';
 import Globe from '../src/sismo/globe.js';
+import Mecanisme from '../src/sismo/mecanisme.js';
 
 const PROFONDEURS = [0, 5, 10, 15, 20, 25, 30, 35, 40], PAS = 0.25, DMAX = 100;
 const RAD = Math.PI / 180;
 const premiere = (ph, h, d) => { const a = Globe.arrivees(ph, h, d); return a.length ? Math.min(...a.map(x => x.temps)) : null; };
+// angle de départ de la première P
+function depart(h, d) {
+  if (d < 2) return Mecanisme.emergence(Math.max(0.01, d * RAD * Globe.R), h).i;
+  const a = Globe.arrivees('P', Math.max(h, 0.01), d);
+  return a.length ? a.reduce((m, x) => (x.temps < m.temps ? x : m)).depart : null;
+}
 
 function temps(h, d) {
   const km = d * RAD * Globe.R, c = Sismo.temps(km, h);
@@ -23,15 +32,16 @@ function temps(h, d) {
   return r;
 }
 
-const sortie = { source: 'tools/temps-localisation.mjs : croûte du cours jusqu\'à 1°, ak135 (Globe) au-delà de 2°, raccord linéaire entre les deux', profondeurs: PROFONDEURS, pas: PAS, dmax: DMAX, P: [], S: [] };
+const sortie = { source: 'tools/temps-localisation.mjs : croûte du cours jusqu\'à 1°, ak135 (Globe) au-delà de 2°, raccord linéaire entre les deux ; iP : croûte sous 2°, ak135 au-delà', profondeurs: PROFONDEURS, pas: PAS, dmax: DMAX, P: [], S: [], iP: [] };
 for (const h of PROFONDEURS) {
-  const P = [], S = [];
+  const P = [], S = [], iP = [];
   for (let i = 0; i * PAS <= DMAX + 1e-9; i++) {
-    const t = temps(h, i * PAS);
+    const t = temps(h, i * PAS), a = depart(h, i * PAS);
     P.push(t.P === null ? null : Math.round(t.P * 100) / 100);
     S.push(t.S === null ? null : Math.round(t.S * 100) / 100);
+    iP.push(a === null ? null : Math.round(a * 100) / 100);
   }
-  sortie.P.push(P); sortie.S.push(S);
+  sortie.P.push(P); sortie.S.push(S); sortie.iP.push(iP);
   process.stdout.write(`h = ${h} km `);
 }
 const chemin = new URL('../data/temps-localisation.json', import.meta.url);
