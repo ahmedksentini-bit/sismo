@@ -15,12 +15,6 @@ function catalogue() {
     return { id: o.id, t: o.dtime, annee: o.annee, M: o.magnitude, x: o.x, y: o.y, lon: o.longitude, lat: o.latitude };
   });
 }
-// Haversine d'HMTK (rayon 6371,227 km)
-const haversine = (a, b) => {
-  const r = Math.PI / 180, dlat = (a.lat - b.lat) * r, dlon = (a.lon - b.lon) * r;
-  const h = Math.sin(dlat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dlon / 2) ** 2;
-  return 2 * 6371.227 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-};
 
 test('Akkar et al. (2014) identique à hazardlib (AkkarEtAlRjb2014) : médiane et σ', () => {
   const ref = lire('gmpe_akkar2014.json'), loi = Gmpe.LOIS.akkar2014;
@@ -59,7 +53,7 @@ test('Bindi et al. (2014) identique à hazardlib (BindiEtAl2014Rjb) : médiane e
 });
 
 test('déclusterage de Gardner et Knopoff identique à HMTK (GardnerKnopoffType1)', () => {
-  const ref = lire('hmtk.json').gk, cat = catalogue(), { drapeau } = Sc.amasGK(cat, { distance: haversine });
+  const ref = lire('hmtk.json').gk, cat = catalogue(), { drapeau } = Sc.amasGK(cat, { distance: Sc.haversine });
   const diff = [...drapeau].reduce((n, d, i) => n + (d !== ref.drapeau[i]), 0);
   assert.equal(cat.length, ref.n);
   assert.equal(diff, 0, `${diff} drapeaux différents sur ${ref.n}`);

@@ -36,6 +36,13 @@ la virgule décimale.
 11. **Sismicité** : magnitudes rangées par classes de 0,1 ; b d'Aki avec la correction
     d'Utsu (Mc − ΔM/2). Les taux et les probabilités de Poisson se calculent sur le
     catalogue déclusteré ; la vérité des exercices est la loi des chocs principaux.
+    Mode « Catalogue réel » : `src/sismo/catalogue.js` lit le texte FDSN, le CSV et le GeoJSON de l'USGS et tout tableau
+    dont l'en-tête nomme les colonnes (heures en ms UTC, lignes rejetées comptées, non-séismes écartés) ; période, région
+    et bornes des graphiques viennent des données ; déclusterage sur la sphère (haversine et année décimale d'HMTK, au
+    jour près ; identique à HMTK sur le catalogue de référence, testé) ; types de magnitude mélangés signalés ; ni vérité
+    ni corrigé. Téléchargement par le relais FDSN (service event, pages de 500, 20 au plus, liste blanche inchangée).
+    Carte : `Catalogue.cadre` (antiméridien compris), fond Natural Earth du monde (`tools/carte/monde.py`), méditerranéen
+    (plus fin) quand la vue y tient.
 12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et le
     moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le

@@ -229,6 +229,16 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 .table-completude { margin-bottom: 12px; }
 .table-completude input { width: 100%; padding: 6px 8px; border: 1px solid var(--input-line); border-radius: 8px; background: var(--input); font-family: var(--mono); }
 #sc-fmd { display: block; width: 100%; height: 320px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+/* mode « Catalogue réel » : carte des épicentres aux proportions du cadre (--rapport, posé par le banc), téléchargement */
+#sc-carte { display: block; width: 100%; aspect-ratio: var(--rapport, 1.8); min-height: 200px; max-height: 520px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+#banc-sismicite .mode-banc button { flex: 1 1 auto; padding-inline: 8px; white-space: nowrap; } /* trois modes sur une ligne */
+#sc-telechargement { margin: 6px 0 12px; }
+#sc-telechargement summary { color: var(--blue-ink); font-size: 13px; font-weight: 800; cursor: pointer; }
+#sc-telechargement[open] summary { margin-bottom: 10px; }
+#sc-telechargement .duo-champs .champ { margin-bottom: 8px; }
+#sc-reel-info, #sc-dl-info, #sc-carte-info, #sc-reel-resume .aide { overflow-wrap: anywhere; }
+#sc-melange { margin: 0 0 10px; }
+#sc-reel-resume .afficheurs { margin-bottom: 4px; }
 
 /* Banc géodésie */
 #ge-carte { display: block; width: 100%; height: 420px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); touch-action: pan-y; }

@@ -87,16 +87,16 @@ const CONSIGNES = {
     rendre: "Sa aux six périodes pour deux scénarios, le type de spectre retenu et justifié, le rapport Sa(T1)/Se(T1).",
   },
   sismicite: {
-    objectif: "Analyser un siècle de catalogue : périodes de complétude, valeur b, taux annuels et probabilités sur la durée de vie d'un ouvrage, avec et sans répliques.",
+    objectif: "Analyser un catalogue de sismicité, simulé sur un siècle puis réel : périodes de complétude, valeur b, taux annuels et probabilités sur la durée de vie d'un ouvrage, avec et sans répliques.",
     etapes: [
       "Gardez le catalogue proposé (b = 1,00 ; 2 chocs principaux par an de M ≥ 4 ; répliques comprises) sans regarder la vérité terrain.",
       "Sur le graphique de Stepp, repérez pour chaque classe l'année où la courbe quitte la pente −1/2 : c'est votre table de complétude.",
       "Méthode « Aki » : fixez le début de la période et Mc (curseurs ou clic sur le catalogue), puis comparez à Mc par courbure maximale.",
       "Notez b ± σ, λ(M ≥ 5) et le nombre de séismes retenus, sans puis avec déclusterage.",
       "Méthode « Weichert » avec votre table : comparez b et λ. Dans « Probabilité sur une durée », calculez P(M ≥ 6 en 50 ans).",
-      "En mode Exercice, analysez un nouveau catalogue, puis « Vérifier ».",
+      "En mode Exercice, analysez un nouveau catalogue, puis « Vérifier ». En mode « Catalogue réel », chargez un vrai catalogue (« Charger un catalogue » : texte FDSN, CSV de l'USGS ou tableau) ou téléchargez-en un (« Télécharger »), lisez son résumé et sa carte, gardez un seul « Type de magnitude analysé » s'il en mélange plusieurs, puis refaites l'analyse : ici, pas de corrigé.",
     ],
-    rendre: "la table de complétude, b ± σ, λ(M ≥ 5), la probabilité en 50 ans, et un commentaire sur l'effet des répliques.",
+    rendre: "la table de complétude, b ± σ, λ(M ≥ 5), la probabilité en 50 ans, et un commentaire sur l'effet des répliques ; pour un catalogue réel, sa source, son type de magnitude, Mc et b ± σ.",
   },
   geodesie: {
     objectif: "Tirer des taux de séismes de la déformation lente mesurée par GNSS : taux de déformation, moment de Kostrov, couplage, et confrontation au catalogue.",
