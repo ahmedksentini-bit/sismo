@@ -128,3 +128,43 @@ test('angle de départ de la première P : croûte du cours sous 2°, ak135 au-d
     assert.ok(L.emergence(T, 10, 0.5) > 90 && L.emergence(T, 10, 30) < 90, 'Pg monte, P télésismique descend');
   });
 });
+
+test('rai d\'un foyer vers une station : distance, azimut, angle de départ et arrivées de la table', () => {
+  const f = { lat: 37, lon: 22, h: 10, t0: 60 }, st = { lat: 38.5, lon: 23.7 }, r = L.rai(T, f, st), d = L.distanceAzimut(37, 22, 38.5, 23.7);
+  assert.equal(r.distance, d.distance); assert.equal(r.azimut, d.azimut);
+  assert.ok(Math.abs(r.R - Math.hypot(L.km(d.distance), 10)) < 1e-9);
+  assert.equal(r.tP, 60 + L.temps(T, 'P', 10, d.distance)); assert.equal(r.tS, 60 + L.temps(T, 'S', 10, d.distance));
+  assert.equal(r.i, L.emergence(T, 10, d.distance));
+  assert.equal(L.rai(T, f, { lat: -60, lon: -100 }).tP, null); // hors de la table
+});
+
+test('pointé automatique de la P (Akaike) : début du signal retrouvé, rapport signal sur bruit', () => {
+  const u = S.aleatoire(8), dt = 0.02, n = 3000, tP = 31.37;
+  const z = Float64Array.from({ length: n }, (_, i) => { const t = i * dt; return 0.2 * u.gauss() + (t >= tP ? Math.sin(2 * Math.PI * 2 * (t - tP)) * Math.exp(-(t - tP) / 3) * 3 : 0); });
+  const p = R.pointerP(z, dt, tP + 2.5);
+  assert.ok(Math.abs(p.t - tP) < 0.1, `pointé ${p.t}`);
+  assert.ok(p.rapport > 5);
+  assert.equal(R.pointerP(z, dt, -100), null);
+});
+
+test('spectre de la source : la vitesse donne le même spectre que l\'accélération ; fenêtre de bruit et bandes retenues', async () => {
+  const So = (await import('../src/sismo/source.js')).default;
+  const ev = S.generer({ Mw: 4.6, delta: 80, h: 10, baz: 30, graine: 12 }), iS = Math.round((ev.tt.tSg - 0.5 - ev.t0) / ev.dt), iP = Math.round((ev.tt.tP - ev.t0) / ev.dt);
+  const a = So.analyserSerie(ev.acc.N, ev.acc.E, ev.dt, { R: ev.tt.R, iS }), v = So.analyserSerie(ev.vit.N, ev.vit.E, ev.dt, { R: ev.tt.R, iS, entree: 'vitesse' });
+  // vitesse dérivée sur la série entière, avant la fenêtre : même accélération que le générateur (arrondis des FFT)
+  a.corrige.forEach(([f, d], j) => assert.ok(Math.abs(Math.log(v.corrige[j][1] / d)) < 1e-6, `${f} Hz`));
+  assert.ok(Math.abs(v.Mw - a.Mw) < 1e-6 && Math.abs(v.fc / a.fc - 1) < 1e-6);
+  // l'analyse du générateur est celle de analyserSerie sur les accélérations
+  const g = So.analyser(ev);
+  assert.equal(g.Mw, a.Mw); assert.equal(g.fc, a.fc);
+  // bruit blanc ajouté : la fenêtre de bruit finit 1 s avant P, les bandes noyées sont écartées
+  const u = S.aleatoire(2), bruite = x => Float64Array.from(x, y => y + 1e-4 * u.gauss());
+  const b = So.analyserSerie(bruite(ev.vit.N), bruite(ev.vit.E), ev.dt, { R: ev.tt.R, iS, iP, entree: 'vitesse' });
+  assert.equal(b.bruitFenetre.i0 + b.bruitFenetre.n, iP - Math.round(1 / ev.dt));
+  assert.equal(b.snr.length, b.corrige.length);
+  assert.ok(b.retenues.some(x => !x) && b.retenues.filter(Boolean).length >= 6);
+  assert.ok(Math.abs(b.Mw - v.Mw) < 0.2);
+  // signal noyé partout : pas d'ajustement
+  const noye = x => Float64Array.from(x, y => y + 1 * u.gauss());
+  assert.equal(So.analyserSerie(noye(ev.vit.N), noye(ev.vit.E), ev.dt, { R: ev.tt.R, iS, iP, entree: 'vitesse' }).fit, null);
+});
