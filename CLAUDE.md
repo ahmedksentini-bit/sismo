@@ -56,9 +56,13 @@ la virgule décimale.
     scalaire, premier plan nodal), QuakeML (nodalPlane1, profondeur en m), tableaux à colonnes strike, dip, rake (ISC ;
     `Catalogue.lire` les attache aux séismes en `mec`) ; régimes de Zoback (1992) par les plongements de P, B et T ; sphères
     focales sur la carte (hémisphère inférieur, cache de canevas) ; chaque zone se voit proposer le mécanisme dominant de
-    ses mécanismes tant que l'étudiant n'a pas choisi le sien. Le site ne télécharge pas les mécanismes : fichier à charger ;
-    la case « Afficher les mécanismes » reste grisée (« aucun chargé ») tant qu'aucun n'est lu, et le bilan signale ceux hors de la
-    région du catalogue.
+    ses mécanismes tant que l'étudiant n'a pas choisi le sien. Extrait méditerranéen du Global CMT livré
+    (`data/mecanismes-mediterranee.json`, format « sismo-mecanismes » v1, refait par `tools/gcmt/extrait.mjs` depuis les ndk,
+    jamais à la main ; domaine 20° O – 50° E, 22° N – 53° N ; citer Dziewonski et al. 1981 et Ekström et al. 2012) : quand
+    l'étendue du catalogue tient dans le domaine (`Mecanismes.couvre`), ses mécanismes de la région (cadre) et de la période
+    (`Mecanismes.selectionner`) s'affichent sans fichier ; colonnes du catalogue puis fichier de l'étudiant le remplacent, et un
+    fichier chargé garde la main d'un catalogue à l'autre. Ailleurs, fichier à charger ; la case « Afficher les mécanismes »
+    reste grisée (« aucun chargé ») tant qu'aucun n'est lu, et le bilan signale ceux hors de la région du catalogue.
 12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et le
     moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le

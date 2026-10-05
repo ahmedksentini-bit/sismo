@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import M from '../src/sismo/mecanismes.js';
 import C from '../src/sismo/catalogue.js';
+import fs from 'node:fs';
 
 const NDK = `PDE  2005/01/01 01:20:05.4  13.78  -88.78 193.1 5.0 0.0 EL SALVADOR
 C200501010120A   B:  4    4  40 S: 27   33  50 M:  0    0   0 CMT: 1 TRIHD:  0.6
@@ -68,4 +69,49 @@ test('bilan d\'une zone : effectifs par mécanisme, mécanisme dominant et gliss
   assert.deepEqual(b.parType, { normale: 1, inverse: 3, decrochement: 1, indetermine: 0 });
   assert.equal(b.dominant, 'inverse'); assert.equal(b.rake, 90);
   assert.equal(M.bilan([]).dominant, null);
+});
+
+// Extrait méditerranéen du Global CMT (tools/gcmt/extrait.mjs → data/mecanismes-mediterranee.json)
+const MED = NDK.replace('13.78  -88.78', '38.10   20.50').replace('7.29   93.92', '36.40   10.20'); // les deux séismes du ndk ramenés dans le domaine
+
+test('extrait « sismo-mecanismes » : domaine, doublons, écriture et relecture identiques à lireNdk', () => {
+  const lu = M.lire(MED).mecanismes, dehors = M.lire(NDK).mecanismes;
+  assert.equal(M.extraire([dehors]).length, 0, 'El Salvador et Nicobar hors du domaine');
+  // le même séisme dans un fichier mensuel (même identifiant, ou autre identifiant à 2 s près) ne compte qu'une fois
+  const ex = M.extraire([lu, [{ ...lu[0] }, { ...lu[1], id: 'Q' + lu[1].id, t: lu[1].t + 2000 }]]);
+  assert.equal(ex.length, 2); assert.equal(ex[1].id, lu[1].id);
+  const r = M.lire(M.ecrire({ source: { nom: 'essai' }, mecanismes: ex }));
+  assert.equal(r.format, M.FORMAT); assert.equal(r.source.nom, 'essai'); assert.equal(r.rejetees, 0);
+  r.mecanismes.forEach((m, i) => {
+    const a = lu[i];
+    assert.equal(m.t, a.t); assert.equal(m.id, a.id); assert.equal(m.typeMag, 'Mw');
+    for (const k of ['lat', 'lon', 'h', 'mag']) assert.ok(Math.abs(m[k] - a[k]) <= 0.005, k);
+    assert.deepEqual([m.azimut, m.pendage, m.glissement], [a.azimut, a.pendage, a.glissement]);
+    assert.equal(M.regime(m), M.regime(a));
+  });
+  assert.throws(() => M.lireCompact({ format: M.FORMAT, version: 9, mecanismes: [] }), /version 9/);
+});
+
+test('extrait : catalogue dans le domaine, sélection sur la région et la période (antiméridien compris)', () => {
+  assert.ok(M.couvre({ lon: [5, 12], lat: [30, 38] }));
+  assert.ok(!M.couvre({ lon: [5, 60], lat: [30, 38] })); assert.ok(!M.couvre({ lon: [5, 12], lat: [10, 38] })); assert.ok(!M.couvre(null));
+  const mk = (lon, lat, an) => ({ t: Date.UTC(an, 0, 1), lon, lat, id: `${lon}/${lat}/${an}` });
+  const mecs = [mk(10, 36, 2000), mk(10, 36, 2015), mk(20, 36, 2000), mk(179, 0, 2000), mk(-179, 0, 2000)];
+  const sel = M.selectionner(mecs, { cadre: { lon: [8, 12], lat: [35, 37] }, debut: Date.UTC(1999, 0, 1), fin: Date.UTC(2010, 0, 1) });
+  assert.deepEqual(sel.map(m => m.id), ['10/36/2000']);
+  assert.equal(M.selectionner(mecs, { cadre: { lon: [178, 182], lat: [-1, 1] } }).length, 2);
+});
+
+const EXTRAIT = new URL('../data/mecanismes-mediterranee.json', import.meta.url);
+test('extrait livré : lisible, tous les mécanismes dans le domaine, plans nodaux valides', { skip: !fs.existsSync(EXTRAIT) && 'extrait absent : node tools/gcmt/extrait.mjs' }, () => {
+  const j = JSON.parse(fs.readFileSync(EXTRAIT, 'utf8')), r = M.lire(fs.readFileSync(EXTRAIT, 'utf8'));
+  assert.equal(r.rejetees, 0); assert.ok(r.mecanismes.length > 500, `${r.mecanismes.length} mécanismes`);
+  assert.match(j.source.references.join(' '), /Dziewonski.*1981.*2825/); assert.match(j.source.references.join(' '), /Ekström.*2012.*200/);
+  const ids = new Set();
+  for (const m of r.mecanismes) {
+    assert.ok(m.lon >= -20 && m.lon <= 50 && m.lat >= 22 && m.lat <= 53, m.id);
+    assert.ok(m.mag > 3 && m.mag < 9 && m.pendage >= 0 && m.pendage <= 90, m.id);
+    assert.ok(!ids.has(m.id), `doublon ${m.id}`); ids.add(m.id);
+  }
+  for (let i = 1; i < r.mecanismes.length; i++) assert.ok(r.mecanismes[i].t >= r.mecanismes[i - 1].t);
 });
