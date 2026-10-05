@@ -19,7 +19,10 @@ import Sismo from './sismo/signal.js';
   const virg = (x, d = 1) => (Number.isFinite(x) ? x.toFixed(d).replace('.', ',').replace(/^-/, '−') : '—');
   const POLICE = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const MONO = 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace';
-  const VUE = { lon: [-12, 42], lat: [28, 48.5] };
+  // Zone de référence de la carte (stations proposées, choix par défaut) ; la vue affichée se zoome et se déplace dans
+  // le domaine des côtes, sans changer cette zone.
+  const VUE = { lon: [-12, 42], lat: [28, 48.5] }, DOMAINE = { lon: [-20, 50], lat: [22, 53] };
+  const carteVue = { clon: (VUE.lon[0] + VUE.lon[1]) / 2, clat: (VUE.lat[0] + VUE.lat[1]) / 2, z: 1 };
   const ZONE = { minlatitude: 25, maxlatitude: 50, minlongitude: -15, maxlongitude: 45 };
   const MAX_SUIVIES = 12, DEFAUT_SUIVIES = 8, INTERVALLE_FDSN = 20000;
   // au-delà de cette latence (s), une station est grise : le service FDSN publie avec plusieurs minutes de retard
@@ -52,6 +55,33 @@ import Sismo from './sismo/signal.js';
   }
   const echapper = t => String(t).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
   const maintenant = () => etat.pause ?? Date.now();
+  // Fenêtre des traces : sa durée (boutons 5, 15, 60 min, ou zoom) et sa fin (null : elle suit le direct). Les tampons
+  // gardent 70 minutes : on ne remonte pas plus loin.
+  const vueT = { duree: 15 * 60000, fin: null }, GARDE = 70 * 60000;
+  let geoTraces = null;
+  const fenetreTraces = () => { const t1 = vueT.fin ?? maintenant(); return { t0: t1 - vueT.duree, t1 }; };
+  function bornerTraces() {
+    const n = maintenant();
+    vueT.duree = Math.max(20000, Math.min(GARDE, vueT.duree));
+    if (vueT.fin !== null) vueT.fin = Math.max(n - GARDE + vueT.duree, vueT.fin);
+    if (vueT.fin !== null && vueT.fin >= n - 1000) vueT.fin = null;
+    etat.fenetre = Math.ceil(vueT.duree / 60000);
+    $$('[data-dr-fenetre]').forEach(b => b.setAttribute('aria-pressed', String(vueT.fin === null && +b.dataset.drFenetre * 60000 === vueT.duree)));
+    const d = $('#dr-direct');
+    if (d) d.hidden = vueT.fin === null;
+  }
+  function zoomerTraces(f, x) {
+    const { t0, t1 } = fenetreTraces(), g = geoTraces, tx = g && x !== undefined ? t0 + ((x - g.x0) / (g.x1 - g.x0)) * (t1 - t0) : t1;
+    const d = Math.max(20000, Math.min(GARDE, vueT.duree / f)), r = (tx - t0) / (t1 - t0);
+    vueT.duree = d; vueT.fin = tx + (1 - r) * d;
+    bornerTraces(); dessinerTout();
+  }
+  function deplacerTraces(dx) {
+    const g = geoTraces;
+    if (!g) return;
+    vueT.fin = fenetreTraces().t1 - (dx / (g.x1 - g.x0)) * vueT.duree;
+    bornerTraces(); dessinerTout();
+  }
   const delai = ms => new Promise(r => setTimeout(r, ms));
   const nomCentre = id => (Centres.CENTRES[id] ? Centres.CENTRES[id].nom : id);
   const nomServeur = sv => { const c = Centres.centreDuServeur(sv); return c ? c.nom : sv; };
@@ -439,7 +469,8 @@ import Sismo from './sismo/signal.js';
   function dessinerTraces() {
     const cv = $('#dr-traces'), n = Math.max(1, etat.suivies.length), hautRang = window.innerWidth < 760 ? 58 : 70;
     const { ctx, W, H } = preparer(cv, 30 + n * hautRang + 26), g = { x0: 10, x1: W - 10, y0: 26, y1: H - 26 };
-    const t1 = maintenant(), t0 = t1 - etat.fenetre * 60000, X = t => g.x0 + ((t - t0) / (t1 - t0)) * (g.x1 - g.x0), hR = (g.y1 - g.y0) / n;
+    const { t0, t1 } = fenetreTraces(), X = t => g.x0 + ((t - t0) / (t1 - t0)) * (g.x1 - g.x0), hR = (g.y1 - g.y0) / n;
+    geoTraces = { x0: g.x0, x1: g.x1, t0, t1 };
     // graduations du temps (UTC)
     const pas = [30, 60, 120, 300, 600, 900].map(x => x * 1000).find(p => (t1 - t0) / p <= 8) || 900000;
     ctx.font = `10.5px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
@@ -508,26 +539,52 @@ import Sismo from './sismo/signal.js';
 
   // ── Carte (comme scmv) ────────────────────────────────────────────────────────────────────────────────────────
   let geo = null;
+  // Projection équirectangulaire (longitudes réduites par le cosinus de la latitude moyenne de la zone), centrée sur la
+  // vue ; le canvas garde la hauteur de la zone de référence. cadre : longitudes et latitudes visibles.
   function projection(W) {
     const latc = (VUE.lat[0] + VUE.lat[1]) / 2, kx = Math.cos((latc * Math.PI) / 180), larg = (VUE.lon[1] - VUE.lon[0]) * kx, haut = VUE.lat[1] - VUE.lat[0];
-    const H = Math.min(window.innerHeight * 0.7, (W * haut) / larg), s = Math.min((W - 20) / larg, (H - 20) / haut);
-    const ox = (W - larg * s) / 2, oy = (H - haut * s) / 2;
-    return { H, X: lon => ox + (lon - VUE.lon[0]) * kx * s, Y: lat => oy + (VUE.lat[1] - lat) * s };
+    const H = Math.min(window.innerHeight * 0.7, (W * haut) / larg), s = Math.min((W - 20) / larg, (H - 20) / haut) * carteVue.z;
+    const X = lon => W / 2 + (lon - carteVue.clon) * kx * s, Y = lat => H / 2 - (lat - carteVue.clat) * s;
+    const lon = x => carteVue.clon + (x - W / 2) / (kx * s), lat = y => carteVue.clat - (y - H / 2) / s;
+    return { W, H, X, Y, lon, lat, kx, s, cadre: { lon: [lon(10), lon(W - 10)], lat: [lat(H - 10), lat(10)] } };
   }
+  // Zoom (facteur f autour du point x, y du canvas) et déplacement (dx, dy en pixels), bornés au domaine des côtes.
+  function bornerCarte(pr) {
+    carteVue.z = Math.max(1, Math.min(16, carteVue.z));
+    const demiL = (pr.W / 2 - 10) / (pr.kx * pr.s), demiH = (pr.H / 2 - 10) / pr.s;
+    const borne = (c, a, b, d) => (b - a <= 2 * d ? (a + b) / 2 : Math.max(a + d, Math.min(b - d, c)));
+    carteVue.clon = borne(carteVue.clon, DOMAINE.lon[0], DOMAINE.lon[1], demiL);
+    carteVue.clat = borne(carteVue.clat, DOMAINE.lat[0], DOMAINE.lat[1], demiH);
+  }
+  function zoomerCarte(f, x, y) {
+    if (!geo) return;
+    const lon = geo.lon(x), lat = geo.lat(y), z = Math.max(1, Math.min(16, carteVue.z * f)), k = carteVue.z / z;
+    carteVue.clon = lon + (carteVue.clon - lon) * k; carteVue.clat = lat + (carteVue.clat - lat) * k; carteVue.z = z;
+    bornerCarte(projection(geo.W)); dessinerCarte();
+  }
+  function deplacerCarte(dx, dy) {
+    if (!geo) return;
+    carteVue.clon -= dx / (geo.kx * geo.s); carteVue.clat += dy / geo.s;
+    bornerCarte(projection(geo.W)); dessinerCarte();
+  }
+  function vueEnsemble() { carteVue.clon = (VUE.lon[0] + VUE.lon[1]) / 2; carteVue.clat = (VUE.lat[0] + VUE.lat[1]) / 2; carteVue.z = 1; dessinerCarte(); }
+
   const couleurAmplitude = a => {
     // échelle logarithmique de 0,01 à 10 µm/s, du bleu au rouge (comme les couleurs de mouvement du sol de scmv)
     const pal = ['#2563eb', '#0891b2', '#16a34a', '#ca8a04', '#ea580c', '#dc2626'], k = Math.max(0, Math.min(5, Math.floor((Math.log10(Math.max(a, 1e-3)) + 2) * (5 / 3))));
     return pal[k];
   };
   function dessinerCarte() {
-    const cv = $('#dr-carte'), W = cv.clientWidth, pr = projection(W), { ctx, H } = preparer(cv, pr.H), { X, Y } = pr;
+    const cv = $('#dr-carte'), W = cv.clientWidth, pr = projection(W), { ctx, H } = preparer(cv, pr.H), { X, Y } = pr, C = pr.cadre;
     geo = pr;
-    ctx.fillStyle = COUL.soft; ctx.fillRect(X(VUE.lon[0]), Y(VUE.lat[1]), X(VUE.lon[1]) - X(VUE.lon[0]), Y(VUE.lat[0]) - Y(VUE.lat[1]));
-    ctx.save(); ctx.beginPath(); ctx.rect(X(VUE.lon[0]), Y(VUE.lat[1]), X(VUE.lon[1]) - X(VUE.lon[0]), Y(VUE.lat[0]) - Y(VUE.lat[1])); ctx.clip();
-    // graticule tous les 5°
+    const dansCadre = o => o.lon >= C.lon[0] && o.lon <= C.lon[1] && o.lat >= C.lat[0] && o.lat <= C.lat[1];
+    ctx.fillStyle = COUL.soft; ctx.fillRect(10, 10, W - 20, H - 20);
+    ctx.save(); ctx.beginPath(); ctx.rect(10, 10, W - 20, H - 20); ctx.clip();
+    // graticule : pas selon l'étendue visible
+    const pasG = C.lon[1] - C.lon[0] > 30 ? 5 : C.lon[1] - C.lon[0] > 12 ? 2 : 1;
     ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1; ctx.font = `10px ${MONO}`; ctx.fillStyle = COUL.muted;
-    for (let lon = -10; lon <= 40; lon += 5) { ctx.beginPath(); ctx.moveTo(X(lon), Y(VUE.lat[0])); ctx.lineTo(X(lon), Y(VUE.lat[1])); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(`${Math.abs(lon)}°${lon < 0 ? 'O' : lon > 0 ? 'E' : ''}`, X(lon), Y(VUE.lat[0]) - 2); }
-    for (let lat = 30; lat <= 45; lat += 5) { ctx.beginPath(); ctx.moveTo(X(VUE.lon[0]), Y(lat)); ctx.lineTo(X(VUE.lon[1]), Y(lat)); ctx.stroke(); ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(`${lat}°N`, X(VUE.lon[0]) + 3, Y(lat) - 1); }
+    for (let lon = Math.ceil(C.lon[0] / pasG) * pasG; lon <= C.lon[1]; lon += pasG) { ctx.beginPath(); ctx.moveTo(X(lon), Y(C.lat[0])); ctx.lineTo(X(lon), Y(C.lat[1])); ctx.stroke(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(`${Math.abs(lon)}°${lon < 0 ? 'O' : lon > 0 ? 'E' : ''}`, X(lon), Y(C.lat[0]) - 2); }
+    for (let lat = Math.ceil(C.lat[0] / pasG) * pasG; lat <= C.lat[1]; lat += pasG) { ctx.beginPath(); ctx.moveTo(X(C.lon[0]), Y(lat)); ctx.lineTo(X(C.lon[1]), Y(lat)); ctx.stroke(); ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(`${lat}°N`, X(C.lon[0]) + 3, Y(lat) - 1); }
     // côtes et frontières (Natural Earth)
     if (etat.cotes) {
       for (const [cle, larg, coul, tirets] of [['frontieres', 0.8, COUL['grid-strong'], [3, 3]], ['cotes', 1.2, COUL.muted, []]]) {
@@ -539,7 +596,7 @@ import Sismo from './sismo/signal.js';
     // séismes : disques selon la magnitude, couleur selon l'âge
     const t = maintenant();
     for (const e of etat.seismes) {
-      if (e.lon < VUE.lon[0] || e.lon > VUE.lon[1] || e.lat < VUE.lat[0] || e.lat > VUE.lat[1]) continue;
+      if (!dansCadre(e)) continue;
       const age = t - e.temps, r = rayonSeisme(e);
       ctx.fillStyle = age < 3600000 ? '#dc2626' : age < 86400000 ? '#ea580c' : '#ca8a04'; ctx.globalAlpha = 0.55;
       ctx.beginPath(); ctx.arc(X(e.lon), Y(e.lat), r, 0, 2 * Math.PI); ctx.fill(); ctx.globalAlpha = 1;
@@ -558,17 +615,17 @@ import Sismo from './sismo/signal.js';
     }
     ctx.restore();
     // séisme choisi hors de la carte : flèche au bord, dans sa direction
-    if (c && (c.lon < VUE.lon[0] || c.lon > VUE.lon[1] || c.lat < VUE.lat[0] || c.lat > VUE.lat[1])) {
-      const centre = { lat: 38, lon: 15 }, { azimut, distance } = Direct.distanceAzimut(centre.lat, centre.lon, c.lat, c.lon), a = (azimut * Math.PI) / 180;
+    if (c && !dansCadre(c)) {
+      const centre = { lat: carteVue.clat, lon: carteVue.clon }, { azimut, distance } = Direct.distanceAzimut(centre.lat, centre.lon, c.lat, c.lon), a = (azimut * Math.PI) / 180;
       const cx = X(centre.lon), cy = Y(centre.lat), dx = Math.sin(a), dy = -Math.cos(a);
-      const k = Math.min(Math.abs((dx > 0 ? X(VUE.lon[1]) - 18 - cx : X(VUE.lon[0]) + 18 - cx) / (dx || 1e-9)), Math.abs((dy > 0 ? Y(VUE.lat[0]) - 18 - cy : Y(VUE.lat[1]) + 18 - cy) / (dy || 1e-9)));
+      const k = Math.min(Math.abs((dx > 0 ? W - 28 - cx : 28 - cx) / (dx || 1e-9)), Math.abs((dy > 0 ? H - 28 - cy : 28 - cy) / (dy || 1e-9)));
       const px = cx + k * dx, py = cy + k * dy;
       ctx.fillStyle = COUL.ink; ctx.beginPath(); ctx.moveTo(px + 9 * dx, py + 9 * dy); ctx.lineTo(px - 7 * dy - 4 * dx, py + 7 * dx - 4 * dy); ctx.lineTo(px + 7 * dy - 4 * dx, py - 7 * dx - 4 * dy); ctx.closePath(); ctx.fill();
       texte(ctx, `M ${virg(c.mag, 1)} · ${virg(distance, 0)}° du centre`, px - 14 * dx, py - 14 * dy, COUL.ink, `800 11px ${POLICE}`, dx > 0.3 ? 'right' : dx < -0.3 ? 'left' : 'center');
     }
     // stations : triangles colorés par l'amplitude (suivies), vides sinon
     const suivies = new Set(etat.suivies.map(ident));
-    for (const s of visibles()) {
+    for (const s of visibles().filter(dansCadre)) {
       const x = X(s.lon), y = Y(s.lat), suivie = suivies.has(ident(s)), m = etat.mesures.get(ident(s)), lat = Direct.latence(m ? m.fin : null, Date.now());
       ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + 6.5, y + 4.5); ctx.lineTo(x - 6.5, y + 4.5); ctx.closePath();
       if (suivie) { ctx.fillStyle = m && lat <= latenceGrise(s) ? couleurAmplitude(m.amp) : '#94a3b8'; ctx.fill(); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1.2; ctx.stroke(); }
@@ -580,7 +637,7 @@ import Sismo from './sismo/signal.js';
     const sel = etat.selection;
     if (sel) {
       const o = sel.objet, x = X(o.lon), y = Y(o.lat), r = sel.type === 'station' ? 13 : rayonSeisme(o) + 5;
-      if (dansVue(o)) for (const [coul, l] of [[COUL.paper, 5], [COUL.ink, 2]]) { ctx.strokeStyle = coul; ctx.lineWidth = l; ctx.beginPath(); ctx.arc(x, y - (sel.type === 'station' ? 1 : 0), r, 0, 2 * Math.PI); ctx.stroke(); }
+      if (dansCadre(o)) for (const [coul, l] of [[COUL.paper, 5], [COUL.ink, 2]]) { ctx.strokeStyle = coul; ctx.lineWidth = l; ctx.beginPath(); ctx.arc(x, y - (sel.type === 'station' ? 1 : 0), r, 0, 2 * Math.PI); ctx.stroke(); }
     }
   }
   const rayonSeisme = e => 2.5 + 2.2 * Math.max(0, (e.mag ?? 3) - 2.5);
@@ -694,9 +751,8 @@ import Sismo from './sismo/signal.js';
   // ── Interactions ──────────────────────────────────────────────────────────────────────────────────────────────
   // Toucher la carte : l'objet le plus proche (station de la carte ou séisme), dans un rayon plus large au doigt ; sa
   // fiche s'ouvre sous la carte. Toucher un séisme le choisit (arrivées sur les traces, fronts sur la carte).
-  function cliquerCarte(ev) {
+  function toucherCarte(x, y) {
     if (!geo) return;
-    const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
     const rayon = window.matchMedia('(pointer: coarse)').matches ? 24 : 14;
     const touches = [
       ...visibles().map(o => ({ type: 'station', objet: o, d: Math.hypot(geo.X(o.lon) - x, geo.Y(o.lat) - 1 - y) })),
@@ -726,7 +782,7 @@ import Sismo from './sismo/signal.js';
   async function chargerSismogrammes(e) {
     const carte = $('#dr-sismo'), cands = [...new Map([...visibles(), ...etat.suivies].map(s => [ident(s), s])).values()];
     const lignes = Direct.stationsSeisme(cands, e, 10), { debut, fin } = Direct.fenetreSeisme(e, lignes.map(l => l.distance));
-    const ev = { seisme: e, debut, fin, lignes: lignes.map(l => ({ ...l, voie: Direct.voie(3 * 3600 * 1000) })), etat: 'lecture' };
+    const ev = { seisme: e, debut, fin, vue: { t0: debut, t1: fin }, lignes: lignes.map(l => ({ ...l, voie: Direct.voie(3 * 3600 * 1000) })), etat: 'lecture' };
     etat.ev = ev;
     carte.hidden = false;
     $('#dr-ev-titre').textContent = `M ${virg(e.mag, 1)} · ${e.region || ''} · ${new Date(e.temps).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
@@ -755,38 +811,59 @@ import Sismo from './sismo/signal.js';
     $('#dr-ev-etat').textContent = `${avec} station${avec > 1 ? 's' : ''} sur ${ev.lignes.length} avec des données dans les archives${echecs ? ` (${echecs} centre${echecs > 1 ? 's' : ''} injoignable${echecs > 1 ? 's' : ''})` : ''}, de ${hms(debut)} à ${hms(fin)} UTC.`;
     dessinerSismogrammes();
   }
+  let geoSismo = null;
+  function zoomerSismogrammes(f, x) {
+    const ev = etat.ev;
+    if (!ev) return;
+    const { t0, t1 } = ev.vue, g = geoSismo, tx = g && x !== undefined ? t0 + ((x - g.x0) / (g.x1 - g.x0)) * (t1 - t0) : (t0 + t1) / 2;
+    const d = Math.max(5000, Math.min(ev.fin - ev.debut, (t1 - t0) / f)), r = (tx - t0) / (t1 - t0);
+    let a = tx - r * d;
+    a = Math.max(ev.debut, Math.min(ev.fin - d, a));
+    ev.vue = { t0: a, t1: a + d }; dessinerSismogrammes();
+  }
+  function deplacerSismogrammes(dx) {
+    const ev = etat.ev, g = geoSismo;
+    if (!ev || !g) return;
+    const d = ev.vue.t1 - ev.vue.t0, a = Math.max(ev.debut, Math.min(ev.fin - d, ev.vue.t0 - (dx / (g.x1 - g.x0)) * d));
+    ev.vue = { t0: a, t1: a + d }; dessinerSismogrammes();
+  }
   // Une trace par station, rangées par distance ; temps comptés depuis l'origine ; arrivées prévues (ak135).
   function dessinerSismogrammes() {
     const ev = etat.ev, cv = $('#dr-ev-traces');
     if (!ev || !cv || $('#dr-sismo').hidden) return;
     const n = Math.max(1, ev.lignes.length), hautRang = window.innerWidth < 760 ? 58 : 66;
     const { ctx, W, H } = preparer(cv, 30 + n * hautRang + 28), g = { x0: 10, x1: W - 10, y0: 24, y1: H - 28 }, hR = (g.y1 - g.y0) / n;
-    const e = ev.seisme, X = t => g.x0 + ((t - ev.debut) / (ev.fin - ev.debut)) * (g.x1 - g.x0), cle = $('#dr-ev-filtre').value;
-    // graduations : minutes (ou secondes) après l'origine
-    const duree = (ev.fin - e.temps) / 1000, nmax = Math.max(3, Math.min(8, Math.floor((g.x1 - g.x0) / 64)));
-    const pas = [10, 30, 60, 120, 300, 600, 900, 1200].find(p => duree / p <= nmax) || 1800;
+    const e = ev.seisme, { t0: v0, t1: v1 } = ev.vue, X = t => g.x0 + ((t - v0) / (v1 - v0)) * (g.x1 - g.x0), cle = $('#dr-ev-filtre').value;
+    geoSismo = { x0: g.x0, x1: g.x1 };
+    // graduations : minutes (ou secondes) après l'origine, sur la partie visible
+    const nmax = Math.max(3, Math.min(8, Math.floor((g.x1 - g.x0) / 64))), a = (v0 - e.temps) / 1000, b = (v1 - e.temps) / 1000;
+    const pas = [1, 2, 5, 10, 30, 60, 120, 300, 600, 900, 1200].find(p => (b - a) / p <= nmax) || 1800;
     ctx.font = `10.5px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    for (let ts = 0; ts <= duree; ts += pas) {
+    ctx.save(); ctx.beginPath(); ctx.rect(g.x0, 0, g.x1 - g.x0, H); ctx.clip();
+    for (let ts = Math.ceil(a / pas) * pas; ts <= b; ts += pas) {
       const x = Math.round(X(e.temps + ts * 1000)) + 0.5;
       ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, g.y0); ctx.lineTo(x, g.y1); ctx.stroke();
-      ctx.fillStyle = COUL.muted; ctx.fillText(pas < 60 ? `${ts} s` : `${ts / 60} min`, x, g.y1 + 6);
+      ctx.fillStyle = COUL.muted; ctx.fillText(pas < 60 ? `${ts} s` : `${virg(ts / 60, ts % 60 ? 1 : 0)} min`, x, g.y1 + 6);
     }
     ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(e.temps), g.y0 - 4); ctx.lineTo(X(e.temps), g.y1); ctx.stroke();
     texte(ctx, 'origine', X(e.temps) + 4, g.y0 - 12, COUL.ink, `700 10.5px ${POLICE}`);
+    ctx.restore();
     ev.lignes.forEach((l, k) => {
       const yc = g.y0 + hR * (k + 0.5), s = l.s;
       if (k) { ctx.strokeStyle = COUL['grid-strong']; ctx.beginPath(); ctx.moveTo(g.x0, Math.round(g.y0 + hR * k) + 0.5); ctx.lineTo(g.x1, Math.round(g.y0 + hR * k) + 0.5); ctx.stroke(); }
       for (const a of arriveesStation(s, e)) {
         const t = e.temps + a.temps * 1000;
-        if (t < ev.debut || t > ev.fin || /^(PcP|ScS)$/.test(a.phase)) continue;
+        if (t < v0 || t > v1 || /^(PcP|ScS)$/.test(a.phase)) continue;
         const x = X(t), coul = a.phase === 'LR' ? COUL.amp : /^[pP]/.test(a.phase) ? COUL['pick-p'] : COUL['pick-s'];
         ctx.strokeStyle = coul; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, yc - hR / 2 + 2); ctx.lineTo(x, yc + hR / 2 - 2); ctx.stroke(); ctx.setLineDash([]);
         if (/^(P|S|LR|PKIKP|PKP|SKS)$/.test(a.phase)) texte(ctx, a.phase, x + 3, yc + hR / 2 - 9, coul, `800 10px ${POLICE}`);
       }
+      // filtre sur toute la fenêtre lue (pas de transitoire au bord de la partie zoomée), dessin de la partie visible
       const x = l.voie.fin() === null ? null : l.voie.extraire(ev.debut, ev.fin);
       let max = 0;
       if (x && x.donnees.length) {
-        const fs = x.cadence, f = FILTRES[cle], brut = Direct.preparer(x.donnees, 1e6 / s.sensibilite, Math.round(20 * fs)), y = f ? Direct.filtrer(brut, sos(cle, fs)) : brut;
+        const fs = x.cadence, f = FILTRES[cle], brut = Direct.preparer(x.donnees, 1e6 / s.sensibilite, Math.round(20 * fs)), tout = f ? Direct.filtrer(brut, sos(cle, fs)) : brut;
+        const i0 = Math.max(0, Math.floor(((v0 - x.t0) * fs) / 1000)), y = tout.subarray(i0, Math.min(tout.length, Math.ceil(((v1 - x.t0) * fs) / 1000) + 1)), ty0 = x.t0 + (i0 * 1000) / fs;
         for (const v of y) if (!Number.isNaN(v)) max = Math.max(max, Math.abs(v));
         const ech = (hR * 0.45) / (max || 1), parPx = Math.max(1, Math.floor(y.length / (g.x1 - g.x0)));
         ctx.save(); ctx.beginPath(); ctx.rect(g.x0, yc - hR / 2, g.x1 - g.x0, hR); ctx.clip();
@@ -796,7 +873,7 @@ import Sismo from './sismo/signal.js';
           let mn = Infinity, mx = -Infinity;
           for (let j = i; j < Math.min(y.length, i + parPx); j++) { const v = y[j]; if (!Number.isNaN(v)) { if (v < mn) mn = v; if (v > mx) mx = v; } }
           if (mn === Infinity) { leve = true; continue; }
-          const xx = X(x.t0 + (i * 1000) / fs);
+          const xx = X(ty0 + (i * 1000) / fs);
           if (leve) { ctx.moveTo(xx, yc - mx * ech); leve = false; } else ctx.lineTo(xx, yc - mx * ech);
           ctx.lineTo(xx, yc - mn * ech);
         }
@@ -805,6 +882,51 @@ import Sismo from './sismo/signal.js';
       texte(ctx, `${s.reseau}.${s.station} · Δ ${virg(l.distance, 1)}°`, g.x0 + 4, yc - hR / 2 + 9, COUL.ink, `700 11.5px ${MONO}`);
       texte(ctx, x ? `max ${virg(max, max < 1 ? 3 : 1)} µm/s` : ev.etat === 'lecture' ? 'lecture…' : 'pas de donnée', g.x1 - 4, yc - hR / 2 + 9, COUL.muted, `10.5px ${MONO}`, 'right');
     });
+  }
+
+  // ── Gestes : glisser (un doigt ou la souris), pincer (deux doigts), molette, double toucher ─────────────────────
+  // h : { glisser(dx, dy), zoomer(f, x, y), toucher(x, y), molette: 'libre' | 'ctrl' }. Sur les traces, la molette ne
+  // zoome qu'avec Ctrl (sinon elle fait défiler la page) et un glissement vertical fait défiler la page (touch-action).
+  function gestes(cv, h) {
+    const pts = new Map();
+    let glisse = null, pince = null;
+    const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener('pointerdown', e => {
+      try { cv.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
+      pts.set(e.pointerId, pos(e));
+      if (pts.size === 1) glisse = { p: pos(e), bouge: false };
+      else if (pts.size === 2) { const [a, b] = [...pts.values()]; pince = Math.hypot(a[0] - b[0], a[1] - b[1]); glisse = null; }
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      const p = pos(e), avant = pts.get(e.pointerId);
+      pts.set(e.pointerId, p);
+      if (pts.size >= 2 && pince) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (d > 0) h.zoomer(d / pince, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        pince = d;
+        return;
+      }
+      if (!glisse) return;
+      if (!glisse.bouge && Math.hypot(p[0] - glisse.p[0], p[1] - glisse.p[1]) > 6) { glisse.bouge = true; cv.classList.add('glisse'); }
+      if (glisse.bouge && h.glisser) h.glisser(p[0] - avant[0], p[1] - avant[1]);
+    });
+    const fin = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (e.type === 'pointerup' && glisse && !glisse.bouge && !pts.size && h.toucher) h.toucher(...pos(e));
+      if (pts.size < 2) pince = null;
+      if (!pts.size) { glisse = null; cv.classList.remove('glisse'); }
+    };
+    cv.addEventListener('pointerup', fin);
+    cv.addEventListener('pointercancel', fin);
+    cv.addEventListener('wheel', e => {
+      if (h.molette === 'ctrl' && !e.ctrlKey) return;
+      e.preventDefault();
+      const [x, y] = pos(e);
+      h.zoomer(e.deltaY < 0 ? 1.25 : 0.8, x, y);
+    }, { passive: false });
+    cv.addEventListener('dblclick', e => { const [x, y] = pos(e); h.zoomer(2, x, y); });
   }
 
   // ── Fiche de l'objet touché ─────────────────────────────────────────────────────────────────────────────────
@@ -854,7 +976,7 @@ import Sismo from './sismo/signal.js';
     if (!sel || sel.type !== 'station' || !cv) return;
     const span = $('#dr-fiche-etat');
     if (span) span.textContent = etatStation(sel.objet);
-    const { ctx, W, H } = preparer(cv, 96), m = etat.mesures.get(ident(sel.objet)), t1 = maintenant(), t0 = t1 - etat.fenetre * 60000;
+    const { ctx, W, H } = preparer(cv, 96), m = etat.mesures.get(ident(sel.objet)), { t0, t1 } = fenetreTraces();
     if (!m || !m.x.length) { texte(ctx, 'en attente de données', W / 2, H / 2, COUL.muted, `700 12px ${POLICE}`, 'center'); return; }
     let max = 0;
     for (const v of m.x) if (!Number.isNaN(v)) max = Math.max(max, Math.abs(v));
@@ -870,18 +992,31 @@ import Sismo from './sismo/signal.js';
       ctx.lineTo(x, yc - mn * ech);
     }
     ctx.stroke();
-    texte(ctx, `${etat.fenetre} min · max ${virg(max, max < 1 ? 3 : 1)} µm/s`, 8, 10, COUL.muted, `10.5px ${MONO}`);
+    texte(ctx, `${depuisQuand(t1 - t0)} · max ${virg(max, max < 1 ? 3 : 1)} µm/s`, 8, 10, COUL.muted, `10.5px ${MONO}`);
   }
 
   function brancher() {
-    $('#dr-carte').addEventListener('click', cliquerCarte);
     $('#dr-carte').addEventListener('mousemove', ev => {
       if (!geo) return;
       const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
       const s = visibles().find(o => Math.hypot(geo.X(o.lon) - x, geo.Y(o.lat) - y) < 10);
       ev.currentTarget.title = s ? `${s.reseau}.${s.station} (${s.voie}, ${s.cadence} Hz) · ${s.pays ? s.pays.nom : 'en mer'} · ${nomCentre(s.centre)}` : '';
     });
-    $$('[data-dr-fenetre]').forEach(b => b.addEventListener('click', () => { etat.fenetre = +b.dataset.drFenetre; $$('[data-dr-fenetre]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); dessinerTout(); }));
+    $$('[data-dr-fenetre]').forEach(b => b.addEventListener('click', () => { vueT.duree = +b.dataset.drFenetre * 60000; vueT.fin = null; bornerTraces(); dessinerTout(); }));
+    $('#dr-traces-plus').addEventListener('click', () => zoomerTraces(2));
+    $('#dr-traces-moins').addEventListener('click', () => zoomerTraces(0.5));
+    $('#dr-direct').addEventListener('click', () => { vueT.fin = null; bornerTraces(); dessinerTout(); });
+    gestes($('#dr-traces'), { molette: 'ctrl', glisser: dx => deplacerTraces(dx), zoomer: (f, x) => zoomerTraces(f, x) });
+    // carte : pincer, molette, double toucher, glisser ; un toucher bref ouvre la fiche
+    gestes($('#dr-carte'), { molette: 'libre', glisser: (dx, dy) => deplacerCarte(dx, dy), zoomer: (f, x, y) => zoomerCarte(f, x, y), toucher: (x, y) => toucherCarte(x, y) });
+    $('#dr-carte-plus').addEventListener('click', () => geo && zoomerCarte(2, geo.W / 2, geo.H / 2));
+    $('#dr-carte-moins').addEventListener('click', () => geo && zoomerCarte(0.5, geo.W / 2, geo.H / 2));
+    $('#dr-carte-tout').addEventListener('click', vueEnsemble);
+    // sismogrammes d'un séisme : mêmes gestes, dans la fenêtre lue
+    gestes($('#dr-ev-traces'), { molette: 'ctrl', glisser: dx => deplacerSismogrammes(dx), zoomer: (f, x) => zoomerSismogrammes(f, x) });
+    $('#dr-ev-plus').addEventListener('click', () => zoomerSismogrammes(2));
+    $('#dr-ev-moins').addEventListener('click', () => zoomerSismogrammes(0.5));
+    $('#dr-ev-tout').addEventListener('click', () => { if (etat.ev) { etat.ev.vue = { t0: etat.ev.debut, t1: etat.ev.fin }; dessinerSismogrammes(); } });
     $('#dr-filtre').addEventListener('change', e => { etat.filtre = e.target.value; dessinerTout(); });
     $('#dr-pause').addEventListener('click', e => { etat.pause = etat.pause ? null : Date.now(); e.currentTarget.textContent = etat.pause ? 'Reprendre' : 'Pause'; e.currentTarget.setAttribute('aria-pressed', String(!!etat.pause)); majTout(); });
     $$('[data-dr-mode]').forEach(b => b.addEventListener('click', () => { if (b.dataset.drMode !== etat.mode) changerMode(b.dataset.drMode); }));
@@ -890,7 +1025,7 @@ import Sismo from './sismo/signal.js';
     new ResizeObserver(() => dessinerSismogrammes()).observe($('#dr-sismo'));
     $$('[data-dr-catalogue]').forEach(b => b.addEventListener('click', () => { etat.catalogue = b.dataset.drCatalogue; $$('[data-dr-catalogue]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); chargerSeismes(); }));
     $('#dr-traces').addEventListener('mousemove', ev => {
-      const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, W = r.width, t1 = maintenant(), t0 = t1 - etat.fenetre * 60000;
+      const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, W = r.width, { t0, t1 } = fenetreTraces();
       $('#dr-curseur').textContent = `${hms(t0 + ((x - 10) / (W - 20)) * (t1 - t0))} UTC`;
     });
     const redessiner = () => { lireCouleurs(); dessinerTout(); };

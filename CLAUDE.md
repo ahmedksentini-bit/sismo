@@ -209,7 +209,11 @@ la virgule décimale.
     `api/fdsn` pour les pages restées en cache. Carte : triangles = stations, disques = séismes des 7 derniers jours, légende
     faite des symboles mêmes de la carte ; toucher un objet (le plus proche, rayon élargi au doigt) ouvre sa fiche sous la
     carte (station : centre, pays, d'où viennent ses données, sa trace, « Suivre cette station » ; séisme : détails,
-    arrivées placées sur les traces) ; un toucher ne change jamais à lui seul les stations suivies. Les séismes sont ceux du
+    arrivées placées sur les traces) ; un toucher ne change jamais à lui seul les stations suivies. Zoom (pincer, molette,
+    double toucher, boutons) : la carte se zoome dans le domaine des côtes sans changer la zone de référence des stations ;
+    les traces en direct remontent au plus 70 min (durée des tampons), « Revenir au direct » ; les sismogrammes d'un
+    séisme se zooment dans leur fenêtre lue, filtrés sur toute la fenêtre. Sur les traces, Ctrl + molette seulement et
+    touch-action: pan-y, pour que la page défile encore. Les séismes sont ceux du
     catalogue de GEOFON (7 derniers jours) ; « Sismogrammes de ce séisme » lit les archives (dataselect) de 10 stations au
     plus (`Direct.stationsSeisme` : les 3 plus proches puis des distances réparties), d'une minute avant l'origine à deux
     minutes après les ondes de surface (ou S) de la plus lointaine (`Direct.fenetreSeisme`, < 2 h). La liste des centres est la liste blanche des deux
