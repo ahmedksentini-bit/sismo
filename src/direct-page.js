@@ -100,6 +100,14 @@ import Sismo from './sismo/signal.js';
     const cs = getComputedStyle(document.documentElement);
     for (const k of ['paper', 'ink', 'muted', 'line', 'soft', 'grid', 'grid-strong', 'trace', 'pick-p', 'pick-s', 'amp', 'blue', 'cyan', 'teal', 'vrai', 'bad']) COUL[k] = cs.getPropertyValue('--' + k).trim();
   }
+  // Grand écran (même requête que lecteur.css) : la page est un tableau de bord sans défilement, et chaque canevas prend la
+  // hauteur de son cadre (.dr-defile), au moins hMin (le cadre défile alors) ; ailleurs, la hauteur de son contenu.
+  const TABLEAU = window.matchMedia('(min-width: 1200px) and (min-height: 600px)');
+  const tableau = () => TABLEAU.matches;
+  function hauteurCanevas(cv, hNormale, hMin = 0) {
+    const cadre = tableau() && cv.closest('.dr-defile');
+    return cadre ? Math.max(hMin, cadre.clientHeight) : hNormale;
+  }
   function preparer(cv, hauteur) {
     const dpr = window.devicePixelRatio || 1, W = cv.clientWidth;
     if (hauteur) cv.style.height = `${Math.round(hauteur)}px`;
@@ -478,7 +486,7 @@ import Sismo from './sismo/signal.js';
   // ── Traces (comme scrttv) ─────────────────────────────────────────────────────────────────────────────────────
   function dessinerTraces() {
     const cv = $('#dr-traces'), n = Math.max(1, etat.suivies.length), hautRang = window.innerWidth < 760 ? 58 : 70;
-    const { ctx, W, H } = preparer(cv, 30 + n * hautRang + 26), g = { x0: 10, x1: W - 10, y0: 26, y1: H - 26 };
+    const { ctx, W, H } = preparer(cv, hauteurCanevas(cv, 30 + n * hautRang + 26, 30 + n * 28 + 26)), g = { x0: 10, x1: W - 10, y0: 26, y1: H - 26 };
     const { t0, t1 } = fenetreTraces(), X = t => g.x0 + ((t - t0) / (t1 - t0)) * (g.x1 - g.x0), hR = (g.y1 - g.y0) / n;
     geoTraces = { x0: g.x0, x1: g.x1, t0, t1 };
     // graduations du temps (UTC)
@@ -553,7 +561,7 @@ import Sismo from './sismo/signal.js';
   // vue ; le canvas garde la hauteur de la zone de référence. cadre : longitudes et latitudes visibles.
   function projection(W) {
     const latc = (VUE.lat[0] + VUE.lat[1]) / 2, kx = Math.cos((latc * Math.PI) / 180), larg = (VUE.lon[1] - VUE.lon[0]) * kx, haut = VUE.lat[1] - VUE.lat[0];
-    const H = Math.min(window.innerHeight * 0.7, (W * haut) / larg), s = Math.min((W - 20) / larg, (H - 20) / haut) * carteVue.z;
+    const H = hauteurCanevas($('#dr-carte'), Math.min(window.innerHeight * 0.7, (W * haut) / larg), 100), s = Math.min((W - 20) / larg, (H - 20) / haut) * carteVue.z;
     const X = lon => W / 2 + (lon - carteVue.clon) * kx * s, Y = lat => H / 2 - (lat - carteVue.clat) * s;
     const lon = x => carteVue.clon + (x - W / 2) / (kx * s), lat = y => carteVue.clat - (y - H / 2) / s;
     return { W, H, X, Y, lon, lat, kx, s, cadre: { lon: [lon(10), lon(W - 10)], lat: [lat(H - 10), lat(10)] } };
@@ -1037,7 +1045,7 @@ import Sismo from './sismo/signal.js';
     const ev = etat.ev, cv = $('#dr-ev-traces');
     if (!ev || !cv || $('#dr-sismo').hidden) return;
     const n = Math.max(1, ev.lignes.length), hautRang = window.innerWidth < 760 ? 58 : 66;
-    const { ctx, W, H } = preparer(cv, 30 + n * hautRang + 28), g = { x0: 10, x1: W - 10, y0: 24, y1: H - 28 }, hR = (g.y1 - g.y0) / n;
+    const { ctx, W, H } = preparer(cv, hauteurCanevas(cv, 30 + n * hautRang + 28, 30 + n * 28 + 28)), g = { x0: 10, x1: W - 10, y0: 24, y1: H - 28 }, hR = (g.y1 - g.y0) / n;
     const e = ev.seisme, { t0: v0, t1: v1 } = ev.vue, X = t => g.x0 + ((t - v0) / (v1 - v0)) * (g.x1 - g.x0), cle = $('#dr-ev-filtre').value;
     geoSismo = { x0: g.x0, x1: g.x1 };
     // graduations : minutes (ou secondes) après l'origine, sur la partie visible
@@ -1151,9 +1159,10 @@ import Sismo from './sismo/signal.js';
     if (!div) return;
     if (!sel) { div.hidden = true; div.innerHTML = ''; return; }
     div.hidden = false;
+    const fermer = '<button type="button" class="fiche-fermer" id="dr-fiche-fermer" aria-label="Fermer la fiche" title="Fermer la fiche">×</button>';
     if (sel.type === 'station') {
       const s = sel.objet, r = etat.reseaux.get(s.reseau);
-      div.innerHTML = `<p class="fiche-titre"><b>${echapper(`${s.reseau}.${s.station}`)}</b> · station sismologique · ${echapper(s.pays ? s.pays.nom : 'en mer ou petite île')}</p>
+      div.innerHTML = `${fermer}<p class="fiche-titre"><b>${echapper(`${s.reseau}.${s.station}`)}</b> · station sismologique · ${echapper(s.pays ? s.pays.nom : 'en mer ou petite île')}</p>
         <p class="aide">Réseau ${echapper(s.reseau)}${r && r.description ? ` (${echapper(r.description)})` : ''} · centre ${echapper(nomCentre(s.centre))} · voie ${echapper(s.voie)}, ${virg(s.cadence, 0)} Hz${s.capteur ? ` · ${echapper(s.capteur)}` : ''}</p>
         <p class="aide"><b>État :</b> <span id="dr-fiche-etat">${echapper(etatStation(s))}</span></p>
         ${suivie(s) ? '<canvas id="dr-fiche-trace" aria-label="Trace de la station, sur la fenêtre des traces"></canvas>' : ''}
@@ -1164,7 +1173,7 @@ import Sismo from './sismo/signal.js';
     } else {
       const e = sel.objet, t = Date.now();
       const d = etat.suivies.map(s => ({ s, d: Direct.distanceAzimut(e.lat, e.lon, s.lat, s.lon).distance })).sort((a, b) => a.d - b.d).slice(0, 3);
-      div.innerHTML = `<p class="fiche-titre"><b>Séisme M ${virg(e.mag, 1)}${e.typeMag ? ` ${echapper(e.typeMag)}` : ''}</b> · ${echapper(e.region || 'région inconnue')}</p>
+      div.innerHTML = `${fermer}<p class="fiche-titre"><b>Séisme M ${virg(e.mag, 1)}${e.typeMag ? ` ${echapper(e.typeMag)}` : ''}</b> · ${echapper(e.region || 'région inconnue')}</p>
         <p class="aide">${new Date(e.temps).toISOString().slice(0, 19).replace('T', ' à ')} UTC (il y a ${depuisQuand(t - e.temps)}) · profondeur ${virg(e.h, 0)} km · ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E${e.id === 'demo' ? ' · séisme fictif' : ''}</p>
         <p class="aide">${e.id === 'demo' ? 'Séisme fictif de la démonstration.' : `Séisme réel, lu dans le catalogue de GEOFON (GFZ Potsdam) : position et magnitude calculées par ce centre, identifiant ${/^gfz/.test(e.id) ? `<a href="https://geofon.gfz.de/eqinfo/event.php?id=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">${echapper(e.id)}</a>` : echapper(e.id)}.`}</p>
         <p class="aide">« Sismogrammes de ce séisme » lit dans les archives des centres les enregistrements de stations réparties en distance, autour de ses arrivées prévues, même s'il date de plusieurs jours.${t - e.temps < etat.fenetre * 60000 ? ' Il est aussi assez récent pour paraître sur les traces en direct.' : ''}${d.length ? ` Stations suivies les plus proches : ${d.map(x => `${echapper(x.s.station)} à ${virg(x.d, 1)}°`).join(', ')}.` : ''}</p>
@@ -1173,6 +1182,7 @@ import Sismo from './sismo/signal.js';
       if (b) b.addEventListener('click', () => chargerSismogrammes(e));
       $('#dr-fiche-rejouer').addEventListener('click', () => lancerRejeu(e));
     }
+    $('#dr-fiche-fermer').addEventListener('click', () => choisir(null));
     const v = $('#dr-fiche-traces');
     if (v) v.addEventListener('click', () => $('section[aria-label="Traces en temps réel"]').scrollIntoView({ behavior: 'smooth', block: 'start' }));
     dessinerFiche();
@@ -1250,6 +1260,22 @@ import Sismo from './sismo/signal.js';
     });
     const redessiner = () => { lireCouleurs(); dessinerTout(); };
     new ResizeObserver(() => dessinerTout()).observe($('#dr-traces'));
+    // tableau de bord : les cadres changent de hauteur avec la fenêtre (et la grille, quand les sismogrammes s'ouvrent)
+    const ro = new ResizeObserver(() => { dessinerTout(); dessinerSismogrammes(); });
+    $$('.dr-defile').forEach(c => ro.observe(c));
+    TABLEAU.addEventListener('change', () => { dessinerTout(); dessinerSismogrammes(); });
+    // légende de la carte : par-dessus la carte sur grand écran (toujours visible ailleurs)
+    $('#dr-legende-bouton').addEventListener('click', e => {
+      const ouverte = $('#dr-p-carte').classList.toggle('legende-ouverte');
+      e.currentTarget.setAttribute('aria-expanded', String(ouverte));
+    });
+    // Échap ferme ce qui s'est ouvert par-dessus le tableau de bord : légende, consigne, fiche
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || !tableau()) return;
+      if ($('#dr-p-carte').classList.contains('legende-ouverte')) { $('#dr-legende-bouton').click(); return; }
+      if ($('#dr-consigne').open) { $('#dr-consigne').open = false; return; }
+      if (etat.selection) choisir(null);
+    });
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) majTout(); });
   }
@@ -1273,6 +1299,8 @@ import Sismo from './sismo/signal.js';
     changerMode(etat.mode === 'demo' ? 'seedlink' : etat.mode);
   }
   lireCouleurs();
+  // sur grand écran, la consigne attend repliée sur sa ligne (elle s'ouvre par-dessus le tableau de bord)
+  if (tableau()) $('#dr-consigne').open = false;
   brancher();
   fetch('data/cotes-mediterranee.json').then(r => r.json()).then(j => { etat.cotes = j; dessinerCarte(); }).catch(() => { /* carte sans côtes */ });
   // table des temps de la localisation (croûte du cours puis ak135) pour les fronts ; sans elle, ak135 seul

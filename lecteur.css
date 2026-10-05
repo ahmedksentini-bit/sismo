@@ -486,3 +486,103 @@ tr.hors td { color: var(--muted); }
 .outils-rejeu select { width: auto; flex: 0 0 auto; }
 .ev-cadre { position: relative; }
 #dr-ev-curseur { position: absolute; top: 20px; bottom: 26px; width: 2px; background: var(--bad); pointer-events: none; }
+
+/* page « En direct » : bouton de légende (tableau de bord seulement), fermeture de la fiche, corps de la consigne */
+#dr-legende-bouton { display: none; }
+.fiche { position: relative; }
+.fiche-titre { padding-right: 30px; }
+.fiche-fermer { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.fiche-fermer:hover, .fiche-fermer:focus-visible { background: var(--paper); color: var(--ink); }
+.consigne-corps > p { margin: 10px 0 0; }
+
+/* page « En direct » sur grand écran : un tableau de bord sans défilement. Trois colonnes à la hauteur de l'écran ;
+   chaque panneau défile à l'intérieur ; carte, traces et sismogrammes prennent la hauteur de leur cadre (.dr-defile,
+   lue par src/direct-page.js) ; consigne, légende et fiche s'ouvrent par-dessus. Téléphone et tablette : inchangés. */
+@media (min-width: 1200px) and (min-height: 600px) {
+  body.page-direct { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+  .page-direct > .topbar { flex: none; padding: 8px 16px; }
+  .page-direct > main { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; width: 100%; max-width: none; margin: 0; padding: 10px 14px 12px; }
+  /* titre et état de la connexion dans la barre du haut */
+  .page-direct .banniere { position: fixed; top: 8px; right: 18px; z-index: 25; height: 42px; margin: 0; flex-wrap: nowrap; align-items: center; gap: 14px; }
+  .page-direct .banniere .eyebrow, .page-direct .banniere .chapeau { display: none; }
+  .page-direct .banniere h1 { font-size: 18px; white-space: nowrap; }
+  .page-direct .banniere .live-badge { align-self: center; }
+
+  #poste-direct { flex: 1 1 0; min-height: 0; display: grid; align-items: stretch; gap: 10px; grid-template-columns: minmax(285px, .95fr) minmax(0, 2.3fr) minmax(340px, 1.15fr);
+    grid-template-rows: auto repeat(12, minmax(0, 1fr)); }
+  #poste-direct > .colonne { display: contents; }
+  #poste-direct .carte { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 12px 14px; border-radius: 16px; }
+  #poste-direct .carte > * { flex: none; }
+  #poste-direct .carte > h2 { margin: 0 0 6px; font-size: 15.5px; }
+  #poste-direct .carte > h2 small:not(#dr-ev-titre), #poste-direct .explication { display: none; }
+  #poste-direct .carte > h2 small#dr-ev-titre { font-size: 12.5px; }
+  #poste-direct .sous-titre { margin: 0 0 8px; }
+  #poste-direct .outils { margin-bottom: 6px; }
+  #poste-direct .dr-defile { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+
+  /* consigne : une ligne ; ouverte, elle se déplie par-dessus le tableau de bord */
+  #poste-direct > .consigne { grid-column: 1 / -1; grid-row: 1; position: relative; z-index: 30; padding: 6px 14px; overflow: visible; }
+  #poste-direct > .consigne summary h2 { font-size: 15.5px; }
+  #poste-direct > .consigne h2 small { display: inline; margin: 0 0 0 10px; }
+  #poste-direct .consigne-corps { position: absolute; left: 0; right: 0; top: calc(100% + 6px); max-height: 70vh; overflow: auto;
+    padding: 4px 18px 14px; border: 1px solid #a5d8ee; border-radius: 14px; background: var(--paper); box-shadow: 0 18px 40px #0c4a6e30; }
+
+  /* gauche : source des données, réseaux, à retenir */
+  #dr-p-source { grid-column: 1; grid-row: 2 / 8; }
+  #dr-p-reseaux { grid-column: 1; grid-row: 8 / 11; }
+  #dr-p-retenir { grid-column: 1; grid-row: 11 / 14; }
+  #poste-direct #dr-afficheurs { margin-top: 8px !important; }
+  #dr-p-source .segments button { font-size: 12.5px; padding-inline: 6px; }
+  #dr-mode-aide { font-size: 12.5px; }
+  #dr-p-source .afficheur { padding: 6px 9px; }
+  #dr-p-source .afficheur small { font-size: 11px; }
+  #dr-journal, #dr-reseaux, #dr-arrivees, #dr-p-retenir > ul, #dr-p-seismes > .table-defile { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  #dr-reseaux { max-height: none; }
+  #dr-p-retenir > h2 { font-size: 14px; }
+  #dr-p-retenir li { font-size: 13px; }
+
+  /* centre : carte (outils sur la ligne du titre) et traces */
+  #poste-direct #dr-p-carte { grid-column: 2; grid-row: 2 / 8; position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto; column-gap: 12px; }
+  #dr-p-carte > * { margin: 0; }
+  #dr-p-carte > h2 { grid-area: 1 / 1; align-self: center; }
+  #dr-p-carte > .outils-zoom { grid-area: 1 / 2; justify-self: end; margin: 0; }
+  #dr-p-carte > .dr-defile { grid-area: 2 / 1 / 3 / 3; margin-top: 6px; overflow: hidden; }
+  #dr-p-carte > .outils-rejeu { grid-area: 3 / 1 / 4 / 3; margin-top: 6px; }
+  #dr-p-carte > #dr-propagation { grid-area: 4 / 1 / 5 / 3; }
+  #dr-p-carte > #dr-propagation:not(:empty) { margin-top: 4px; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #dr-legende-bouton { display: inline-flex; }
+  #dr-p-carte > .legende-carte { display: none; }
+  #dr-p-carte.legende-ouverte > .legende-carte { display: flex; position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 6; max-height: 70%; overflow: auto;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); box-shadow: 0 12px 28px #0c4a6e2a; }
+  #dr-p-carte > .fiche .bouton { padding: 6px 11px; font-size: 13px; }
+  #dr-fiche-traces { display: none; }
+  #dr-p-carte > .fiche { position: absolute; top: 48px; right: 22px; z-index: 7; width: min(420px, 46%); max-height: calc(100% - 64px); overflow: auto;
+    background: var(--paper); box-shadow: 0 14px 30px #0c4a6e30; }
+  #poste-direct #dr-p-traces { grid-column: 2; grid-row: 8 / 14; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 12px; }
+  #dr-p-traces > * { margin: 0; }
+  #dr-p-traces > h2 { grid-area: 1 / 1; align-self: center; }
+  #dr-p-traces > .outils { grid-area: 1 / 2; justify-content: flex-end; margin: 0; }
+  #dr-p-traces > .dr-defile { grid-area: 2 / 1 / 3 / 3; margin-top: 6px; }
+  #poste-direct .segments.compact button { padding: 4px 9px; font-size: 12.5px; }
+  #poste-direct .outil, #dr-legende-bouton { padding: 5px 10px; font-size: 12.5px; }
+  #poste-direct #dr-filtre, #poste-direct #dr-ev-filtre { padding: 4px 6px; font-size: 12.5px; }
+  #dr-curseur { font-size: 11.5px; }
+
+  /* droite : séismes et arrivées prévues ; un séisme ouvert y met ses sismogrammes, les arrivées passant à gauche */
+  #dr-p-seismes { grid-column: 3; grid-row: 2 / 8; }
+  #dr-p-arrivees { grid-column: 3; grid-row: 8 / 14; }
+  #dr-sismo { grid-column: 3; grid-row: 6 / 14; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-seismes { grid-row: 2 / 6; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-source { grid-row: 2 / 7; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-reseaux { grid-row: 7 / 9; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-arrivees { grid-column: 1; grid-row: 9 / 12; }
+  #poste-direct:has(#dr-sismo:not([hidden])) #dr-p-retenir { grid-row: 12 / 14; }
+  #dr-arrivees .resultats { font-size: 12px; }
+  #dr-arrivees .resultats th, #dr-arrivees .resultats td { padding: 4px 3px; white-space: nowrap; }
+  #dr-seismes { font-size: 12.5px; }
+  #dr-sismo .outils { gap: 6px; }
+  #dr-sismo .outil { padding: 5px 9px; font-size: 12.5px; }
+  #dr-ev-etat:empty { display: none; }
+  #dr-sismo .ev-cadre { min-height: 100%; }
+}
