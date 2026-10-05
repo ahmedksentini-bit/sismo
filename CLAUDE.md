@@ -76,6 +76,11 @@ la virgule décimale.
     site, sans fractiles, comparée au job `carte` d'OpenQuake (six sites). Après tout changement du modèle d'école,
     relancer `npm run references` (OpenQuake, ~10 min). `Psha.modeleSimple` (une zone circulaire, sans faille ni
     branche) sert au cours ; il est testé contre la somme directe de Cornell sur une zone ponctuelle.
+    Mode « Zones du catalogue » du banc « aléa » (`src/zones-reel.js`, `alea:zones`) : `Zones.modelePsha` dans un repère
+    fixe, projection équirectangulaire autour de `Zones.centre(zones)` (le site cliqué s'y place en lat/lon, le repère ne
+    bouge pas) ; `pasGrille` = le plus petit pas de `Zones.pasAdapte` donnant au plus 1 500 points (un calcul : 1 à 2 s),
+    branches (a, b) jusqu'à quatre zones à σ(b) > 0 (729 réalisations), carte d'aléa de 250 sites au plus
+    (`Zones.grilleAlea`) ; ni faille ni géodésie (un catalogue n'en donne pas) ; Explorer retrouve ses réglages en sortant.
 14. **Géodésie** (`src/sismo/geodesie.js`) : le champ vrai ne dépend que de x (faille de
     Savage et Burford, bande de raccourcissement uniforme) ; ε̇ en ns/an (1 mm/an/km = 1000 ns/an) ;
     e1h est l'axe le plus compressif, comme HMTK ; Kostrov sous la forme de Savage et Simpson

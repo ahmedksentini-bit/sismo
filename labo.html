@@ -6,13 +6,13 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Travaux pratiques de sismologie et d'aléa sismique : dix-sept bancs interactifs, de la lecture d'un sismogramme à l'isolation à la base">
 <title>Travaux pratiques — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=2d2e515096">
+<link rel="stylesheet" href="lecteur.css?v=17f7f606d6">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
   "./src/app.js": "./src/app.js?v=1cd687d721",
   "./src/ballon.js": "./src/ballon.js?v=34da25b99b",
-  "./src/banc-alea.js": "./src/banc-alea.js?v=efef685cad",
+  "./src/banc-alea.js": "./src/banc-alea.js?v=5379a51d44",
   "./src/banc-batiment.js": "./src/banc-batiment.js?v=947c718313",
   "./src/banc-ductilite.js": "./src/banc-ductilite.js?v=c29300a46c",
   "./src/banc-geodesie.js": "./src/banc-geodesie.js?v=34dc2cee6d",
@@ -27,7 +27,7 @@
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
   "./src/banc-source.js": "./src/banc-source.js?v=a0c137fe7c",
   "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
-  "./src/consignes.js": "./src/consignes.js?v=e815c35e35",
+  "./src/consignes.js": "./src/consignes.js?v=03516d3767",
   "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
   "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
   "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
@@ -122,7 +122,7 @@
   "./src/sismo/spectre.js": "./src/sismo/spectre.js?v=1202ae7996",
   "./src/sismo/tables.js": "./src/sismo/tables.js?v=cc48159840",
   "./src/sismo/teleseisme.js": "./src/sismo/teleseisme.js?v=548e548b4d",
-  "./src/sismo/zones.js": "./src/sismo/zones.js?v=d613e6291c",
+  "./src/sismo/zones.js": "./src/sismo/zones.js?v=7fe46c5410",
   "./src/socle.js": "./src/socle.js?v=1931acce73",
   "./src/tableaux.js": "./src/tableaux.js?v=69a0ae895d",
   "./src/traits.js": "./src/traits.js?v=1bf04c36d8",
@@ -823,11 +823,12 @@
     <section class="carte consigne" id="consigne-alea" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Modèle de sources">
-        <h2>Modèle de sources<small>Zones discrétisées en points tous les 10 km ; un clic déplace le site</small></h2>
+        <h2>Modèle de sources<small id="al-carte-titre">Zones discrétisées en points tous les 10 km ; un clic déplace le site</small></h2>
         <canvas id="al-carte" aria-label="Zones sources et site"></canvas>
-        <p class="legende"><span><i style="background:var(--pick-s)"></i>zone A</span><span><i style="background:var(--amp)"></i>zone B</span><span><i style="background:var(--teal)"></i>faille F</span><span><i class="tirets" style="border-color:var(--muted)"></i>50, 100 et 200 km du site</span><span class="curseur-lecture" id="al-curseur" style="margin-left:0">—</span></p>
+        <p class="legende"><span id="al-legende-sources" style="display:contents"><span><i style="background:var(--pick-s)"></i>zone A</span><span><i style="background:var(--amp)"></i>zone B</span><span><i style="background:var(--teal)"></i>faille F</span></span><span><i class="tirets" style="border-color:var(--muted)"></i><span id="al-legende-cercles">50, 100 et 200 km du site</span></span><span class="curseur-lecture" id="al-curseur" style="margin-left:0">—</span></p>
         <div class="actions"><button type="button" class="bouton secondaire" id="al-carte-alea">Carte d'aléa</button>
-          <span class="aide" style="margin:0">niveau moyen de la grandeur choisie à la probabilité visée, tous les 20 km (266 sites, une dizaine de secondes)</span></div>
+          <span class="aide" id="al-carte-aide" style="margin:0">niveau moyen de la grandeur choisie à la probabilité visée, tous les 20 km (266 sites, une dizaine de secondes)</span>
+          <span class="live-badge calcul" id="al-etat" role="status" hidden><i></i>Calcul de l'aléa…</span></div>
       </section>
       <section class="carte" aria-label="Courbe d'aléa" style="--o:42">
         <h2>Courbe d'aléa<small>Probabilité de dépasser chaque niveau en 50 ans pour la grandeur choisie : une courbe fine par réalisation de l'arbre logique, la moyenne et les fractiles</small></h2>
@@ -858,7 +859,19 @@
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
         <button type="button" id="al-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="al-mode-exercice" aria-pressed="false">Exercice</button>
+        <button type="button" id="al-mode-zones" aria-pressed="false">Zones du catalogue</button>
       </div>
+      <section class="carte" id="al-panneau-zones" aria-label="Zones du catalogue" hidden>
+        <p class="sous-titre">Zones du catalogue</p>
+        <p class="enonce" id="al-zones-vide">Aucun modèle de zones pour l'instant. Tracez des zones sismogènes au banc « sismicité », en mode
+          « Catalogue réel », puis cliquez sur son bouton « Calculer l'aléa avec ces zones ». Vous pouvez aussi charger un fichier de zones
+          (format « sismo-zones », enregistré par ce même banc).</p>
+        <div id="al-zones-resume"></div>
+        <label class="bouton secondaire bouton-fichier">Charger un fichier de zones<input type="file" id="al-zones-fichier" accept=".json,application/json"></label>
+        <p class="aide" id="al-zones-info"></p>
+        <p class="aide">Les zones sont projetées en km autour de leur centre (projection équirectangulaire locale) et discrétisées en points ;
+          chaque zone suit sa loi de Gutenberg-Richter tronquée, de max(Mc, 4) à Mmax. Pas de vérité terrain ni de corrigé.</p>
+      </section>
       <section class="carte" aria-label="Probabilité visée">
         <p class="sous-titre">Probabilité visée</p>
         <div class="segments" role="group" aria-label="Probabilité" style="margin-bottom:12px">
@@ -871,23 +884,33 @@
       <section class="carte" id="al-panneau-explorer" aria-label="Modèle" style="--o:41">
         <p class="sous-titre">Site</p>
         <div class="champ"><label for="al-vs30">Vs30 <output id="al-vs30-v"></output></label><input type="range" id="al-vs30" min="200" max="1100" step="10"></div>
+        <p class="aide" id="al-site-geo" hidden></p>
         <div class="separateur"></div>
         <p class="sous-titre">Zones sources</p>
-        <div class="segments" role="group" aria-label="Zone" style="margin-bottom:12px"><button type="button" data-al-zone="0">Zone A (proche)</button><button type="button" data-al-zone="1">Zone B (lointaine)</button></div>
-        <div class="champ"><label for="al-lam">Taux annuel λ(M ≥ 4) <output id="al-lam-v"></output></label><input type="range" id="al-lam" min="-1.5" max="0.6" step="0.01"></div>
+        <div class="segments" role="group" aria-label="Zone" id="al-zones-choix" style="margin-bottom:12px"><button type="button" data-al-zone="0">Zone A (proche)</button><button type="button" data-al-zone="1">Zone B (lointaine)</button></div>
+        <div class="champ"><label for="al-lam"><span id="al-lam-lib">Taux annuel λ(M ≥ 4)</span> <output id="al-lam-v"></output></label><input type="range" id="al-lam" min="-1.5" max="0.6" step="0.01"></div>
         <div class="champ"><label for="al-b">Valeur b <output id="al-b-v"></output></label><input type="range" id="al-b" min="0.7" max="1.3" step="0.01"></div>
         <div class="champ"><label for="al-mmax">Magnitude maximale Mmax <output id="al-mmax-v"></output></label><input type="range" id="al-mmax" min="5.5" max="7.6" step="0.1"></div>
+        <p class="aide" id="al-zone-stats" hidden></p>
         <div class="separateur"></div>
-        <p class="sous-titre">Faille F (zone A)</p>
-        <label class="case"><input type="checkbox" id="al-faille"> Ruptures flottantes de M = Mmax de la zone A à 7,1 (Wells et Coppersmith)</label>
-        <div class="champ" style="margin-top:12px"><label for="al-glissement">Vitesse de glissement géologique <output id="al-glissement-v"></output></label><input type="range" id="al-glissement" min="0" max="3" step="0.05"></div>
-        <div class="separateur"></div>
+        <div id="al-bloc-faille">
+          <p class="sous-titre">Faille F (zone A)</p>
+          <label class="case"><input type="checkbox" id="al-faille"> Ruptures flottantes de M = Mmax de la zone A à 7,1 (Wells et Coppersmith)</label>
+          <div class="champ" style="margin-top:12px"><label for="al-glissement">Vitesse de glissement géologique <output id="al-glissement-v"></output></label><input type="range" id="al-glissement" min="0" max="3" step="0.05"></div>
+          <div class="separateur"></div>
+        </div>
         <p class="sous-titre">Arbre logique</p>
         <label class="case"><input type="checkbox" id="al-inc-ab"> (a, b) de chaque zone : b ± 1,645 σ (poids 0,185 / 0,63 / 0,185)</label>
+        <p class="aide" id="al-ab-info" hidden></p>
         <label class="case" style="margin-top:6px"><input type="checkbox" id="al-inc-mmax"> Mmax − 0,3 / + 0 / + 0,3 (poids 0,3 / 0,5 / 0,2)</label>
-        <label class="case" style="margin-top:6px"><input type="checkbox" id="al-inc-geo"> Modèle géodésique : couplage χ 0,3 / 0,6 / 0,9 (poids 0,25 / 0,5 / 0,25)</label>
-        <div class="champ" style="margin-top:12px"><label for="al-poids-geo">Poids de la géodésie face au catalogue <output id="al-poids-geo-v"></output></label><input type="range" id="al-poids-geo" min="0" max="1" step="0.05"></div>
-        <p class="aide" id="al-geo-source" style="margin-top:0"></p>
+        <div id="al-bloc-geo">
+          <label class="case" style="margin-top:6px"><input type="checkbox" id="al-inc-geo"> Modèle géodésique : couplage χ 0,3 / 0,6 / 0,9 (poids 0,25 / 0,5 / 0,25)</label>
+          <div class="champ" style="margin-top:12px"><label for="al-poids-geo">Poids de la géodésie face au catalogue <output id="al-poids-geo-v"></output></label><input type="range" id="al-poids-geo" min="0" max="1" step="0.05"></div>
+          <p class="aide" id="al-geo-source" style="margin-top:0"></p>
+        </div>
+        <p class="aide" id="al-sans-faille" hidden>Ni faille ni modèle géodésique dans ce mode : un catalogue seul ne donne ni la géométrie et le
+          glissement d'une faille, ni la vitesse de déformation mesurée par GNSS ; les taux viennent du catalogue seul. La faille F et la
+          géodésie restent dans le modèle d'école (mode Explorer).</p>
         <div class="champ" style="margin-top:12px"><span class="etiquette">Lois d'atténuation (poids égaux)</span>
           <label class="case"><input type="checkbox" data-al-loi="akkar2014"> Akkar, Sandıkkaya et Bommer (2014)</label>
           <label class="case"><input type="checkbox" data-al-loi="bindi2014"> Bindi et al. (2014)</label>
@@ -1634,7 +1657,7 @@
 <script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>
 <script type="module" src="src/banc-sismicite.js?v=83a05b337f"></script>
 <script type="module" src="src/banc-geodesie.js?v=34dc2cee6d"></script>
-<script type="module" src="src/banc-alea.js?v=efef685cad"></script>
+<script type="module" src="src/banc-alea.js?v=5379a51d44"></script>
 <script type="module" src="src/banc-selection.js?v=fa88657041"></script>
 <script type="module" src="src/banc-site.js?v=07d6eb2b49"></script>
 <script type="module" src="src/banc-liquefaction.js?v=a209e4a6a4"></script>
