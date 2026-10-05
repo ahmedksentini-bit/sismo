@@ -27,7 +27,11 @@ la virgule décimale.
    X/Ug = r²/(1 − r² + 2iξr). Toute intégration passe par Newmark à accélération
    moyenne (`Oscillateur.integrer` ou `Oscillateur.pas`, identiques pas à pas, testé).
 9. **Profil** : les temps sont comptés depuis l'origine ; la réduction (t − Δ/V) n'est
-   qu'un affichage, les droites sont toujours calculées en temps vrais.
+   qu'un affichage, les droites sont toujours calculées en temps vrais. La carte des stations et la coupe de la Terre
+   se redessinent à chaque changement ; leur géométrie (distance critique, rais Pg et Pn, croisement) sort de
+   `Refraction.coupe`, testée contre `Sismo.temps`. La croûte dessinée est celle des droites de l'étudiant (V₁, V₂, H des
+   lectures ; phase première = droite la plus précoce) ; le modèle simulé (tirets) n'apparaît qu'en mode Explorer ou après
+   « Vérifier », jamais avant.
 10. **Spectre de réponse** : Sa = ω²·Sd (pseudo-accélération). Pas d'intégration
     ≤ T/20 (sous-pas par interpolation linéaire) ; le calcul progressif de l'animation
     et le calcul d'un bloc donnent le même spectre (testé). Le spectre EC8 affiché est

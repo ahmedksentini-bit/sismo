@@ -3,6 +3,8 @@ import Refraction from './sismo/refraction.js';
 
 // src/banc-profil.js — banc « profil par distance » : douze stations alignées, traces rangées par
 // distance, hodochrones Pg et Pn, et lecture de la croûte (V₁, V₂, épaisseur, distance de croisement).
+// Carte des stations et coupe de la Terre redessinées à chaque changement : la croûte tirée des droites de
+// l'utilisateur, le modèle simulé en tirets en mode Explorer ou après « Vérifier » seulement.
 (() => {
   'use strict';
   const SM = Sismo, Rf = Refraction;
@@ -12,6 +14,7 @@ import Refraction from './sismo/refraction.js';
   const MONO = 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace';
   const DISTANCES = Array.from({ length: 12 }, (_, i) => 15 + 30 * i);
   const DMAX = 360, H_FOYER = 5, MW = 5;
+  const BAZ = 90; // azimut de chaque station vers la source : les stations sont à l'ouest de l'épicentre (azimut 270°)
   const VPVS1 = 1.73, VPVS2 = 1.75;
 
   const etat = {
@@ -34,7 +37,7 @@ import Refraction from './sismo/refraction.js';
   function regenerer() {
     const p = parametres(), m = modele(p);
     etat.traces = DISTANCES.map((d, k) => {
-      const ev = SM.generer({ Mw: MW, delta: d, h: H_FOYER, baz: 90, graine: p.graine * 20 + k, modele: m, fin: d / m.vs1 + 25 });
+      const ev = SM.generer({ Mw: MW, delta: d, h: H_FOYER, baz: BAZ, graine: p.graine * 20 + k, modele: m, fin: d / m.vs1 + 25 });
       const rec = SM.enregistrer(ev, 'HH', 'calme', p.graine * 7 + k);
       const z = SM.convertir(rec.series.Z, ev.dt, 'HH', 'vitesse', [1, 10]);
       // Normalisations : trace entière, ou fenêtre des ondes P (de la première P à la Sg)
@@ -77,8 +80,11 @@ import Refraction from './sismo/refraction.js';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
     return { ctx, W, H };
   }
+  // Texte avec halo, gardé dans le canvas (un libellé proche du bord est décalé vers l'intérieur).
   function texte(ctx, t, x, y, coul, police, align = 'left', base = 'middle') {
     ctx.font = police; ctx.textAlign = align; ctx.textBaseline = base;
+    const w = ctx.measureText(t).width, W = ctx.canvas.clientWidth, g = align === 'left' ? x : align === 'right' ? x - w : x - w / 2;
+    if (g < 3) x += 3 - g; else if (g + w > W - 3) x -= g + w - (W - 3);
     ctx.lineWidth = 4; ctx.strokeStyle = COUL.paper; ctx.lineJoin = 'round'; ctx.strokeText(t, x, y);
     ctx.fillStyle = coul; ctx.fillText(t, x, y);
   }
@@ -213,6 +219,244 @@ import Refraction from './sismo/refraction.js';
     const v = verite();
     $('#p-verite').innerHTML = `<b>Vérité terrain.</b> V₁ = <b>${virg(v.V1, 2)} km/s</b>, V₂ = <b>${virg(v.V2, 2)} km/s</b>, H = <b>${virg(v.H, 0)} km</b> ; tᵢ = ${virg(v.ti, 2)} s ; Pn devance Pg au-delà de <b>${Math.round(v.xc)} km</b>.`;
   }
+  // ── Carte des stations et coupe de la Terre ─────────────────────────────
+  // Croûte de l'utilisateur : V₁ et V₂ des pentes, H des lectures (Refraction.coupe) ; la phase première à chaque
+  // station est celle de la droite la plus précoce (le croisement des droites, comme l'afficheur). Le modèle simulé
+  // (première arrivée du générateur) ne se montre qu'en mode Explorer ou après « Vérifier ».
+  const vraiVisible = () => etat.mode === 'explorer' || etat.verifie;
+  const CROUTE = 'rgba(180,120,60,0.10)', MANTEAU = 'rgba(180,120,60,0.24)';
+  function interpretation() {
+    const r = lectures(), g = etat.droites.g, n = etat.droites.n;
+    const coupe = g ? Rf.coupe(g.V, r.H ? n.V : null, r.H || null, H_FOYER, DISTANCES) : null;
+    return { r, g, n, coupe, premieres: DISTANCES.map(d => Rf.premiereLue(g, n, d)) };
+  }
+  function modeleVrai() { const p = parametres(); return Rf.coupe(p.v1, p.v2, p.H, H_FOYER, DISTANCES); }
+  const couleurPhase = ph => (ph === 'Pn' ? COUL['pick-s'] : COUL['pick-p']);
+  function etoile(ctx, x, y, r, coul) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = (i * Math.PI) / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); }
+    ctx.closePath(); ctx.fillStyle = coul; ctx.fill(); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1.2; ctx.stroke();
+  }
+  // Triangle de station (pointe en haut sur la carte, en bas sur la coupe) ; creux si la phase première n'est pas lue.
+  function triangle(ctx, x, y, s, sens, plein) {
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - s, y - sens * 1.8 * s); ctx.lineTo(x + s, y - sens * 1.8 * s); ctx.closePath();
+    ctx.fillStyle = plein || COUL.paper; ctx.fill(); ctx.lineWidth = plein ? 1.2 : 1.4; ctx.strokeStyle = plein ? COUL.paper : COUL.ink; ctx.stroke();
+  }
+  const ligne = (ctx, pts, X, Z) => { ctx.beginPath(); pts.forEach(([x, z], i) => (i ? ctx.lineTo(X(x), Z(z)) : ctx.moveTo(X(x), Z(z)))); ctx.stroke(); };
+  // Cote horizontale à double flèche de xd à xf (px) : libellé dessus si la place suffit, sinon à droite (gardé dans
+  // le canvas), le trait s'interrompant sous le libellé ; « suite » [texte, couleur] prolonge le libellé.
+  function cote(ctx, xd, xf, y, coul, etiquette, police, tirets = false, suite = null) {
+    ctx.font = police;
+    const a = Math.min(xd, xf), b = Math.max(xd, xf), w1 = ctx.measureText(etiquette).width, w = w1 + (suite ? ctx.measureText(suite[0]).width : 0);
+    let xg = w + 24 < b - a ? (a + b) / 2 - w / 2 : b + 6;
+    xg = Math.max(3, Math.min(ctx.canvas.clientWidth - 3 - w, xg));
+    ctx.strokeStyle = coul; ctx.fillStyle = coul; ctx.lineWidth = 1.2; ctx.setLineDash(tirets ? [5, 3] : []);
+    ctx.beginPath();
+    for (const [u, v] of [[a, Math.min(b, xg - 4)], [Math.max(a, xg + w + 4), b]]) if (v > u) { ctx.moveTo(u, y); ctx.lineTo(v, y); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const s = Math.sign(xf - xd) || 1;
+    for (const [x, sg] of [[xd, -s], [xf, s]]) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - sg * 6, y - 3.5); ctx.lineTo(x - sg * 6, y + 3.5); ctx.closePath(); ctx.fill(); }
+    texte(ctx, etiquette, xg, y, coul, police, 'left');
+    if (suite) texte(ctx, suite[0], xg + w1, y, suite[1], police, 'left');
+  }
+
+  // Carte : épicentre à l'origine, x vers l'est, y vers le nord (km), échelle isotrope ; stations le long du profil.
+  function dessinerCarte() {
+    const cv = $('#p-carte');
+    if (cv.clientWidth < 50) return;
+    const { ctx, W, H } = preparer(cv), I = interpretation(), V = vraiVisible() ? modeleVrai() : null;
+    ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
+    const mg = 16, md = 36, k = (W - mg - md) / DMAX, xE = W - md, yP = Math.round(H * 0.42);
+    const X = x => xE + x * k, Y = y => yP - y * k;
+    // Quadrillage tous les 50 km depuis l'épicentre
+    ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1;
+    for (let x = 0; X(x) > 0; x -= 50) { ctx.beginPath(); ctx.moveTo(Math.round(X(x)) + 0.5, 0); ctx.lineTo(Math.round(X(x)) + 0.5, H); ctx.stroke(); }
+    for (let y = -Math.floor(yP / k / 50) * 50; Y(y) > 0; y += 50) { ctx.beginPath(); ctx.moveTo(0, Math.round(Y(y)) + 0.5); ctx.lineTo(W, Math.round(Y(y)) + 0.5); ctx.stroke(); }
+    // Nord et échelle
+    const nx = mg + 8, ny = 10;
+    ctx.fillStyle = COUL.ink; ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(nx - 6, ny + 16); ctx.lineTo(nx + 6, ny + 16); ctx.closePath(); ctx.fill();
+    texte(ctx, 'N', nx, ny + 19, COUL.ink, `800 11px ${POLICE}`, 'center', 'top');
+    const L = 100 * k < W * 0.45 ? 100 : 50, ye = H - 22;
+    ctx.fillStyle = COUL.ink;
+    ctx.fillRect(mg, ye, (L / 2) * k, 4); ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1; ctx.strokeRect(mg + 0.5, ye + 0.5, L * k, 4);
+    for (const [v, a] of [[0, 'center'], [L / 2, 'center'], [L, 'left']]) texte(ctx, v === L ? `${v} km` : String(v), mg + v * k - (v === L ? 3 : 0), ye + 7, COUL.ink, `10px ${MONO}`, a, 'top');
+    // Profil (azimut 270°) et épicentre
+    ctx.save(); ctx.strokeStyle = COUL.muted; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(X(0), yP); ctx.lineTo(X(-DMAX), yP); ctx.stroke(); ctx.restore();
+    texte(ctx, `profil vers l'ouest (azimut ${(BAZ + 180) % 360}°)`, nx + 14, ny + 8, COUL.muted, `600 10.5px ${POLICE}`, 'left');
+    // Croisement selon vos droites (trait plein), selon le modèle simulé (tirets, sous les stations)
+    const xc = I.r.xc;
+    if (Number.isFinite(xc) && xc > 0 && xc < DMAX) {
+      ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(-xc), yP - 18); ctx.lineTo(X(-xc), yP + 6); ctx.stroke();
+      texte(ctx, `Xc ${Math.round(xc)} km`, X(-xc), yP - 25, COUL.ink, `800 10.5px ${POLICE}`, 'center', 'bottom');
+    }
+    // Stations : couleur de la phase première selon vos droites ; distances dessous, sur deux rangs si elles sont
+    // serrées (l'unité sur la plus proche seulement si la place manque)
+    ctx.font = `10.5px ${MONO}`;
+    const pas = 30 * k, wkm = ctx.measureText('345 km').width + 10, deuxRangs = wkm > pas, toutes = wkm <= (deuxRangs ? 2 * pas : pas);
+    const yv = yP + (deuxRangs ? 44 : 34);
+    if (V && V.xc !== null && V.xc < DMAX) {
+      ctx.save(); ctx.strokeStyle = COUL.vrai; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(X(-V.xc), yP + 4); ctx.lineTo(X(-V.xc), yv + 8); ctx.stroke(); ctx.restore();
+    }
+    DISTANCES.forEach((d, i) => {
+      const ph = I.premieres[i];
+      triangle(ctx, X(-d), yP - 8, 6, -1, ph ? couleurPhase(ph) : null);
+      texte(ctx, toutes || i === 0 ? `${d} km` : String(d), X(-d), yP + 8 + (deuxRangs && i % 2 ? 12 : 0), COUL.ink, `10.5px ${MONO}`, 'center', 'top');
+    });
+    if (V) {
+      if (V.xc !== null && V.xc < DMAX) texte(ctx, `Xc simulé ${Math.round(V.xc)} km`, X(-V.xc), yv + 11, COUL.vrai, `800 10.5px ${POLICE}`, 'center', 'top');
+      V.stations.forEach(s => { ctx.fillStyle = couleurPhase(s.premiere); ctx.strokeStyle = COUL.paper; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X(-s.d), yv, 3.6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); });
+      texte(ctx, 'simulé', X(-DISTANCES[0]) + 8, yv, COUL.vrai, `700 10px ${POLICE}`, 'left');
+    }
+    etoile(ctx, X(0), yP, 8, COUL.amp);
+    texte(ctx, 'épicentre', X(0), yP - 13, COUL.ink, `700 10.5px ${POLICE}`, 'center', 'bottom');
+  }
+
+  // Coupe verticale le long du profil : x = distance (km) depuis l'épicentre, z = profondeur, échelle verticale exagérée.
+  function dessinerCoupe() {
+    const cv = $('#p-coupe');
+    if (cv.clientWidth < 50) return;
+    const { ctx, W, H } = preparer(cv), I = interpretation(), V = vraiVisible() ? modeleVrai() : null;
+    ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
+    const P = I.coupe || V, deVous = !!I.coupe;   // dessin principal : votre croûte ; sans droite Pg, le modèle simulé visible
+    const premieres = deVous ? I.premieres : P ? P.stations.map(s => s.premiere) : DISTANCES.map(() => null);
+    const Hp = P && P.H > 0 ? P.H : null, xcP = deVous ? I.r.xc : P ? P.xc : null;
+    const m = { g: 46, d: 12, h: 54, b: 34 }, xa = -12, xb = DMAX;
+    const zMax = Math.min(160, Math.max(70, Math.ceil((1.3 * Math.max(Hp || 0, V ? V.H : 0)) / 10) * 10));
+    const sx = (W - m.g - m.d) / (xb - xa), sz = (H - m.h - m.b) / zMax, X = x => m.g + (x - xa) * sx, Z = z => m.h + z * sz;
+    const x0 = X(xa), x1 = X(xb), y0 = Z(0), y1 = Z(zMax), PETIT = W < 560;
+    // Couches de l'interprétation principale
+    if (P) {
+      const zm = Hp !== null ? Math.min(Hp, zMax) : zMax;
+      ctx.fillStyle = CROUTE; ctx.fillRect(x0, y0, x1 - x0, Z(zm) - y0);
+      if (Hp !== null && Hp < zMax) { ctx.fillStyle = MANTEAU; ctx.fillRect(x0, Z(Hp), x1 - x0, y1 - Z(Hp)); }
+    }
+    // Axes : profondeur à gauche, distance en bas
+    const pz = zMax > 100 ? 20 : 10;
+    ctx.lineWidth = 1; ctx.font = `10.5px ${MONO}`; ctx.fillStyle = COUL.muted;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let z = 0; z <= zMax + 1e-9; z += pz) {
+      ctx.strokeStyle = COUL.grid; ctx.beginPath(); ctx.moveTo(x0, Math.round(Z(z)) + 0.5); ctx.lineTo(x1, Math.round(Z(z)) + 0.5); ctx.stroke();
+      ctx.fillText(String(z), x0 - 5, Z(z));
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let d = 0; d <= DMAX; d += 50) {
+      ctx.strokeStyle = COUL.grid; ctx.beginPath(); ctx.moveTo(Math.round(X(d)) + 0.5, y0); ctx.lineTo(Math.round(X(d)) + 0.5, y1); ctx.stroke();
+      ctx.fillText(String(d), X(d), y1 + 5);
+    }
+    ctx.save(); ctx.translate(11, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
+    texte(ctx, 'profondeur (km)', 0, 0, COUL.muted, `600 10.5px ${POLICE}`, 'center'); ctx.restore();
+    texte(ctx, 'distance Δ (km)', W - m.d, H - 4, COUL.muted, `600 10.5px ${POLICE}`, 'right', 'bottom');
+    texte(ctx, `exagération verticale ×${virg(sz / sx, 1)}`, x0, H - 4, COUL.muted, `600 10.5px ${POLICE}`, 'left', 'bottom');
+    ctx.strokeStyle = COUL['grid-strong']; ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
+    if (!P) {
+      const l = ['Tracez la droite Pg puis la droite Pn sur le profil :', 'la coupe de votre croûte se dessine ici.'];
+      if (etat.mode === 'exercice') l.push('Le modèle simulé n\'apparaît qu\'après « Vérifier ».');
+      l.forEach((t, i) => texte(ctx, t, (x0 + x1) / 2, (y0 + y1) / 2 + (i - (l.length - 1) / 2) * 19, COUL.muted, `700 ${PETIT ? 12 : 13}px ${POLICE}`, 'center'));
+    }
+    const PL = `800 ${PETIT ? 10.5 : 11.5}px ${POLICE}`;
+    // Modèle simulé en tirets sous votre croûte : Moho, rai Pn vers la station la plus lointaine
+    if (V && deVous) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+      ctx.strokeStyle = COUL.vrai; ctx.lineWidth = 1.8; ctx.setLineDash([8, 5]);
+      ctx.beginPath(); ctx.moveTo(x0, Z(V.H)); ctx.lineTo(x1, Z(V.H)); ctx.stroke();
+      const loin = V.stations[V.stations.length - 1].pn;
+      if (loin) { ctx.lineWidth = 1.3; ctx.globalAlpha = 0.85; ligne(ctx, loin.pts, X, Z); }
+      ctx.restore();
+    }
+    // Rais vers chaque station : la première arrivée en trait épais, l'autre phase estompée
+    if (P) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0 - 1, x1 - x0, y1 - y0 + 1); ctx.clip();
+      const rais = [];
+      P.stations.forEach((s, i) => {
+        const pr = premieres[i];
+        for (const [ph, r] of [['Pg', s.pg], ['Pn', s.pn]]) if (r) rais.push({ ph, r, rang: pr === null ? 1 : pr === ph || (ph === 'Pg' && !s.pn) ? 2 : 0 });
+      });
+      rais.sort((a, b) => a.rang - b.rang);
+      for (const { ph, r, rang } of rais) {
+        ctx.strokeStyle = couleurPhase(ph); ctx.globalAlpha = [0.3, 0.7, 0.95][rang]; ctx.lineWidth = [1, 1.3, 2.2][rang];
+        ligne(ctx, r.pts, X, Z);
+      }
+      ctx.globalAlpha = 1;
+      // rai critique (réflexion à l'angle critique) : il fixe la distance critique
+      if (P.xcr !== null) {
+        const xm = (P.H - P.h) * Math.tan(P.ic);
+        ctx.strokeStyle = COUL['pick-s']; ctx.lineWidth = 1.1; ctx.setLineDash([2, 3]);
+        ligne(ctx, [[0, P.h], [xm, P.H], [P.xcr, 0]], X, Z); ctx.setLineDash([]);
+      }
+      ctx.restore();
+      ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke();
+      if (Hp !== null && Hp < zMax) { ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x0, Z(Hp)); ctx.lineTo(x1, Z(Hp)); ctx.stroke(); }
+    }
+    // Cotes : croisement (rang 1) et distance critique (rang 2), repères du modèle simulé en tirets
+    const ry1 = 14, ry2 = 32;
+    // [distance, rang, couleur, libellé, tirets, complément] ; sans cote à vous, celle du modèle simulé en tirets
+    const reperes = [], sim = V && deVous, nomXc = PETIT ? 'croisement' : 'distance de croisement';
+    const suite = x => (sim && !PETIT && x !== null ? [` · simulé ${Math.round(x)} km`, COUL.vrai] : null);
+    if (P && Number.isFinite(xcP)) reperes.push([xcP, ry1, COUL.ink, `${nomXc} Xc = ${virg(xcP, 0)} km`, false, suite(V && V.xc)]);
+    else if (sim && V.xc !== null) reperes.push([V.xc, ry1, COUL.vrai, `${nomXc} simulée ${Math.round(V.xc)} km`, true]);
+    if (P && P.xcr !== null) reperes.push([P.xcr, ry2, COUL['pick-s'], `distance critique ${Math.round(P.xcr)} km`, false, suite(V && V.xcr)]);
+    else if (sim && V.xcr !== null) reperes.push([V.xcr, ry2, COUL.vrai, `distance critique simulée ${Math.round(V.xcr)} km`, true]);
+    for (const [x, y] of reperes) { ctx.save(); ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(Math.max(xa, Math.min(xb, x))), y + 4); ctx.lineTo(X(Math.max(xa, Math.min(xb, x))), y0); ctx.stroke(); ctx.restore(); }
+    if (sim) for (const [x, y] of [[V.xc, ry1], [V.xcr, ry2]]) if (x !== null && x < xb) {
+      ctx.save(); ctx.strokeStyle = COUL.vrai; ctx.lineWidth = 2; ctx.setLineDash([3, 2]);
+      ctx.beginPath(); ctx.moveTo(X(x), y - 8); ctx.lineTo(X(x), y + 8); ctx.stroke(); ctx.restore();
+    }
+    for (const [x, y, c, t, ti, su] of reperes) cote(ctx, X(0), X(Math.max(xa, Math.min(xb, x))), y, c, t, `700 ${PETIT ? 10.5 : 11}px ${POLICE}`, ti, su);
+    // Stations (pointe sur la surface) et foyer
+    DISTANCES.forEach((d, i) => triangle(ctx, X(d), y0 - 1, 6, 1, premieres[i] ? couleurPhase(premieres[i]) : null));
+    etoile(ctx, X(0), Z(H_FOYER), 7.5, COUL.amp);
+    if (!P) return;
+    // Annotations : V₁, V₂, Moho, angle critique (angles déformés par l'exagération verticale)
+    // libellé du Moho simulé au bout de sa ligne, du côté opposé à votre Moho ; V₁ dans la croûte, à l'écart de lui
+    const yVrai = V && deVous ? Z(V.H) + (Hp === null || V.H >= Hp ? 11 : -10) : -99;
+    const yV1 = [0.62, 0.32, 0.85].map(f => Z((Hp !== null ? Math.min(Hp, zMax) : zMax / 2) * f)).find(y => Math.abs(y - yVrai) > 16) ?? Z(Hp * 0.62);
+    texte(ctx, `${deVous ? 'votre croûte' : 'croûte simulée'} · V₁ = ${virg(P.V1, 2)} km/s`, x1 - 6, yV1, COUL.ink, PL, 'right');
+    if (Hp !== null && Hp < zMax) {
+      texte(ctx, `${deVous ? 'votre Moho' : 'Moho simulé'} · H = ${virg(Hp, deVous ? 1 : 0)} km`, x0 + 6, Z(Hp) + 12, COUL.ink, PL, 'left');
+      if (P.V2) texte(ctx, `manteau · V₂ = ${virg(P.V2, 2)} km/s`, x1 - 6, Math.max(Z(Hp) + 30, y1 - 14), COUL.ink, PL, 'right');
+    }
+    if (V && deVous) texte(ctx, `Moho simulé · ${virg(V.H, 0)} km`, x1 - 6, yVrai, COUL.vrai, PL, 'right');
+    if (P.ic !== null && P.xcr !== null) {
+      const cx = X(0), cy = Z(P.h), xm = (P.H - P.h) * Math.tan(P.ic), th = Math.atan2(Z(P.H) - cy, X(xm) - cx), r = Math.min(30, 0.6 * (Z(P.H) - cy));
+      ctx.save(); ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + r + 8); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(cx, cy, r, th, Math.PI / 2); ctx.stroke(); ctx.restore();
+      texte(ctx, `iᶜ = ${virg((P.ic * 180) / Math.PI, 1)}°`, cx + 1.25 * r * Math.cos(th) + 9, cy + 1.25 * r * Math.sin(th), COUL.ink, PL, 'left');
+    }
+  }
+
+  // Légendes et explications sous les deux figures
+  function majTextesFigures() {
+    const I = interpretation(), V = vraiVisible() ? modeleVrai() : null, r = I.r, deg = a => virg((a * 180) / Math.PI, 1) + '°';
+    const auDela = ps => ps.filter(p => p === 'Pn').length;
+    const simule = V ? `modèle simulé : V₁ = ${virg(V.V1, 2)} km/s, V₂ = ${virg(V.V2, 2)} km/s, H = ${virg(V.H, 0)} km, iᶜ = ${deg(V.ic)}, distance critique ${Math.round(V.xcr)} km, croisement ${Math.round(V.xc)} km` : '';
+    const attente = etat.mode === 'exercice' && !etat.verifie ? ' Le modèle simulé n\'apparaît qu\'après « Vérifier ».' : '';
+    // Carte
+    let c;
+    if (I.premieres[0] !== null) {
+      const n = auDela(I.premieres);
+      c = `Selon vos droites, Pn arrive la première ${Number.isFinite(r.xc) && r.xc > 0 ? `au-delà de <b>${Math.round(r.xc)} km</b>` : 'partout'} : <b>${n} station${n > 1 ? 's' : ''}</b> sur 12.`;
+    } else c = 'Tracez les deux droites : chaque station prend la couleur de la phase qui y arrive la première selon vous.';
+    if (V) { const n = auDela(V.stations.map(s => s.premiere)); c += ` Points : ${n} station${n > 1 ? 's' : ''} en Pn d'abord dans le modèle simulé.`; }
+    $('#p-carte-aide').innerHTML = c + attente;
+    $('#p-carte-leg-vrai').hidden = !V;
+    // Coupe
+    let t;
+    if (!I.g) t = V ? `Dessin du ${simule}. ${I.n ? 'Il manque la droite Pg' : 'Tracez vos droites Pg et Pn'} : votre croûte remplacera ce dessin, le modèle simulé restera en tirets.`
+      : 'Il faut d\'abord la droite Pg (V₁), puis la droite Pn (V₂ et tᵢ) pour situer le Moho.';
+    else if (!I.n) t = `Votre droite Pg donne V₁ = ${virg(r.V1, 2)} km/s : tracez la droite Pn pour situer le Moho.`;
+    else if (!r.H) t = 'Votre droite Pn est plus lente que la droite Pg : sans manteau plus rapide, pas d\'onde conique ni de Moho. Reprenez la droite Pn sur les stations lointaines.';
+    else if (r.H <= H_FOYER) t = `Votre Moho (H = ${virg(r.H, 1)} km) passe au-dessus du foyer (h = ${H_FOYER} km) : tᵢ est trop petit, reprenez la droite Pn.`;
+    else t = `Votre croûte : V₁ = ${virg(r.V1, 2)} km/s, V₂ = ${virg(r.V2, 2)} km/s, H = ${virg(r.H, 1)} km, iᶜ = ${deg(r.ic)} ; Pn n'existe qu'au-delà de la distance critique (${Math.round(I.coupe.xcr)} km) et devance Pg au-delà du croisement de vos droites.`;
+    if (I.g && V) t += ` Tirets : ${simule}.`;
+    $('#p-coupe-aide').innerHTML = t + attente;
+    $('#p-coupe-leg-vrai').hidden = !(V && I.g);
+  }
+  function figures() { lireCouleurs(); dessinerCarte(); dessinerCoupe(); majTextesFigures(); }
+
   function majAide() {
     const t = {
       g: '<strong>Droite Pg.</strong> Cliquez deux points sur les premières arrivées des stations proches (avant le croisement).',
@@ -221,15 +465,17 @@ import Refraction from './sismo/refraction.js';
     $('#p-aide').innerHTML = t + ' L\'amplitude « P renforcée » écrête les traces pour faire ressortir les premières arrivées, plus faibles que la Sg.';
   }
   function majOutils() { $$('[data-p-outil]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pOutil === etat.outil))); }
-  function tout() { majOutils(); dessiner(); majLectures(); majVerite(); majAide(); }
+  function tout() { majOutils(); dessiner(); figures(); majLectures(); majVerite(); majAide(); }
 
   // ── Exercice ────────────────────────────────────────────────────────────
   function nouvelExercice() {
     const numero = 1000 + Math.floor(Math.random() * 9000), u = SM.aleatoire(numero * 6151 + 9);
     etat.exo = { numero, p: { H: Math.round(u.entre(24, 44)), v1: Math.round(u.entre(5.7, 6.5) * 20) / 20, v2: Math.round(u.entre(7.7, 8.3) * 20) / 20, graine: numero } };
-    etat.outil = 'g';
+    // la croûte du nouvel exercice ne doit pas apparaître avant « Vérifier » : verrou tout de suite, sans attendre le calcul
+    etat.outil = 'g'; etat.verifie = false; etat.points = { g: [], n: [] }; etat.droites = { g: null, n: null };
     $('#p-exo-num').textContent = 'Exercice n° ' + numero;
     $('#p-corrige').innerHTML = '';
+    figures();
     plusTard(regenerer);
   }
   function verifier() {
@@ -260,9 +506,11 @@ import Refraction from './sismo/refraction.js';
   let attente = 0;
   const planifier = () => { clearTimeout(attente); attente = setTimeout(() => plusTard(regenerer), 400); };
   function brancher() {
-    $('#p-H').addEventListener('input', e => { etat.explo.H = parseInt(e.target.value, 10); majCurseurs(); planifier(); });
-    $('#p-v1').addEventListener('input', e => { etat.explo.v1 = parseFloat(e.target.value); majCurseurs(); planifier(); });
-    $('#p-v2').addEventListener('input', e => { etat.explo.v2 = parseFloat(e.target.value); majCurseurs(); planifier(); });
+    // la coupe et la carte suivent le curseur tout de suite ; les traces sont recalculées un peu après
+    const curseur = (cle, lire) => e => { etat.explo[cle] = lire(e.target.value); majCurseurs(); figures(); majVerite(); planifier(); };
+    $('#p-H').addEventListener('input', curseur('H', v => parseInt(v, 10)));
+    $('#p-v1').addEventListener('input', curseur('v1', parseFloat));
+    $('#p-v2').addEventListener('input', curseur('v2', parseFloat));
     $('#p-hodo').addEventListener('change', e => { etat.hodo = e.target.checked; dessiner(); });
     $('#p-tirage').addEventListener('click', () => { etat.explo.graine = 1 + Math.floor(Math.random() * 1e5); plusTard(regenerer); });
     $('#p-reduction').addEventListener('change', e => { etat.reduction = parseInt(e.target.value, 10); tout(); });
@@ -295,6 +543,8 @@ import Refraction from './sismo/refraction.js';
     });
     const redessiner = () => { if (etat.traces.length && !$('#banc-profil').hidden) tout(); };
     new ResizeObserver(redessiner).observe(cv);
+    const refigurer = () => { if (!$('#banc-profil').hidden) figures(); };
+    for (const id of ['#p-carte', '#p-coupe']) new ResizeObserver(refigurer).observe($(id));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     new MutationObserver(redessiner).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
@@ -306,7 +556,7 @@ import Refraction from './sismo/refraction.js';
     $('#p-panneau-explorer').hidden = m !== 'explorer';
     $('#p-panneau-exercice').hidden = m !== 'exercice';
     if (m === 'exercice') nouvelExercice();
-    else { etat.outil = 'g'; plusTard(regenerer); }
+    else { etat.outil = 'g'; figures(); plusTard(regenerer); }
   }
 
   window.addEventListener('banc:ouvert', e => {
