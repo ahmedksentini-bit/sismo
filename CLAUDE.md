@@ -80,7 +80,18 @@ la virgule décimale.
     fixe, projection équirectangulaire autour de `Zones.centre(zones)` (le site cliqué s'y place en lat/lon, le repère ne
     bouge pas) ; `pasGrille` = le plus petit pas de `Zones.pasAdapte` donnant au plus 1 500 points (un calcul : 1 à 2 s),
     branches (a, b) jusqu'à quatre zones à σ(b) > 0 (729 réalisations), carte d'aléa de 250 sites au plus
-    (`Zones.grilleAlea`) ; ni faille ni géodésie (un catalogue n'en donne pas) ; Explorer retrouve ses réglages en sortant.
+    (`Zones.grilleAlea`) ; Explorer retrouve ses réglages en sortant. **Failles réelles** (`src/sismo/failles.js`, testé) :
+    base GEM des failles actives (CC BY-SA 4.0, Styron et Pagani 2020), extrait méditerranéen `data/failles-mediterranee.json`
+    refait par `tools/failles/gem.mjs` (jamais à la main ; frontières de plaques de Bird 2003, subductions, dorsales, plis
+    écartés), ou GeoJSON de la base chargé ; défauts par type (rake à 45° pour les obliques, pendage 90/55/45/70°, 0–15 km) ;
+    vitesse nette, sinon recomposée (rejet vertical / sin δ, raccourcissement / cos δ) ; faille retenue si le milieu de sa trace
+    est dans une zone ; trace ramenée à ses extrémités, retournée pour que le pendage soit à droite ; Mmax = rupture entière
+    (WC1994) au dixième ; hors du calcul si Mmax ≤ Mmax de la zone + ΔMmax le plus bas ; maillage `Failles.pasAdapte`
+    (15 000 ruptures au plus). **GNSS réel** (`src/sismo/gnss.js`, testé) : psvelo ou tableau à en-tête (m/an converti) ;
+    tenseur par zone dans son propre repère, vitesses tournées de la convergence des méridiens (une rotation rigide de plaque
+    ne donne aucune déformation, testé) ; σ station ≥ 0,2 mm/an ; Kostrov μ = 30 GPa, H = 15 km. Une zone sans tenseur
+    (moins de 3 stations : moment null) garde la loi centrale du catalogue et ses failles leur moment entier dans les
+    variantes géodésiques (`Psha.variantes`).
 14. **Géodésie** (`src/sismo/geodesie.js`) : le champ vrai ne dépend que de x (faille de
     Savage et Burford, bande de raccourcissement uniforme) ; ε̇ en ns/an (1 mm/an/km = 1000 ns/an) ;
     e1h est l'axe le plus compressif, comme HMTK ; Kostrov sous la forme de Savage et Simpson

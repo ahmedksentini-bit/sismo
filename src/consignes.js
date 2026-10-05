@@ -113,14 +113,14 @@ const CONSIGNES = {
   alea: {
     objectif: "Calculer l'aléa d'un site par la méthode probabiliste : courbe d'aléa, spectre à probabilité uniforme, désagrégation, et poids de chaque branche de l'arbre logique.",
     etapes: [
-      "Avec le modèle d'école à 10 % en 50 ans, relevez le PGA moyen et ses fractiles 16 et 84 %, Sa(0,2 s), Sa(1 s) et le scénario dominant.",
-      "Sur la courbe d'aléa, lisez la probabilité de dépasser 0,2 g en 50 ans et vérifiez que 10 % en 50 ans correspond à 475 ans.",
+      "Avec le modèle d'école à 10 % en 50 ans, relevez le PGA moyen et ses fractiles 16 et 84 %, Sa(0,2 s), Sa(1 s) et le scénario dominant ; sur la courbe d'aléa, lisez la probabilité de dépasser 0,2 g en 50 ans et vérifiez que 10 % en 50 ans correspond à 475 ans.",
       "Comparez l'UHS aux spectres de l'Eurocode 8 de type 1 et 2 calés sur le PGA : où l'UHS les dépasse-t-il ?",
       "Dans « Grandeur », sous la probabilité visée, choisissez Sa(1 s) : quelle zone domine la désagrégation ? Comparez au PGA, puis lisez le spectre moyen conditionnel.",
       "Graphique « Ce qui pèse dans l'arbre logique » : quelle branche pèse le plus ? Activez puis désactivez la faille F, déplacez le site près d'elle (clic sur la carte) et passez à 2 % en 50 ans.",
-      "En mode Exercice, lisez PGA et Sa(1 s) à 475 ans et désignez la zone dominante, puis « Vérifier ». En mode « Zones du catalogue », calculez l'aléa d'un site réel avec les zones tracées au banc Sismicité (« Calculer l'aléa avec ces zones ») ou un fichier (« Charger un fichier de zones ») : déplacez le site sur la carte et refaites ces lectures, sans corrigé.",
+      "En mode « Zones du catalogue », calculez l'aléa d'un site réel avec les zones tracées au banc Sismicité (« Calculer l'aléa avec ces zones ») ou un fichier (« Charger un fichier de zones ») et déplacez le site sur la carte ; décochez puis recochez les failles actives de la base GEM et comparez Sa(1 s) ; chargez un champ de vitesses (« Charger un champ de vitesses GNSS »), relevez le couplage apparent de chaque zone et l'effet de la géodésie sur le PGA. Pas de corrigé pour un site réel.",
+      "En mode Exercice, lisez PGA et Sa(1 s) à 475 ans et désignez la zone dominante, puis « Vérifier ».",
     ],
-    rendre: "PGA, Sa(0,2 s) et Sa(1 s) avec leurs fractiles, le scénario dominant pour deux périodes, la branche la plus influente.",
+    rendre: "PGA, Sa(0,2 s) et Sa(1 s) avec leurs fractiles, le scénario dominant pour deux périodes, la branche la plus influente ; pour un site réel, l'effet des failles et de la géodésie.",
     prerequis: "le banc Géodésie peut fournir les taux de moment des zones (bouton « Utiliser ces moments dans le banc Aléa »).",
   },
   selection: {
