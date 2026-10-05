@@ -126,3 +126,24 @@ test('sismogrammes d\'un séisme passé : trois stations proches puis distances 
   assert.ok(Math.abs(loin.fin - (e.temps + (lr.temps + 120) * 1000)) < 1);
   assert.ok(D.fenetreSeisme(e, [170]).fin - (e.temps - 60000) < 2 * 3600 * 1000);
 });
+
+test('fronts d\'onde : la distance atteinte au temps de la table, P puis PKIKP, S puis SKS, Rayleigh à vitesse de groupe', async () => {
+  const L = (await import('../src/sismo/localisation.js')).default, T = JSON.parse(readFileSync(new URL('../data/temps-localisation.json', import.meta.url), 'utf-8'));
+  const tf = D.tableFronts(10, T);
+  for (const d of [0.5, 1.5, 10, 50, 90]) for (const ph of ['P', 'S']) if (ph === 'P' || d < 80) assert.ok(Math.abs(D.distanceFront(tf, ph, L.temps(T, ph, 10, d)) - d) < 0.05, `${ph} ${d}°`);
+  // vers 90°, SKS devance S : le front S est celui de la première des deux
+  assert.ok(Math.abs(D.distanceFront(tf, 'S', Math.min(L.temps(T, 'S', 10, 90), G.arrivees('SKS', 10, 90)[0].temps)) - 90) < 0.1);
+  // au-delà de 100° : PKIKP et SKS d'ak135
+  assert.ok(Math.abs(D.distanceFront(tf, 'P', G.arrivees('PKIKP', 10, 150)[0].temps) - 150) < 0.5);
+  assert.ok(Math.abs(D.distanceFront(tf, 'S', G.arrivees('SKS', 10, 120)[0].temps) - 120) < 0.5);
+  // avant que la P n'atteigne la surface : pas de front ; temps et distance réciproques ; distance croissante avec le temps
+  assert.equal(D.distanceFront(tf, 'P', 1), null);
+  for (const t of [20, 200, 700, 1100]) assert.ok(Math.abs(D.tempsFront(tf, 'P', D.distanceFront(tf, 'P', t)) - t) < 1e-6);
+  let d0 = 0;
+  for (let t = 5; t < 1200; t += 5) { const d = D.distanceFront(tf, 'P', t); if (d !== null) { assert.ok(d >= d0 - 1e-9, `t ${t}`); d0 = d; } }
+  // ondes de Rayleigh : 3,5 km/s environ ; foyer profond (hors de la table) : ak135
+  const lr = D.distanceFront(tf, 'LR', 600);
+  assert.ok(Math.abs(D.tempsFront(tf, 'LR', lr) - 600) < 1e-9 && lr * 111.19 > 1800 && lr * 111.19 < 2400);
+  const prof = D.tableFronts(120, T);
+  assert.ok(Math.abs(D.distanceFront(prof, 'P', G.arrivees('P', 120, 30)[0].temps) - 30) < 0.1);
+});

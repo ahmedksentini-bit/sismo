@@ -450,3 +450,10 @@ aside.colonne .resultats th, aside.colonne .resultats td { padding-inline: 4px; 
 .pol-ligne .outil { min-width: 34px; padding: 4px 8px; }
 #r-sphere { display: block; width: 100%; max-width: 380px; height: 360px; margin: 0 auto; }
 tr.hors td { color: var(--muted); }
+
+/* page « En direct » : rejeu de la propagation, curseur sur les sismogrammes */
+.outils-rejeu { flex-wrap: wrap; }
+.outils-rejeu input[type="range"] { flex: 1 1 160px; min-width: 120px; }
+.outils-rejeu select { width: auto; flex: 0 0 auto; }
+.ev-cadre { position: relative; }
+#dr-ev-curseur { position: absolute; top: 20px; bottom: 26px; width: 2px; background: var(--bad); pointer-events: none; }
