@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Travaux pratiques de sismologie et d'aléa sismique : dix-sept bancs interactifs, de la lecture d'un sismogramme à l'isolation à la base">
 <title>Travaux pratiques — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=aca60523ee">
+<link rel="stylesheet" href="lecteur.css?v=6a4396e14a">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -18,16 +18,16 @@
   "./src/banc-geodesie.js": "./src/banc-geodesie.js?v=34dc2cee6d",
   "./src/banc-isolation.js": "./src/banc-isolation.js?v=b75f629476",
   "./src/banc-liquefaction.js": "./src/banc-liquefaction.js?v=a209e4a6a4",
-  "./src/banc-mecanisme.js": "./src/banc-mecanisme.js?v=5026120541",
+  "./src/banc-mecanisme.js": "./src/banc-mecanisme.js?v=89346d54de",
   "./src/banc-poussee.js": "./src/banc-poussee.js?v=1ae7248b49",
   "./src/banc-profil.js": "./src/banc-profil.js?v=34e550acef",
   "./src/banc-selection.js": "./src/banc-selection.js?v=fa88657041",
   "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=1bbd183b43",
   "./src/banc-sismometre.js": "./src/banc-sismometre.js?v=97df4b1e82",
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
-  "./src/banc-source.js": "./src/banc-source.js?v=f844666ceb",
+  "./src/banc-source.js": "./src/banc-source.js?v=a0c137fe7c",
   "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
-  "./src/consignes.js": "./src/consignes.js?v=ead378cec2",
+  "./src/consignes.js": "./src/consignes.js?v=ee41f313ac",
   "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
   "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
   "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
@@ -74,13 +74,14 @@
   "./src/globe-figure.js": "./src/globe-figure.js?v=3dab247c58",
   "./src/gmpe-notes.js": "./src/gmpe-notes.js?v=0c33f8c35b",
   "./src/impression.js": "./src/impression.js?v=b8f76b944a",
-  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=acbcfc520f",
+  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=5c1cf4e88e",
   "./src/lecteur-station.js": "./src/lecteur-station.js?v=2c4aacd228",
   "./src/onglets.js": "./src/onglets.js?v=869ae39f99",
   "./src/parcours.js": "./src/parcours.js?v=0576a3a1d5",
   "./src/propagation-anim.js": "./src/propagation-anim.js?v=09b8d63d07",
   "./src/schemas-notes.js": "./src/schemas-notes.js?v=875bc6fc7f",
   "./src/schemas.js": "./src/schemas.js?v=a7836082b6",
+  "./src/seisme-reel.js": "./src/seisme-reel.js?v=d64c2d6919",
   "./src/sismo/accelerogramme.js": "./src/sismo/accelerogramme.js?v=c4d9584306",
   "./src/sismo/batiment.js": "./src/sismo/batiment.js?v=64d6e346cb",
   "./src/sismo/centres.js": "./src/sismo/centres.js?v=9434d01982",
@@ -101,21 +102,21 @@
   "./src/sismo/isolation.js": "./src/sismo/isolation.js?v=de3977e9bb",
   "./src/sismo/isolignes.js": "./src/sismo/isolignes.js?v=46595a3d75",
   "./src/sismo/liquefaction.js": "./src/sismo/liquefaction.js?v=2fa95a312e",
-  "./src/sismo/localisation.js": "./src/sismo/localisation.js?v=c4a898f595",
+  "./src/sismo/localisation.js": "./src/sismo/localisation.js?v=338696d654",
   "./src/sismo/mecanisme.js": "./src/sismo/mecanisme.js?v=9ddc2d867b",
   "./src/sismo/miniseed.js": "./src/sismo/miniseed.js?v=e89719161b",
   "./src/sismo/oscillateur.js": "./src/sismo/oscillateur.js?v=3f8504910f",
   "./src/sismo/poussee.js": "./src/sismo/poussee.js?v=a9a6aa3dd5",
   "./src/sismo/propagation.js": "./src/sismo/propagation.js?v=6b02374afd",
   "./src/sismo/psha.js": "./src/sismo/psha.js?v=0e7f974e10",
-  "./src/sismo/reel.js": "./src/sismo/reel.js?v=aec7da7dea",
+  "./src/sismo/reel.js": "./src/sismo/reel.js?v=1c6e05c856",
   "./src/sismo/refraction.js": "./src/sismo/refraction.js?v=dff98ef9aa",
   "./src/sismo/seedlink.js": "./src/sismo/seedlink.js?v=d1f8330f2a",
   "./src/sismo/selection.js": "./src/sismo/selection.js?v=d7d9327078",
   "./src/sismo/signal.js": "./src/sismo/signal.js?v=269aa56df1",
   "./src/sismo/sismicite.js": "./src/sismo/sismicite.js?v=ae771a63c0",
   "./src/sismo/site.js": "./src/sismo/site.js?v=a9116403be",
-  "./src/sismo/source.js": "./src/sismo/source.js?v=106a0e6fcd",
+  "./src/sismo/source.js": "./src/sismo/source.js?v=c7c162f0ec",
   "./src/sismo/spectre.js": "./src/sismo/spectre.js?v=1202ae7996",
   "./src/sismo/tables.js": "./src/sismo/tables.js?v=cc48159840",
   "./src/sismo/teleseisme.js": "./src/sismo/teleseisme.js?v=548e548b4d",
@@ -1403,10 +1404,10 @@
       <section class="carte" aria-label="Sphère focale">
         <h2>Sphère focale<small>Projection de Schmidt, hémisphère inférieur : ● compression (le sol monte), ○ dilatation ; en bleu, les plans nodaux et les quadrants en compression du modèle réglé ; cerclées de rouge, les polarités qu'il contredit</small></h2>
         <canvas id="me-sphere" aria-label="Sphère focale avec polarités et plans nodaux"></canvas>
-        <p class="legende"><span><i style="background:var(--blue)"></i>modèle</span><span><i style="background:var(--amp)"></i>solutions de l'inversion</span><span><i class="tirets" style="border-color:var(--teal)"></i>solution vraie</span><span><i style="background:var(--pick-p)"></i>désaccord</span></p>
+        <p class="legende"><span><i style="background:var(--blue)"></i>modèle</span><span><i style="background:var(--amp)"></i>solutions de l'inversion</span><span id="me-legende-vraie"><i class="tirets" style="border-color:var(--teal)"></i>solution vraie</span><span><i style="background:var(--pick-p)"></i>désaccord</span></p>
       </section>
       <section class="carte" aria-label="Premières arrivées" style="--o:43">
-        <h2>Premières arrivées P sur les verticales<small>Vitesse verticale, 0,2 s avant et 0,4 s après l'arrivée (tirets), stations rangées par azimut ; C : compression, D : dilatation, lues sur le premier extrême ; un clic repère la station sur la sphère</small></h2>
+        <h2>Premières arrivées P sur les verticales<small id="me-traces-legende">Vitesse verticale, 0,2 s avant et 0,4 s après l'arrivée (tirets), stations rangées par azimut ; C : compression, D : dilatation, lues sur le premier extrême ; un clic repère la station sur la sphère</small></h2>
         <canvas id="me-traces" aria-label="Premières arrivées P des stations"></canvas>
       </section>
     </div>
@@ -1414,6 +1415,7 @@
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
         <button type="button" id="me-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="me-mode-exercice" aria-pressed="false">Exercice</button>
+        <button type="button" id="me-mode-reel" aria-pressed="false">Séisme réel</button>
       </div>
       <section class="carte" id="me-reglages-seisme" aria-label="Séisme">
         <p class="sous-titre">Séisme</p>
@@ -1433,6 +1435,21 @@
           <div class="segments" role="group" aria-label="Type de faille"><button type="button" data-me-rep="normale" aria-pressed="false">Normale</button><button type="button" data-me-rep="inverse" aria-pressed="false">Inverse</button><button type="button" data-me-rep="decrochement" aria-pressed="false">Décrochement</button></div></div>
         <div class="actions"><button type="button" class="bouton primaire" id="me-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="me-nouvel-exo">Nouvel exercice</button></div>
         <div id="me-corrige"></div>
+      </section>
+      <section class="carte" id="me-panneau-reel" aria-label="Séisme réel" hidden>
+        <p class="sous-titre">Séisme réel</p>
+        <p class="enonce">Un vrai séisme, enregistré depuis la page <a href="direct.html">En direct</a> (le fichier du TP de localisation) :
+          polarités de la première P sur les verticales, placées sur la sphère par l'azimut et l'angle de départ de chaque rai.
+          Réglez un plan nodal qui les respecte, puis comparez à l'inversion.</p>
+        <label class="bouton secondaire bouton-fichier">Charger un fichier de séisme<input type="file" id="me-fichier" accept=".json,application/json"></label>
+        <p class="aide" id="me-reel-info">Aucun fichier chargé : chargez-en un ici ou dans le banc « réseau ».</p>
+        <div class="champ"><span class="etiquette">Foyer</span>
+          <div class="segments compact" role="group" aria-label="Foyer"><button type="button" data-me-foyer="localisation" aria-pressed="false">Votre localisation</button><button type="button" data-me-foyer="geofon" aria-pressed="false">GEOFON</button></div></div>
+        <div class="actions"><button type="button" class="bouton secondaire" id="me-lire-pol">Lire les polarités</button></div>
+        <div class="pol-stations" id="me-pol-stations"></div>
+        <canvas id="me-carte-reel" aria-label="Carte des stations du séisme réel autour de l'épicentre" style="margin-top:12px"></canvas>
+        <p class="aide">Pointé P : celui du banc « réseau », sinon un pointé automatique (critère d'Akaike) autour de l'arrivée prévue ;
+          un clic sur une trace y place le vôtre et relit la polarité. C : le sol monte, D : il descend, ? : illisible (écartée).</p>
       </section>
       <section class="carte" aria-label="Modèle" style="--o:41">
         <p class="sous-titre">Plan nodal du modèle</p>
@@ -1459,11 +1476,11 @@
     <section class="carte consigne" id="consigne-source" aria-label="Ce que vous allez faire"></section>
     <div class="colonne">
       <section class="carte" aria-label="Sismogramme">
-        <h2>Enregistrement et fenêtre S<small>Vitesse horizontale de la station choisie dans le tableau ; zone teintée : fenêtre des ondes S analysée (de 0,5 s avant Sg à 1/fc + 0,05·R, 5 s au moins)</small></h2>
+        <h2>Enregistrement et fenêtre S<small>Vitesse horizontale de la station choisie dans le tableau ; zone teintée : fenêtre des ondes S analysée (de 0,5 s avant Sg à 1/fc + 0,05·R, 5 s au moins) ; pour un séisme réel, en gris, la fenêtre de bruit</small></h2>
         <canvas id="so-sismo" aria-label="Sismogramme et fenêtre S"></canvas>
       </section>
       <section class="carte" aria-label="Spectre de déplacement" style="--o:41">
-        <h2>Spectre de déplacement à la source<small>Moyenne des deux horizontales, lissée en bandes de 1/6 d'octave : brut (tirets), puis corrigé de l'expansion géométrique, de Q(f), de κ et du site ; en bleu, le modèle de Brune Ω0/(1 + (f/fc)²)</small></h2>
+        <h2>Spectre de déplacement à la source<small>Moyenne des deux horizontales, lissée en bandes de 1/6 d'octave : brut (tirets), puis corrigé de l'expansion géométrique, de Q(f), de κ et du site ; en bleu, le modèle de Brune Ω0/(1 + (f/fc)²) ; pour un séisme réel, le bruit (pointillés) et, pâles, les bandes noyées dans le bruit</small></h2>
         <canvas id="so-spectre" aria-label="Spectre de déplacement et modèle de Brune"></canvas>
         <p class="aide" id="so-lecture"></p>
       </section>
@@ -1472,6 +1489,7 @@
       <div class="mode-switch mode-banc" role="group" aria-label="Mode du banc">
         <button type="button" id="so-mode-explorer" aria-pressed="true">Explorer</button>
         <button type="button" id="so-mode-exercice" aria-pressed="false">Exercice</button>
+        <button type="button" id="so-mode-reel" aria-pressed="false">Séisme réel</button>
       </div>
       <section class="carte" id="so-reglages-seisme" aria-label="Séisme">
         <p class="sous-titre">Séisme (générateur)</p>
@@ -1488,9 +1506,22 @@
         <div class="actions"><button type="button" class="bouton primaire" id="so-verifier">Vérifier</button><button type="button" class="bouton secondaire" id="so-nouvel-exo">Nouvel exercice</button></div>
         <div id="so-corrige"></div>
       </section>
+      <section class="carte" id="so-panneau-reel" aria-label="Séisme réel" hidden>
+        <p class="sous-titre">Séisme réel</p>
+        <p class="enonce">Le spectre des ondes S d'un vrai séisme, enregistré depuis la page <a href="direct.html">En direct</a> (le fichier du
+          TP de localisation), aux stations de 10 à 600 km : ajustez le modèle de Brune, lisez Mw, fc et Δσ, et comparez-les à ML et à la
+          magnitude de GEOFON.</p>
+        <label class="bouton secondaire bouton-fichier">Charger un fichier de séisme<input type="file" id="so-fichier" accept=".json,application/json"></label>
+        <p class="aide" id="so-reel-info">Aucun fichier chargé : chargez-en un ici ou dans le banc « réseau ».</p>
+        <div class="champ"><span class="etiquette">Foyer</span>
+          <div class="segments compact" role="group" aria-label="Foyer"><button type="button" data-so-foyer="localisation" aria-pressed="false">Votre localisation</button><button type="button" data-so-foyer="geofon" aria-pressed="false">GEOFON</button></div></div>
+        <p class="aide">Fenêtre S depuis le pointé S du banc « réseau », sinon depuis l'arrivée prévue. Corrections du modèle du cours
+          (Q(f) = 130·f<sup>0,6</sup>, κ = 0,05 s, site rocher générique) : approchées pour une vraie croûte. Seules les bandes où le signal
+          dépasse trois fois le bruit (fenêtre de même durée avant la P, en gris) sont ajustées.</p>
+      </section>
       <section class="carte" aria-label="Modèle de Brune" style="--o:42">
         <p class="sous-titre">Modèle de Brune (station choisie)</p>
-        <div class="champ"><label for="so-o0">Plateau Ω0 <output id="so-o0-v"></output></label><input type="range" id="so-o0" min="-4.5" max="0.5" step="0.01"></div>
+        <div class="champ"><label for="so-o0">Plateau Ω0 <output id="so-o0-v"></output></label><input type="range" id="so-o0" min="-6" max="1" step="0.01"></div>
         <div class="champ"><label for="so-fc">Fréquence coin fc <output id="so-fc-v"></output></label><input type="range" id="so-fc" min="-1.3" max="1.3" step="0.005"></div>
         <div class="actions"><button type="button" class="bouton secondaire" id="so-ajuster">Ajuster (moindres carrés en ln)</button></div>
         <p class="aide indice-ligne">Cliquez une ligne pour afficher le spectre de cette station et son modèle de Brune.</p>
@@ -1527,7 +1558,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript>Activez JavaScript pour utiliser le lecteur.</noscript>
 <script type="module" src="src/lecteur-station.js?v=2c4aacd228"></script>
-<script type="module" src="src/lecteur-reseau.js?v=acbcfc520f"></script>
+<script type="module" src="src/lecteur-reseau.js?v=5c1cf4e88e"></script>
 <script type="module" src="src/banc-sismometre.js?v=97df4b1e82"></script>
 <script type="module" src="src/banc-profil.js?v=34e550acef"></script>
 <script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>
@@ -1538,8 +1569,8 @@
 <script type="module" src="src/banc-site.js?v=07d6eb2b49"></script>
 <script type="module" src="src/banc-liquefaction.js?v=a209e4a6a4"></script>
 <script type="module" src="src/banc-ductilite.js?v=c29300a46c"></script>
-<script type="module" src="src/banc-mecanisme.js?v=5026120541"></script>
-<script type="module" src="src/banc-source.js?v=f844666ceb"></script>
+<script type="module" src="src/banc-mecanisme.js?v=89346d54de"></script>
+<script type="module" src="src/banc-source.js?v=a0c137fe7c"></script>
 <script type="module" src="src/banc-batiment.js?v=947c718313"></script>
 <script type="module" src="src/banc-poussee.js?v=1ae7248b49"></script>
 <script type="module" src="src/banc-isolation.js?v=b75f629476"></script>

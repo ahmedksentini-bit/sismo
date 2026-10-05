@@ -35,9 +35,9 @@ const CONSIGNES = {
       "Réglez l'azimut, le pendage et le glissement du plan nodal jusqu'à n'avoir plus aucun désaccord.",
       "Relevez le plan auxiliaire et les axes P et T, et déduisez-en le type de faille.",
       "Lancez « Inverser » : combien de solutions au pas de 10° ? Recommencez avec 8 stations et voyez la famille de solutions s'élargir ; cochez enfin « Montrer la solution vraie ».",
-      "En mode Exercice, ajustez le plan d'un séisme inconnu et donnez le type de faille, puis « Vérifier ».",
+      "En mode Exercice, ajustez le plan d'un séisme inconnu et donnez le type de faille, puis « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme », le fichier du TP de localisation) : contrôlez chaque polarité en zoomant sur la trace, corrigez-la au besoin, réglez le plan puis comparez à « Inverser ».",
     ],
-    rendre: "l'azimut, le pendage et le glissement du plan, le plan auxiliaire, les axes P et T, le type de faille et le nombre de désaccords.",
+    rendre: "l'azimut, le pendage et le glissement du plan, le plan auxiliaire, les axes P et T, le type de faille et le nombre de désaccords (et, pour un séisme réel, les polarités retenues).",
   },
   source: {
     objectif: "Mesurer la taille d'un séisme sur le spectre des ondes S : moment sismique et Mw par le plateau, fréquence coin et chute de contrainte par le coude.",
@@ -47,9 +47,9 @@ const CONSIGNES = {
       "Réglez Ω0 sur le plateau, puis fc sur le coude ; notez M0, Mw et Δσ. Cliquez ensuite « Ajuster » et comparez à votre réglage.",
       "Recommencez pour les autres stations : la Mw spectrale reste-t-elle stable avec la distance ? Comparez-la à ML.",
       "Montez Mw à 6 : fc baisse et ML s'écarte de Mw. Puis, à Mw fixée, faites varier Δσ et observez fc.",
-      "En mode Exercice, ajustez le modèle de la station affichée, donnez Mw et fc, puis « Vérifier ».",
+      "En mode Exercice, ajustez le modèle de la station affichée, donnez Mw et fc, puis « Vérifier ». En mode « Séisme réel », chargez un vrai séisme enregistré depuis la page En direct (« Charger un fichier de séisme ») : ajustez Brune station par station sur les bandes au-dessus du bruit, puis comparez Mw, ML et la magnitude de GEOFON.",
     ],
-    rendre: "Ω0, fc, M0, Mw et Δσ par station, leur moyenne, et un commentaire sur l'écart entre ML et Mw.",
+    rendre: "Ω0, fc, M0, Mw et Δσ par station, leur moyenne, et un commentaire sur l'écart entre ML et Mw (et, pour un séisme réel, avec la magnitude de GEOFON).",
   },
   sismometre: {
     objectif: "Comprendre ce que mesure un sismomètre : selon sa fréquence propre et son amortissement, il recopie le déplacement du sol ou son accélération.",
