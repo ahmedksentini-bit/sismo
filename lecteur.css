@@ -9,6 +9,7 @@
   --trace: #0f172a; --grid: #edf2f7; --grid-strong: #d5e0ea;
   --pick-p: #d9480f; --pick-s: #1d4ed8; --amp: #a16207; --phase: #0891b2; --vrai: #15803d; --sature: #dc2626;
   --warn-bg: #fffbeb; --warn-ink: #854d0e; --ok-bg: #f0fdf4; --ko-bg: #fef2f2;
+  --violet: #7c3aed; --rose: #be185d;
   --shadow: 0 12px 32px #0c4a6e12;
   --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
@@ -22,6 +23,7 @@
     --trace: #e2edf5; --grid: #10263a; --grid-strong: #1d3a52;
     --pick-p: #fb923c; --pick-s: #60a5fa; --amp: #fbbf24; --phase: #22d3ee; --vrai: #4ade80; --sature: #f87171;
     --warn-bg: #2a2110; --warn-ink: #fcd34d; --ok-bg: #0f2a1c; --ko-bg: #2c1416;
+    --violet: #a78bfa; --rose: #f472b6;
     --shadow: 0 12px 32px #00000040;
     color-scheme: dark;
   }
@@ -34,6 +36,7 @@
   --trace: #e2edf5; --grid: #10263a; --grid-strong: #1d3a52;
   --pick-p: #fb923c; --pick-s: #60a5fa; --amp: #fbbf24; --phase: #22d3ee; --vrai: #4ade80; --sature: #f87171;
   --warn-bg: #2a2110; --warn-ink: #fcd34d; --ok-bg: #0f2a1c; --ko-bg: #2c1416;
+  --violet: #a78bfa; --rose: #f472b6;
   --shadow: 0 12px 32px #00000040;
   color-scheme: dark;
 }
@@ -231,6 +234,15 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #sc-fmd { display: block; width: 100%; height: 320px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 /* mode « Catalogue réel » : carte des épicentres aux proportions du cadre (--rapport, posé par le banc), téléchargement */
 #sc-carte { display: block; width: 100%; aspect-ratio: var(--rapport, 1.8); min-height: 200px; max-height: 520px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+#sc-carte { touch-action: none; cursor: grab; }
+#sc-carte.trace { cursor: crosshair; }
+#sc-carte.glisse { cursor: grabbing; }
+#sc-zones-table input[type="text"] { min-width: 110px; padding: 5px 7px; }
+#sc-zones-table input[type="number"] { width: 72px; padding: 5px 7px; }
+#sc-zones-table select { width: auto; padding: 5px 7px; }
+#sc-zones-table .pastille { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+#sc-zones-table td:first-child { white-space: nowrap; }
+#sc-zones-table td:first-child input { display: inline-block; width: auto; vertical-align: middle; }
 #banc-sismicite .mode-banc button { flex: 1 1 auto; padding-inline: 8px; white-space: nowrap; } /* trois modes sur une ligne */
 #sc-telechargement { margin: 6px 0 12px; }
 #sc-telechargement summary { color: var(--blue-ink); font-size: 13px; font-weight: 800; cursor: pointer; }
@@ -254,6 +266,23 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #al-desag { display: block; width: 100%; height: 330px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 #al-tornade { display: block; width: 100%; height: 340px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 #al-imts { flex-wrap: wrap; }
+/* mode « Zones du catalogue » : trois modes sur une ligne, sélecteur de zones sur plusieurs lignes, calcul en cours */
+#banc-alea .mode-banc button { flex: 1 1 auto; padding-inline: 7px; font-size: 14px; white-space: nowrap; }
+#al-curseur { white-space: normal; }
+#al-zones-choix { flex-wrap: wrap; }
+#al-zones-choix button { flex: 1 1 auto; }
+#al-zones-resume, #al-zones-info, #al-zone-stats { overflow-wrap: anywhere; }
+#al-zones-resume .afficheurs { margin: 0 0 10px; }
+#al-zones-resume .resultats { margin-bottom: 8px; }
+#al-zones-resume .resultats i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 2px; vertical-align: baseline; }
+#banc-alea .actions .live-badge { align-self: center; }
+#banc-alea canvas { transition: opacity .2s; }
+#banc-alea.al-calcul canvas { opacity: .5; }
+/* sans modèle de zones : seuls la consigne, les modes, le panneau des zones et « À retenir » restent */
+#banc-alea.sans-zones > .colonne > section:not(.retenir):not(#al-panneau-zones) { display: none; }
+#banc-alea.sans-zones { grid-template-columns: minmax(0, 1fr); }
+#banc-alea.sans-zones > div.colonne { display: none; }
+#banc-alea.sans-zones > aside.colonne { max-width: 760px; }
 
 /* Banc accélérogrammes */
 #ac-spectres { display: block; width: 100%; height: 400px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }

@@ -2,10 +2,15 @@ import Sismo from './sismo/signal.js';
 import Spectre from './sismo/spectre.js';
 import Psha from './sismo/psha.js';
 import Isolignes from './sismo/isolignes.js';
+import Zones from './sismo/zones.js';
+import ZonesReel from './zones-reel.js';
 
 // src/banc-alea.js — banc « aléa » : calcul probabiliste de l'aléa sismique (PSHA) sur un modèle d'école,
 // avec son arbre logique ; courbe d'aléa, spectre à probabilité uniforme face à l'EC8, désagrégation et
 // sensibilité aux branches. Tout le calcul est dans src/sismo/psha.js (vérifié contre OpenQuake).
+// Mode « Zones du catalogue » : les zones sismogènes tracées sur un catalogue réel au banc « sismicité » (état partagé
+// src/zones-reel.js, événement alea:zones) ou lues dans un fichier « sismo-zones », projetées en km autour de leur centre
+// (Zones.modelePsha) ; site en latitude et longitude, côtes réelles, ni faille ni géodésie.
 (() => {
   'use strict';
   const SM = Sismo, Sp = Spectre;
@@ -36,10 +41,15 @@ import Isolignes from './sismo/isolignes.js';
   const etat = {
     pret: false, mode: 'explorer', r: reglagesDefaut(), zone: 0, proba: [0.1, 50], k: K_PGA,
     modele: null, res: null, desag: null, sens: null, exo: null, verifie: false, dom: null, carte: null,
+    // mode « Zones du catalogue » : modèle préparé (repère, points, domaine, côtes), version lue de l'état partagé,
+    // réglages d'Explorer mis de côté, mode demandé avant la construction du banc
+    zm: null, zonesVersion: 0, sauvegarde: null, modeDepart: 'explorer',
   };
+  const enZones = () => etat.mode === 'zones';
 
   // ── Calcul ──────────────────────────────────────────────────────────────
   function construire(r) {
+    if (enZones()) return construireZones(r);
     const zones = BASE.zones.map((z, i) => {
       const p = r.zones[i], aj = { ...z.ajustement, b: p.b, lamPivot: p.lam };
       return { ...z, points: POINTS[i], mmax: p.mmax, ajustement: aj,
@@ -64,7 +74,7 @@ import Isolignes from './sismo/isolignes.js';
     etat.res = Psha.calculer(etat.modele);
     analyser();
     // le banc « accélérogrammes » reprend le modèle exploré (jamais celui, caché, d'un exercice)
-    if (etat.mode === 'explorer') window.dispatchEvent(new CustomEvent('alea:modele', { detail: { modele: etat.modele } }));
+    if (etat.mode !== 'exercice') window.dispatchEvent(new CustomEvent('alea:modele', { detail: { modele: etat.modele } }));
   }
   // Ce qui dépend de la grandeur et de la probabilité choisies
   function analyser() {
@@ -86,14 +96,17 @@ import Isolignes from './sismo/isolignes.js';
     if (b) { b.textContent = 'Carte d\'aléa'; b.disabled = enExercice(); }
   }
   function lancerCarte() {
-    const grille = Psha.grilleCarte({ ...DOMAINE, pas: PAS_CARTE }), modele = etat.modele, k = etat.k, poe = poeCible();
+    if (!etat.modele || (enZones() && !etat.zm)) return;
+    const grille = enZones() ? etat.zm.grille : Psha.grilleCarte({ ...DOMAINE, pas: PAS_CARTE }), modele = etat.modele, k = etat.k, poe = poeCible();
     const carte = { k, poe, grille, valeurs: new Float64Array(grille.sites.length).fill(NaN), n: 0, t0: performance.now() };
     etat.carte = carte;
     $('#al-carte-alea').disabled = true;
     const tranche = () => {
       if (etat.carte !== carte) return; // modèle, grandeur ou probabilité changés
-      const fin = Math.min(grille.sites.length, carte.n + 6);
-      for (; carte.n < fin; carte.n++) carte.valeurs[carte.n] = Psha.niveauSite(modele, grille.sites[carte.n], BASE.imts[k], poe);
+      // tranches de 6 sites (modèle d'école) ou d'environ 150 ms (zones réelles, un site y coûte bien plus)
+      const fin = Math.min(grille.sites.length, carte.n + 6), t = performance.now();
+      if (enZones()) do { carte.valeurs[carte.n] = Psha.niveauSite(modele, grille.sites[carte.n], BASE.imts[k], poe); carte.n++; } while (carte.n < grille.sites.length && performance.now() - t < 150);
+      else for (; carte.n < fin; carte.n++) carte.valeurs[carte.n] = Psha.niveauSite(modele, grille.sites[carte.n], BASE.imts[k], poe);
       $('#al-carte-alea').textContent = carte.n < grille.sites.length ? `Carte : ${Math.round((100 * carte.n) / grille.sites.length)} %` : 'Carte d\'aléa';
       if (carte.n >= grille.sites.length) { carte.duree = performance.now() - carte.t0; $('#al-carte-alea').disabled = false; }
       dessinerCarte();
@@ -106,7 +119,7 @@ import Isolignes from './sismo/isolignes.js';
   const COUL = {};
   function lireCouleurs() {
     const cs = getComputedStyle(document.documentElement);
-    for (const k of ['trace', 'grid', 'grid-strong', 'pick-p', 'pick-s', 'amp', 'muted', 'ink', 'paper', 'blue', 'cyan', 'soft', 'teal', 'line'])
+    for (const k of ['trace', 'grid', 'grid-strong', 'pick-p', 'pick-s', 'amp', 'muted', 'ink', 'paper', 'blue', 'cyan', 'soft', 'teal', 'line', 'violet', 'rose', 'sature', 'vrai'])
       COUL[k] = cs.getPropertyValue('--' + k).trim();
   }
   function preparer(cv) {
@@ -123,15 +136,18 @@ import Isolignes from './sismo/isolignes.js';
     ctx.fillStyle = coul; ctx.fillText(t, x, y);
   }
   const COUL_ZONES = ['pick-s', 'amp'];
+  // zones d'un catalogue réel : autant de couleurs que de zones (au-delà de huit, elles reviennent)
+  const PALETTE_ZONES = ['pick-s', 'amp', 'teal', 'violet', 'sature', 'rose', 'cyan', 'vrai'];
+  const couleurZone = i => COUL[enZones() ? PALETTE_ZONES[i % PALETTE_ZONES.length] : COUL_ZONES[i]];
   const enExercice = () => etat.mode === 'exercice' && !etat.verifie;
 
-  // Carte : échelle isotrope autour du domaine des zones
+  // Carte : échelle isotrope autour du domaine des zones (modèle d'école), ou des zones réelles et du site
   const DOMAINE = { x0: -120, x1: 240, y0: -120, y1: 150 };
   function geoCarte(cv) {
-    const W = cv.clientWidth, H = cv.clientHeight, m = 26;
-    const s = Math.min((W - 2 * m) / (DOMAINE.x1 - DOMAINE.x0), (H - 2 * m) / (DOMAINE.y1 - DOMAINE.y0));
-    const cx = (W - s * (DOMAINE.x1 - DOMAINE.x0)) / 2, cy = (H - s * (DOMAINE.y1 - DOMAINE.y0)) / 2;
-    return { s, X: x => cx + (x - DOMAINE.x0) * s, Y: y => H - cy - (y - DOMAINE.y0) * s, x: X => DOMAINE.x0 + (X - cx) / s, y: Y => DOMAINE.y0 + (H - cy - Y) / s };
+    const D = enZones() && etat.zm ? etat.zm.domaine : DOMAINE, W = cv.clientWidth, H = cv.clientHeight, m = enZones() ? 14 : 26;
+    const s = Math.min((W - 2 * m) / (D.x1 - D.x0), (H - 2 * m) / (D.y1 - D.y0));
+    const cx = (W - s * (D.x1 - D.x0)) / 2, cy = (H - s * (D.y1 - D.y0)) / 2;
+    return { s, X: x => cx + (x - D.x0) * s, Y: y => H - cy - (y - D.y0) * s, x: X => D.x0 + (X - cx) / s, y: Y => D.y0 + (H - cy - Y) / s };
   }
   // Couleur opaque entre le fond et `vers` (couleurs #rrggbb), t de 0 à 1
   const rgb = c => (/^#[0-9a-f]{6}$/i.test(c) ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : null);
@@ -144,7 +160,7 @@ import Isolignes from './sismo/isolignes.js';
   function dessinerCarteAlea(ctx, g, W, H) {
     const c = etat.carte, gr = c.grille, v = Array.from(c.valeurs).filter(x => x > 0);
     if (!v.length) return;
-    const vmin = Math.min(...v), vmax = Math.max(...v), t = x => (vmax > vmin ? Math.log(x / vmin) / Math.log(vmax / vmin) : 1), d = (PAS_CARTE * g.s) / 2;
+    const vmin = Math.min(...v), vmax = Math.max(...v), t = x => (vmax > vmin ? Math.log(x / vmin) / Math.log(vmax / vmin) : 1), d = (gr.pas * g.s) / 2;
     gr.sites.forEach((s, n) => {
       const x = c.valeurs[n];
       if (!(x > 0)) return;
@@ -154,7 +170,7 @@ import Isolignes from './sismo/isolignes.js';
     if (c.n < gr.sites.length) return;
     const places = [];
     for (const niv of Isolignes.niveauxRonds(vmin, vmax, 5)) {
-      const segs = Isolignes.segments(c.valeurs, gr.nx, gr.ny, niv), P = ([i, j]) => [g.X(gr.x0 + i * PAS_CARTE), g.Y(gr.y0 + j * PAS_CARTE)];
+      const segs = Isolignes.segments(c.valeurs, gr.nx, gr.ny, niv), P = ([i, j]) => [g.X(gr.x0 + i * gr.pas), g.Y(gr.y0 + j * gr.pas)];
       ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.1; ctx.globalAlpha = 0.7; ctx.beginPath();
       for (const [a, b] of segs) { const [x1, y1] = P(a), [x2, y2] = P(b); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); }
       ctx.stroke(); ctx.globalAlpha = 1;
@@ -168,6 +184,7 @@ import Isolignes from './sismo/isolignes.js';
     texte(ctx, lib, 8, H - 8, COUL['pick-p'], `800 11.5px ${POLICE}`, 'left', 'bottom');
   }
   function dessinerCarte() {
+    if (enZones()) { dessinerCarteZones(); return; }
     const cv = $('#al-carte');
     if (cv.clientWidth < 50) return;
     const { ctx, W, H } = preparer(cv), g = geoCarte(cv), site = etat.r.site;
@@ -213,6 +230,156 @@ import Isolignes from './sismo/isolignes.js';
     ctx.fillStyle = COUL['pick-p']; ctx.strokeStyle = COUL.paper; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(Xs, Ys - 9); ctx.lineTo(Xs + 8, Ys + 6); ctx.lineTo(Xs - 8, Ys + 6); ctx.closePath(); ctx.stroke(); ctx.fill();
     texte(ctx, `Site · Vs30 ${milliers(site.vs30)} m/s`, Xs + 12, Ys + 2, COUL['pick-p'], `800 12px ${POLICE}`);
+  }
+
+  // ── Mode « Zones du catalogue » : préparation du modèle et carte ──────────
+  // Repère fixe en km autour du centre des zones ; pas de discrétisation choisi pour qu'un calcul dure une à deux
+  // secondes (1 500 points au plus) ; grille de la carte d'aléa sur le domaine des zones et du site (250 sites au plus) ;
+  // branches (a, b) en énumération complète jusqu'à quatre zones à σ(b) > 0 (3⁴ × 3 × 3 = 729 réalisations).
+  const CIBLE_POINTS = 1500, SITES_CARTE = 250, MAX_VARIANTES_AB = 81, DOMAINE_MED = { lon: [-20, 50], lat: [22, 53] };
+  const echapper = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const geoTexte = (v, pos, neg, d = 2) => `${virg(Math.abs(v), d)}°${v >= 0 ? pos : neg}`;
+  const lonPres = l => ((((l + 180) % 360) + 360) % 360) - 180;
+  const latLon = (lat, lon, d = 2) => `${geoTexte(lat, 'N', 'S', d)} ${geoTexte(lonPres(lon), 'E', 'O', d)}`;
+  const tauxTexte = x => (x >= 10 ? virg(x, 1) : x >= 0.1 ? virg(x, 2) : virg(x, 3));
+  const fonds = {};
+  const chargerFond = cle => (fonds[cle] = fonds[cle] || fetch(`data/cotes-${cle}.json`).then(r => r.json()).catch(() => null));
+  function preparerZones(m) {
+    const reference = Zones.centre(m.zones), pr = Zones.projection(reference.lat, reference.lon);
+    const polys = m.zones.map(z => z.polygone.map(pr.versKm)), siteKm = pr.versKm([m.site.lon, m.site.lat]);
+    const { pas, points, n } = Zones.pasAdapte(polys, { cible: CIBLE_POINTS });
+    const domaine = Zones.domaine(polys, siteKm), nSigma = m.zones.filter(z => z.sigmaB > 0).length;
+    // km par degré de longitude et de latitude (méridiens et parallèles sont droits dans ce repère)
+    const kx = pr.versKm([reference.lon + 1, reference.lat])[0], ky = pr.versKm([reference.lon, reference.lat + 1])[1];
+    const zm = { modele: m, reference, pr, pas, points, n, domaine, grille: Zones.grilleAlea(domaine, { nMax: SITES_CARTE }),
+      nSigma, abPossible: nSigma > 0 && Math.pow(3, nSigma) <= MAX_VARIANTES_AB, kx, ky, fond: null };
+    // fond de carte : côtes et frontières de la Méditerranée (plus fines) quand la vue y tient, sinon du monde ; la boîte
+    // déborde du domaine, que la carte montre au-delà quand ses proportions diffèrent de celles du canevas
+    const L = Math.max(domaine.x1 - domaine.x0, domaine.y1 - domaine.y0);
+    const boite = { x0: domaine.x0 - L, x1: domaine.x1 + L, y0: domaine.y0 - L, y1: domaine.y1 + L };
+    const med = reference.lon + boite.x0 / kx >= DOMAINE_MED.lon[0] && reference.lon + boite.x1 / kx <= DOMAINE_MED.lon[1]
+      && reference.lat + boite.y0 / ky >= DOMAINE_MED.lat[0] && reference.lat + boite.y1 / ky <= DOMAINE_MED.lat[1];
+    chargerFond(med ? 'mediterranee' : 'monde').then(j => {
+      if (!j || etat.zm !== zm) return;
+      zm.fond = { cotes: Zones.lignesKm(j.cotes, pr, boite), frontieres: Zones.lignesKm(j.frontieres || [], pr, boite) };
+      if (enZones() && etat.res && !$('#banc-alea').hidden) dessinerCarte();
+    });
+    return zm;
+  }
+  // Réglages de départ : valeurs du fichier (λ, b, Mmax de chaque zone, site), toutes les branches possibles
+  function reglagesZones() {
+    const zm = etat.zm, m = zm.modele, [x, y] = zm.pr.versKm([m.site.lon, m.site.lat]);
+    return {
+      site: { x, y, lat: m.site.lat, lon: m.site.lon, vs30: m.site.vs30 },
+      zones: m.zones.map(z => ({ lam: z.lam, b: z.b, mmax: z.mmax })),
+      incAB: zm.abPossible, incMmax: true, lois: Object.fromEntries(BASE.gmpe.map(g => [g.id, true])),
+      geo: { ...reglagesDefaut().geo, actif: false }, faille: { ...reglagesDefaut().faille, actif: false },
+    };
+  }
+  // Modèle PSHA des zones (Zones.modelePsha), réglages du banc appliqués ; les points de chaque zone sont calculés une fois
+  function construireZones(r) {
+    const zm = etat.zm, m = zm.modele, ids = BASE.gmpe.map(g => g.id).filter(id => r.lois[id]);
+    const mod = Zones.modelePsha({ ...m, zones: m.zones.map((z, i) => ({ ...z, ...r.zones[i] })) }, {
+      reference: zm.reference, site: { lat: r.site.lat, lon: r.site.lon, vs30: r.site.vs30 }, gmpe: ids,
+      incAB: r.incAB && zm.abPossible, incMmax: r.incMmax, pasGrille: zm.pas,
+    });
+    mod.zones.forEach((z, i) => { z.points = zm.points[i]; });
+    return mod;
+  }
+  // Cercles de distance autour du site, selon la taille du domaine (300 km : portée du calcul)
+  function cercles() {
+    if (!enZones() || !etat.zm) return [50, 100, 200];
+    const d = etat.zm.domaine, L = Math.max(d.x1 - d.x0, d.y1 - d.y0);
+    return L > 700 ? [100, 200, 300] : L > 300 ? [50, 100, 200] : [25, 50, 100];
+  }
+  // Raccourcit un texte à une largeur donnée (points de suspension)
+  function raccourcir(ctx, t, larg, police) {
+    ctx.font = police;
+    if (ctx.measureText(t).width <= larg) return t;
+    let s = t;
+    while (s.length > 1 && ctx.measureText(s + '…').width > larg) s = s.slice(0, -1);
+    return s.trimEnd() + '…';
+  }
+  // Carte des zones réelles : graticule, carte d'aléa, côtes et frontières projetées, zones, cercles, site, échelle
+  function dessinerCarteZones() {
+    const cv = $('#al-carte'), zm = etat.zm;
+    if (cv.clientWidth < 50 || !zm || !etat.modele) return;
+    const { ctx, W, H } = preparer(cv), g = geoCarte(cv), site = etat.r.site, etroit = W < 520, ref = zm.reference;
+    const lon = x => ref.lon + x / zm.kx, lat = y => ref.lat + y / zm.ky, Xlon = l => g.X((l - ref.lon) * zm.kx), Ylat = l => g.Y((l - ref.lat) * zm.ky);
+    // graticule : pas rond, lignes à 64 px au moins
+    const pasG = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 15, 30].find(p => p * zm.kx * g.s >= 64 && p * zm.ky * g.s >= 40) || 30;
+    const dec = pasG >= 1 ? 0 : pasG === 0.25 ? 2 : 1;
+    const meridiens = [], paralleles = [];
+    for (let i = Math.ceil(lon(g.x(0)) / pasG); i * pasG <= lon(g.x(W)); i++) meridiens.push(i * pasG);
+    for (let i = Math.ceil(lat(g.y(H)) / pasG); i * pasG <= lat(g.y(0)); i++) if (Math.abs(i * pasG) <= 90) paralleles.push(i * pasG);
+    ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (const l of meridiens) { const X = Math.round(Xlon(l)) + 0.5; ctx.moveTo(X, 0); ctx.lineTo(X, H); }
+    for (const l of paralleles) { const Y = Math.round(Ylat(l)) + 0.5; ctx.moveTo(0, Y); ctx.lineTo(W, Y); }
+    ctx.stroke();
+    if (etat.carte) dessinerCarteAlea(ctx, g, W, H);
+    // côtes (trait plein) et frontières (tirets)
+    if (zm.fond) {
+      for (const [cle, larg, alpha, tirets] of [['frontieres', 0.9, 0.45, [3, 3]], ['cotes', 1.2, 0.9, []]]) {
+        ctx.strokeStyle = COUL.muted; ctx.lineWidth = larg; ctx.globalAlpha = alpha; ctx.setLineDash(tirets); ctx.beginPath();
+        for (const l of zm.fond[cle]) for (let i = 0; i < l.length; i += 2) (i ? ctx.lineTo : ctx.moveTo).call(ctx, g.X(l[i]), g.Y(l[i + 1]));
+        ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
+    }
+    // zones : surface, contour, points de calcul (plus petits quand ils se serrent)
+    const rPt = Math.min(1.5, Math.max(0.6, 0.15 * zm.pas * g.s));
+    etat.modele.zones.forEach((z, i) => {
+      const c = couleurZone(i);
+      ctx.beginPath(); z.polygone.forEach(([x, y], j) => (j ? ctx.lineTo(g.X(x), g.Y(y)) : ctx.moveTo(g.X(x), g.Y(y)))); ctx.closePath();
+      ctx.globalAlpha = 0.12; ctx.fillStyle = c; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = c; ctx.globalAlpha = 0.5;
+      for (const p of z.points) { ctx.beginPath(); ctx.arc(g.X(p.x), g.Y(p.y), rPt, 0, 2 * Math.PI); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    });
+    // cercles de distance autour du site
+    for (const R of cercles()) {
+      ctx.strokeStyle = COUL.muted; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(g.X(site.x), g.Y(site.y), R * g.s, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+      texte(ctx, `${R} km`, g.X(site.x), g.Y(site.y) + R * g.s + 3, COUL.muted, `10.5px ${MONO}`, 'center', 'top');
+    }
+    // site et son étiquette (à gauche du site quand il est près du bord droit)
+    const Xs = g.X(site.x), Ys = g.Y(site.y), places = [];
+    ctx.fillStyle = COUL['pick-p']; ctx.strokeStyle = COUL.paper; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(Xs, Ys - 9); ctx.lineTo(Xs + 8, Ys + 6); ctx.lineTo(Xs - 8, Ys + 6); ctx.closePath(); ctx.stroke(); ctx.fill();
+    const lignesSite = [`Site · Vs30 ${milliers(site.vs30)} m/s`, latLon(site.lat, site.lon)];
+    const policeSite = `800 ${etroit ? 11.5 : 12}px ${POLICE}`;
+    ctx.font = policeSite;
+    const lS = Math.max(...lignesSite.map(t => ctx.measureText(t).width)), gauche = Xs + 12 + lS > W - 4;
+    const xS = gauche ? Xs - 12 : Xs + 12, yS = Ys + 2 - (lignesSite.length - 1) * 7;
+    lignesSite.forEach((t, k) => texte(ctx, t, xS, yS + 14 * k, COUL['pick-p'], policeSite, gauche ? 'right' : 'left'));
+    places.push({ x0: gauche ? xS - lS : xS, x1: gauche ? xS : xS + lS, y0: yS - 8, y1: yS + 14 * (lignesSite.length - 1) + 8 });
+    places.push({ x0: Xs - 9, x1: Xs + 9, y0: Ys - 10, y1: Ys + 7 });
+    // étiquettes des zones, au centre de leurs points : nom et statistiques (nom seul sur téléphone, ou faute de place),
+    // décalées d'une ligne au plus pour ne rien chevaucher
+    const libre = b => b.x0 >= 2 && b.x1 <= W - 2 && b.y0 >= 2 && b.y1 <= H - 2 && places.every(p => b.x1 < p.x0 || b.x0 > p.x1 || b.y1 < p.y0 || b.y0 > p.y1);
+    etat.modele.zones.forEach((z, i) => {
+      const c = couleurZone(i), p = etat.r.zones[i], q = zm.modele.zones[i], pts = z.points;
+      const xc = g.X(pts.reduce((s, u) => s + u.x, 0) / pts.length), yc = g.Y(pts.reduce((s, u) => s + u.y, 0) / pts.length);
+      const pNom = `800 ${etroit ? 11 : 12}px ${POLICE}`, pStat = `700 10.5px ${MONO}`;
+      const nom = raccourcir(ctx, z.nom, etroit ? 120 : 200, pNom), stat = `λ(≥ ${virg(q.mc, 1)}) ${tauxTexte(p.lam)}/an · b ${virg(p.b, 2)} · Mmax ${virg(p.mmax, 1)}`;
+      ctx.font = pNom; const lN = ctx.measureText(nom).width; ctx.font = pStat; const lT = ctx.measureText(stat).width;
+      const boite = (avec, y) => {
+        const h = avec ? 28 : 14, l = avec ? Math.max(lN, lT) : lN, x = Math.min(Math.max(xc, 4 + l / 2), W - 4 - l / 2);
+        return { avec, x, y, x0: x - l / 2, x1: x + l / 2, y0: y - h / 2, y1: y + h / 2 };
+      };
+      const essais = [...(etroit ? [] : [0, -30, 30].map(dy => boite(true, yc + dy))), ...[0, -16, 16].map(dy => boite(false, yc + dy))];
+      const b = essais.find(libre) || boite(false, yc);
+      places.push(b);
+      if (b.avec) { texte(ctx, nom, b.x, b.y - 7, c, pNom, 'center'); texte(ctx, stat, b.x, b.y + 7, c, pStat, 'center'); }
+      else texte(ctx, nom, b.x, b.y, c, pNom, 'center');
+    });
+    // étiquettes du graticule : longitudes en haut, latitudes à gauche (la légende de la carte d'aléa occupe le bas)
+    for (const l of meridiens) { const X = Xlon(l); if (X > 26 && X < W - 26) texte(ctx, geoTexte(lonPres(l), 'E', 'O', dec), X, 4, COUL.muted, `10px ${MONO}`, 'center', 'top'); }
+    for (const l of paralleles) { const Y = Ylat(l); if (Y > 30 && Y < H - 26) texte(ctx, geoTexte(l, 'N', 'S', dec), 4, Y - 1, COUL.muted, `10px ${MONO}`, 'left', 'bottom'); }
+    // échelle en bas à droite
+    const lkm = [25, 50, 100, 200, 500].find(v => v * g.s >= 50) || 500, x1 = W - 12, x0 = x1 - lkm * g.s, yb = H - 12;
+    ctx.strokeStyle = COUL.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, yb - 4); ctx.lineTo(x0, yb); ctx.lineTo(x1, yb); ctx.lineTo(x1, yb - 4); ctx.stroke();
+    texte(ctx, `${lkm} km`, (x0 + x1) / 2, yb - 4, COUL.ink, `700 10.5px ${MONO}`, 'center', 'bottom');
   }
 
   // Courbe d'aléa : probabilité en 50 ans en fonction du niveau, échelles logarithmiques
@@ -367,7 +534,7 @@ import Isolignes from './sismo/isolignes.js';
     ctx.font = `10.5px ${MONO}`; ctx.fillStyle = COUL.muted;
     if (!d) { ctx.textAlign = 'center'; ctx.fillText('probabilité visée non atteinte', W / 2, H / 2); return; }
     const Rmax = Math.max(100, Math.ceil(Math.max(...d.cases.filter(c => c.part > 1e-3).map(c => c.r1)) / 20) * 20);
-    const M0 = 4, M1 = 8, X = R => m.g + (R / Rmax) * (W - m.g - m.d), Y = M => H - m.b - ((M - M0) / (M1 - M0)) * (H - m.h - m.b);
+    const M0 = 4, M1 = Math.max(8, Math.ceil(Math.max(...d.cases.map(c => c.m1)))), X = R => m.g + (R / Rmax) * (W - m.g - m.d), Y = M => H - m.b - ((M - M0) / (M1 - M0)) * (H - m.h - m.b);
     const pmax = Math.max(...d.cases.map(c => c.part));
     for (const c of d.cases) {
       if (c.r0 >= Rmax) continue;
@@ -388,9 +555,19 @@ import Isolignes from './sismo/isolignes.js';
       const xm = X(d.rMoy), ym = Y(d.mMoy);
       ctx.strokeStyle = COUL.blue; ctx.lineWidth = 2.4;
       ctx.beginPath(); ctx.moveTo(xm - 7, ym); ctx.lineTo(xm + 7, ym); ctx.moveTo(xm, ym - 7); ctx.lineTo(xm, ym + 7); ctx.stroke();
-      const zones = [...d.zones.map((p, i) => `${etat.modele.zones[i].nom.split(' (')[0]} ${virg(100 * p, 0)} %`),
-        ...d.failles.map((p, i) => `${etat.modele.failles[i].nom} ${virg(100 * p, 0)} %`)].join(' · ');
-      texte(ctx, `M̄ ${virg(d.mMoy, 1)} · R̄ ${virg(d.rMoy, 0)} km · ${zones}`, etroit ? m.g : W - m.d, etroit ? 31 : 14, COUL.blue, `800 12px ${POLICE}`, etroit ? 'left' : 'right');
+      let parts = [...d.zones.map((p, i) => [etat.modele.zones[i].nom.split(' (')[0], p]), ...d.failles.map((p, i) => [etat.modele.failles[i].nom, p])];
+      let lib = `M̄ ${virg(d.mMoy, 1)} · R̄ ${virg(d.rMoy, 0)} km · ${parts.map(([n, p]) => `${n} ${virg(100 * p, 0)} %`).join(' · ')}`;
+      if (enZones()) {
+        // zones réelles : les plus contributives d'abord, autant qu'en tient la ligne
+        ctx.font = `800 12px ${POLICE}`;
+        const place = etroit ? W - m.d - m.g : W - m.d - m.g - ctx.measureText(titre).width - 24;
+        parts = parts.filter(([, p]) => p >= 0.005).sort((a, b) => b[1] - a[1]);
+        for (let k = parts.length; k >= 0; k--) {
+          lib = `M̄ ${virg(d.mMoy, 1)} · R̄ ${virg(d.rMoy, 0)} km${parts.slice(0, k).map(([n, p]) => ` · ${n} ${virg(100 * p, 0)} %`).join('')}${k < parts.length ? ' · …' : ''}`;
+          if (ctx.measureText(lib).width <= place) break;
+        }
+      }
+      texte(ctx, lib, etroit ? m.g : W - m.d, etroit ? 31 : 14, COUL.blue, `800 12px ${POLICE}`, etroit ? 'left' : 'right');
     }
   }
 
@@ -405,6 +582,7 @@ import Isolignes from './sismo/isolignes.js';
       .replace('Loi d\'atténuation', W < 520 ? 'Loi' : 'Loi d\'atténuation').replace('Modèle de taux', W < 520 ? 'Taux' : 'Modèle de taux');
     const lignes = etat.sens.map(e => ({ ...e, nom: court(e.nom), branches: e.branches.map(b => ({ ...b, libelle: court(b.libelle) })), min: Math.min(...e.branches.map(b => b.niveau)), max: Math.max(...e.branches.map(b => b.niveau)) }))
       .sort((p, q) => (q.max - q.min) - (p.max - p.min));
+    if (enZones()) { ctx.font = `700 12px ${POLICE}`; m.g = Math.min(Math.max(m.g, Math.max(...lignes.map(l => ctx.measureText(l.nom).width)) + 16), W * 0.45); }
     const lo = Math.min(xMoy, ...lignes.map(l => l.min)) * 0.92, hi = Math.max(xMoy, ...lignes.map(l => l.max)) * 1.08;
     const X = x => m.g + ((x - lo) / (hi - lo)) * (W - m.g - m.d), hL = (H - m.h - m.b) / lignes.length;
     ctx.font = `10.5px ${MONO}`; ctx.fillStyle = COUL.muted; ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1;
@@ -415,7 +593,7 @@ import Isolignes from './sismo/isolignes.js';
     if (!enExercice()) { ctx.strokeStyle = COUL['pick-p']; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(xMoy), m.h - 6); ctx.lineTo(X(xMoy), H - m.b); ctx.stroke(); }
     lignes.forEach((l, i) => {
       const y = m.h + hL * (i + 0.5);
-      texte(ctx, l.nom, m.g - 10, y, COUL.ink, `700 12px ${POLICE}`, 'right');
+      texte(ctx, raccourcir(ctx, l.nom, m.g - 14, `700 12px ${POLICE}`), m.g - 10, y, COUL.ink, `700 12px ${POLICE}`, 'right');
       if (l.branches.length < 2) { texte(ctx, 'branche unique', X(xMoy) + 8, y, COUL.muted, `11px ${POLICE}`); return; }
       ctx.fillStyle = COUL.blue; ctx.globalAlpha = 0.22; ctx.fillRect(X(l.min), y - hL * 0.28, X(l.max) - X(l.min), hL * 0.56); ctx.globalAlpha = 1;
       l.branches.forEach(b => { ctx.fillStyle = COUL.blue; ctx.beginPath(); ctx.arc(X(b.niveau), y, 3.5, 0, 2 * Math.PI); ctx.fill(); });
@@ -461,18 +639,45 @@ import Isolignes from './sismo/isolignes.js';
       afficheur('Scénario dominant', cache || !d ? '—' : `M ${virg(d.mMoy, 1)}`, cache || !d ? nomImt(etat.k) : `R̄ = ${virg(d.rMoy, 0)} km, ${nomImt(etat.k)}`),
       afficheur('Réalisations', String(n), tailles.join(' × ')),
     ].join('');
+    const zm = enZones() ? etat.zm : null;
+    if (zm) {
+      // zones réelles : branches (a, b), points de calcul à portée du site, durée prévisible de la carte d'aléa
+      const mod = etat.modele, k = etat.r.incAB && zm.abPossible ? zm.nSigma : 0;
+      const proches = mod.zones.reduce((s, z) => s + z.points.filter(q => Math.hypot(q.x - mod.site.x, q.y - mod.site.y) <= mod.distanceMax).length, 0);
+      $('#al-arbre').textContent = `${n} réalisations = ${tailles.join(' × ')} : variantes (a, b) des zones (${k ? `3${exposant(k)}, b ± 1,645 σ dans ${k} zone${k > 1 ? 's' : ''}` : 'b central'}), Mmax, loi d'atténuation ; taux du catalogue seul. `
+        + `${milliers(proches)} points de calcul sur ${milliers(zm.n)} à moins de ${mod.distanceMax} km du site. Courbes calculées en ${milliers(etat.duree)} ms.`;
+      const nS = zm.grille.sites.length, tCarte = Math.max(5, Math.round((nS * etat.duree) / 12 / 5000) * 5);
+      $('#al-carte-aide').textContent = `niveau moyen de la grandeur choisie à la probabilité visée, tous les ${zm.grille.pas} km (${milliers(nS)} sites, de l'ordre de ${tCarte} s)`;
+      return;
+    }
     $('#al-arbre').textContent = `${n} réalisations = ${tailles.join(' × ')} : variantes de taux${nGeo ? ` (${nCat} du catalogue, ${nGeo} couplages géodésiques)` : ' du catalogue'}, Mmax, loi d'atténuation. Courbes calculées en ${milliers(etat.duree)} ms.`;
     const g = etat.r.geo;
     $('#al-geo-source').textContent = `Moments géodésiques : zone A ${sci(g.moments[0])}, zone B ${sci(g.moments[1])} N·m/an (${g.source}).`;
   }
+  const exposant = n => String(n).split('').map(c => SUP[c]).join('');
   function majControles() {
-    const r = etat.r, z = r.zones[etat.zone];
+    const r = etat.r, z = r.zones[etat.zone], zm = enZones() ? etat.zm : null;
     $('#al-vs30').value = r.site.vs30; $('#al-vs30-v').textContent = `${milliers(r.site.vs30)} m/s · sol ${classeSol(r.site.vs30)}`;
     $$('[data-al-zone]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alZone === etat.zone)));
-    $('#al-lam').value = Math.log10(z.lam); $('#al-lam-v').textContent = virg(z.lam, 2) + ' /an';
+    // bornes des curseurs : celles du modèle d'école, ou autour des valeurs du fichier pour une zone réelle (λ de ÷ 10 à
+    // × 10, b ± 0,3, Mmax d'au moins Mmin du calcul + 0,5 à 8 au moins)
+    const q = zm ? zm.modele.zones[etat.zone] : null, mmin = q ? Math.max(q.mc, Zones.MMIN_CALCUL) : 0;
+    const bornes = q ? [[Math.log10(q.lam) - 1, Math.log10(q.lam) + 1], [Math.round(Math.min(0.7, q.b - 0.3) * 100) / 100, Math.round(Math.max(1.3, q.b + 0.3) * 100) / 100],
+      [Math.min(q.mmax, Math.ceil((mmin + 0.5) * 10 - 1e-9) / 10), Math.max(8, q.mmax)]] : [[-1.5, 0.6], [0.7, 1.3], [5.5, 7.6]];
+    ['#al-lam', '#al-b', '#al-mmax'].forEach((id, i) => { $(id).min = bornes[i][0]; $(id).max = bornes[i][1]; });
+    $('#al-lam-lib').textContent = q ? `Taux annuel λ(M ≥ ${virg(q.mc, 1)})` : 'Taux annuel λ(M ≥ 4)';
+    $('#al-lam').value = Math.log10(z.lam); $('#al-lam-v').textContent = (q ? tauxTexte(z.lam) : virg(z.lam, 2)) + ' /an';
     $('#al-b').value = z.b; $('#al-b-v').textContent = virg(z.b, 2);
     $('#al-mmax').value = z.mmax; $('#al-mmax-v').textContent = virg(z.mmax, 1);
-    $('#al-inc-ab').checked = r.incAB; $('#al-inc-mmax').checked = r.incMmax; $('#al-inc-geo').checked = r.geo.actif;
+    $('#al-inc-ab').disabled = !!zm && !zm.abPossible; $('#al-ab-info').hidden = !zm || zm.abPossible;
+    if (q) {
+      $('#al-zone-stats').textContent = `${q.nom} : ${q.n ?? '—'} séismes de M ≥ ${virg(q.mc, 1)} au catalogue ; fichier : λ ${tauxTexte(q.lam)} /an, b ${virg(q.b, 2)} ± ${virg(q.sigmaB, 2)}`
+        + `${q.bPropre ? '' : ' (b régional)'}, Mmax ${virg(q.mmax, 1)}${q.mmaxObs !== null ? ` (observée ${virg(q.mmaxObs, 1)})` : ''} ; foyers à ${virg(q.profondeur, 0)} km, rake ${virg(q.rake, 0)}° ; séismes calculés de M ${virg(mmin, 1)} à Mmax.`;
+      $('#al-site-geo').textContent = `Site : ${latLon(r.site.lat, r.site.lon)}. Un clic sur la carte le déplace.`;
+      $('#al-ab-info').textContent = zm.nSigma === 0 ? 'σ(b) nul dans toutes les zones : une seule branche (a, b) par zone.'
+        : `${zm.nSigma} zones à σ(b) > 0 : 3${exposant(zm.nSigma)} = ${milliers(3 ** zm.nSigma)} variantes (a, b), ${milliers(9 * 3 ** zm.nSigma)} réalisations ; l'énumération complète s'arrête à quatre zones, chaque zone garde son b central.`;
+    }
+    $('#al-inc-ab').checked = r.incAB && (!zm || zm.abPossible); $('#al-inc-mmax').checked = r.incMmax; $('#al-inc-geo').checked = r.geo.actif;
     $('#al-poids-geo').value = r.geo.poids; $('#al-poids-geo-v').textContent = `${virg(r.geo.poids, 2)} / ${virg(1 - r.geo.poids, 2)}`;
     $('#al-poids-geo').disabled = !r.geo.actif;
     $('#al-faille').checked = r.faille.actif; $('#al-glissement').value = r.faille.glissement; $('#al-glissement').disabled = !r.faille.actif;
@@ -484,13 +689,105 @@ import Isolignes from './sismo/isolignes.js';
     $$('[data-al-proba]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alProba === etat.proba.join('|'))));
     $$('[data-al-imt]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.alImt === etat.k)));
   }
+  // Vue selon le mode : panneaux, réglages sans objet (faille et géodésie pour des zones réelles), sélecteur de zones,
+  // légende et titre de la carte. Les libellés du modèle d'école sont ceux de la page (lus par brancher).
+  let ECOLE = null;
+  function majVue() {
+    const z = enZones(), zm = z ? etat.zm : null;
+    $('#banc-alea').classList.toggle('sans-zones', z && !zm);
+    for (const id of ['explorer', 'exercice', 'zones']) $(`#al-mode-${id}`).setAttribute('aria-pressed', String(etat.mode === id));
+    $('#al-panneau-explorer').hidden = etat.mode === 'exercice';
+    $('#al-panneau-exercice').hidden = etat.mode !== 'exercice';
+    $('#al-panneau-zones').hidden = !z;
+    $('#al-bloc-faille').hidden = z; $('#al-bloc-geo').hidden = z;
+    for (const id of ['#al-sans-faille', '#al-site-geo', '#al-zone-stats']) $(id).hidden = !z;
+    $('#al-zones-vide').hidden = !!zm;
+    $('#al-defaut').textContent = z ? 'Revenir aux valeurs du catalogue' : 'Revenir au modèle d\'école';
+    if (etat.vue === (zm || 'ecole')) return;
+    etat.vue = zm || 'ecole';
+    const R = cercles();
+    $('#al-legende-cercles').textContent = `${R.slice(0, -1).join(', ')} et ${R[R.length - 1]} km du site${R.includes(300) ? ' (portée du calcul)' : ''}`;
+    if (!zm) {
+      $('#al-zones-choix').innerHTML = ECOLE.choix; $('#al-legende-sources').innerHTML = ECOLE.legende;
+      $('#al-carte-titre').textContent = ECOLE.titre; $('#al-carte-aide').textContent = ECOLE.aide; $('#al-zones-resume').innerHTML = '';
+      return;
+    }
+    const m = zm.modele, coul = i => `var(--${PALETTE_ZONES[i % PALETTE_ZONES.length]})`;
+    $('#al-zones-choix').innerHTML = m.zones.map((q, i) => `<button type="button" data-al-zone="${i}">${echapper(q.nom)}</button>`).join('');
+    $('#al-legende-sources').innerHTML = m.zones.map((q, i) => `<span><i style="background:${coul(i)}"></i>${echapper(q.nom)}</span>`).join('');
+    $('#al-carte-titre').textContent = `Zones discrétisées en points tous les ${zm.pas} km (${milliers(zm.n)} points) ; un clic déplace le site`;
+    $('#al-carte-aide').textContent = `niveau moyen de la grandeur choisie à la probabilité visée, tous les ${zm.grille.pas} km (${milliers(zm.grille.sites.length)} sites)`;
+    // ce qu'est le modèle : catalogue, période, Mc, nombre de zones, b régional, puis les zones une à une
+    const s = m.source || {}, fini = Number.isFinite, an = x => String(Math.floor(x + 1e-6)), duree = fini(s.debut) && fini(s.fin) ? s.fin - s.debut : null;
+    const lignes = m.zones.map((q, i) => `<tr><td><i style="background:${coul(i)}"></i>${echapper(q.nom)}</td><td class="n">${q.n ?? '—'}</td><td class="n">${tauxTexte(q.lam)}</td>`
+      + `<td class="n">${virg(q.b, 2)}${q.bPropre ? '' : '*'}</td><td class="n">${virg(q.mmax, 1)}${q.mmaxObs !== null ? ` <small>(${virg(q.mmaxObs, 1)})</small>` : ''}</td></tr>`).join('');
+    $('#al-zones-resume').innerHTML = `<p class="aide" style="margin:0 0 8px">Catalogue : <b>${echapper(s.catalogue || 'sans nom')}</b>. Site du fichier : ${latLon(m.site.lat, m.site.lon)}, Vs30 ${milliers(m.site.vs30)} m/s.</p>
+      <div class="afficheurs deux">${[
+        afficheur('Zones', String(m.zones.length), `${milliers(zm.n)} points, pas ${zm.pas} km`),
+        afficheur('Période', duree !== null ? `${an(s.debut)}–${an(s.fin)}` : '—', duree !== null ? `${virg(duree, duree < 15 ? 1 : 0)} ans` : ''),
+        afficheur('Mc', fini(s.mc) ? virg(s.mc, 1) : '—', 'complétude du catalogue'),
+        afficheur('b régional', fini(s.b) ? virg(s.b, 2) : '—', fini(s.sigmaB) ? `σ = ${virg(s.sigmaB, 2)}` : ''),
+      ].join('')}</div>
+      <div class="table-defile"><table class="resultats"><thead><tr><th>Zone</th><th>N</th><th>λ /an</th><th>b</th><th>Mmax (obs.)</th></tr></thead><tbody>${lignes}</tbody></table></div>
+      <p class="aide" style="margin:0">N : séismes déclusterés de M ≥ Mc dans la zone ; λ : leur taux annuel${m.zones.some(q => !q.bPropre) ? ' ; * b régional (trop peu de séismes pour un b propre)' : ''}.</p>`;
+  }
+  const CANEVAS = ['#al-carte', '#al-courbe', '#al-uhs', '#al-cms', '#al-desag', '#al-tornade'];
+  function effacer() { lireCouleurs(); for (const id of CANEVAS) if ($(id).clientWidth >= 50) preparer($(id)); }
   function dessiner() { lireCouleurs(); dessinerCarte(); dessinerCourbe(); dessinerUHS(); dessinerCMS(); dessinerDesag(); dessinerTornade(); }
-  function tout() { majControles(); dessiner(); majAfficheurs(); }
-  function recalculer() {
+  function tout() {
+    majVue();
+    if (enZones() && (!etat.zm || !etat.res)) { if (etat.zm) majControles(); return; }
+    majControles(); dessiner(); majAfficheurs();
+  }
+  function recalculerMaintenant() {
     const t0 = performance.now();
     calculer();
     etat.duree = performance.now() - t0;
     tout();
+  }
+  // Mode « Zones du catalogue » : un calcul dure une à deux secondes ; il part après un rafraîchissement de l'écran, qui
+  // montre le témoin « Calcul de l'aléa… » et grise les graphiques. Seul le dernier demandé s'exécute ; un calcul en
+  // attente refait aussi l'analyse (grandeur, probabilité).
+  let tache = 0, enAttente = null, attente = 0;
+  function occupe(oui) { $('#banc-alea').classList.toggle('al-calcul', oui); $('#al-etat').hidden = !oui; }
+  function annulerCalcul() { tache++; enAttente = null; clearTimeout(attente); occupe(false); }
+  function plusTard(genre) {
+    if (genre === 'analyse' && enAttente === 'calcul') return;
+    const j = ++tache;
+    enAttente = genre; occupe(true);
+    setTimeout(() => {
+      if (j !== tache) return;
+      enAttente = null;
+      try {
+        if (genre === 'calcul') recalculerMaintenant(); else { analyser(); tout(); }
+        if (etat.erreur) { etat.erreur = false; $('#al-zones-info').textContent = ''; }
+      } catch (err) {
+        etat.res = null; etat.erreur = true; arreterCarte(); effacer();
+        $('#al-zones-info').textContent = `Calcul impossible : ${err.message || err}.`;
+        tout();
+      }
+      occupe(false);
+    }, 40);
+  }
+  function recalculer() {
+    if (!enZones()) { recalculerMaintenant(); return; }
+    if (etat.zm) plusTard('calcul');
+  }
+  function reanalyser() {
+    if (!enZones()) { analyser(); tout(); }
+    else if (etat.res) plusTard('analyse');
+    else tout();
+  }
+  // Lit le modèle publié (src/zones-reel.js) et repart de ses valeurs ; sans modèle, le banc n'affiche que l'explication
+  // et le chargement d'un fichier.
+  function lireZones() {
+    const m = ZonesReel.courant();
+    etat.zonesVersion = ZonesReel.version();
+    annulerCalcul(); arreterCarte();
+    etat.zm = m ? preparerZones(m) : null;
+    etat.res = null; etat.modele = null; etat.zone = 0;
+    if (etat.zm) etat.r = reglagesZones();
+    effacer(); tout(); recalculer();
   }
 
   // ── Exercice ────────────────────────────────────────────────────────────
@@ -537,15 +834,24 @@ import Isolignes from './sismo/isolignes.js';
   }
 
   // ── Événements ──────────────────────────────────────────────────────────
-  let attente = 0;
-  const planifier = () => { clearTimeout(attente); attente = setTimeout(recalculer, 120); };
+  const planifier = () => {
+    clearTimeout(attente);
+    if (enZones()) occupe(true);
+    attente = setTimeout(recalculer, enZones() ? 350 : 120);
+  };
   function brancher() {
+    ECOLE = { choix: $('#al-zones-choix').innerHTML, legende: $('#al-legende-sources').innerHTML, titre: $('#al-carte-titre').textContent, aide: $('#al-carte-aide').textContent };
     $('#al-imts').innerHTML = CHOIX_IMTS.map(k => `<button type="button" data-al-imt="${k}">${nomImt(k)}</button>`).join('');
-    $$('[data-al-imt]').forEach(b => b.addEventListener('click', () => { etat.k = +b.dataset.alImt; analyser(); tout(); }));
-    $$('[data-al-proba]').forEach(b => b.addEventListener('click', () => { etat.proba = b.dataset.alProba.split('|').map(Number); analyser(); tout(); }));
-    $$('[data-al-zone]').forEach(b => b.addEventListener('click', () => { etat.zone = +b.dataset.alZone; majControles(); }));
+    $$('[data-al-imt]').forEach(b => b.addEventListener('click', () => { etat.k = +b.dataset.alImt; reanalyser(); }));
+    $$('[data-al-proba]').forEach(b => b.addEventListener('click', () => { etat.proba = b.dataset.alProba.split('|').map(Number); reanalyser(); }));
+    // boutons des zones : ceux du modèle d'école, ou un par zone réelle (recréés à chaque modèle)
+    $('#al-zones-choix').addEventListener('click', e => { const b = e.target.closest('[data-al-zone]'); if (b) { etat.zone = +b.dataset.alZone; majControles(); } });
     $('#al-vs30').addEventListener('input', e => { etat.r.site.vs30 = parseFloat(e.target.value); majControles(); planifier(); });
-    $('#al-lam').addEventListener('input', e => { etat.r.zones[etat.zone].lam = Math.round(Math.pow(10, parseFloat(e.target.value)) * 100) / 100; majControles(); planifier(); });
+    $('#al-lam').addEventListener('input', e => {
+      const lam = Math.pow(10, parseFloat(e.target.value));
+      etat.r.zones[etat.zone].lam = enZones() ? Number(lam.toPrecision(3)) : Math.round(lam * 100) / 100;
+      majControles(); planifier();
+    });
     $('#al-b').addEventListener('input', e => { etat.r.zones[etat.zone].b = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-mmax').addEventListener('input', e => { etat.r.zones[etat.zone].mmax = parseFloat(e.target.value); majControles(); planifier(); });
     $('#al-carte-alea').addEventListener('click', lancerCarte);
@@ -560,24 +866,61 @@ import Isolignes from './sismo/isolignes.js';
       if (!Object.values(etat.r.lois).some(Boolean)) { etat.r.lois[c.dataset.alLoi] = true; c.checked = true; return; } // au moins une loi
       recalculer();
     }));
-    $('#al-defaut').addEventListener('click', () => { etat.r = reglagesDefaut(); etat.geoRecu = null; recalculer(); });
+    $('#al-defaut').addEventListener('click', () => {
+      if (enZones()) { if (etat.zm) { etat.r = reglagesZones(); recalculer(); } return; }
+      etat.r = reglagesDefaut(); etat.geoRecu = null; recalculer();
+    });
     $$('[data-al-dom]').forEach(b => b.addEventListener('click', () => { etat.dom = +b.dataset.alDom; $$('[data-al-dom]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
     $('#al-mode-explorer').addEventListener('click', () => changerMode('explorer'));
     $('#al-mode-exercice').addEventListener('click', () => changerMode('exercice'));
+    $('#al-mode-zones').addEventListener('click', () => changerMode('zones'));
     $('#al-verifier').addEventListener('click', verifier);
     $('#al-nouvel-exo').addEventListener('click', nouvelExercice);
-    // Carte : un clic déplace le site (pas de 5 km) ; le survol donne la position et les distances aux zones
+    // Fichier de zones (format « sismo-zones ») : validé, publié comme le ferait le banc « sismicité », puis calculé
+    $('#al-zones-fichier').addEventListener('change', async e => {
+      const f = e.target.files && e.target.files[0], info = $('#al-zones-info');
+      e.target.value = '';
+      if (!f) return;
+      try {
+        if (f.size > 20 * 1024 * 1024) throw new Error('fichier trop gros (20 Mo au plus)');
+        const texte = await f.text();
+        Zones.lire(texte); // erreur lisible si le fichier n'est pas un modèle de zones valable
+        ZonesReel.publier(texte);
+        info.textContent = `Fichier « ${f.name} » chargé.`;
+        window.dispatchEvent(new CustomEvent('alea:zones', { detail: { source: 'fichier' } }));
+      } catch (err) {
+        info.textContent = `Fichier refusé : ${err.message || err}.`;
+      }
+    });
+    // Carte : un clic déplace le site (pas de 5 km ; zones réelles : au centième de degré) ; le survol donne la position
+    // et les distances aux zones
     const cv = $('#al-carte');
     const position = e => { const g = geoCarte(cv); return { x: g.x(e.offsetX), y: g.y(e.offsetY) }; };
     cv.addEventListener('click', e => {
       if (etat.mode === 'exercice') return;
       const p = position(e);
+      if (enZones()) {
+        const zm = etat.zm;
+        if (!zm) return;
+        const [lon, lat] = zm.pr.versGeo([p.x, p.y]), la = Math.round(lat * 100) / 100, lo = Math.round(lon * 100) / 100, [x, y] = zm.pr.versKm([lo, la]);
+        etat.r.site = { ...etat.r.site, lat: la, lon: lo, x, y };
+        majControles(); dessinerCarte(); recalculer();
+        return;
+      }
       if (p.x < DOMAINE.x0 || p.x > DOMAINE.x1 || p.y < DOMAINE.y0 || p.y > DOMAINE.y1) return;
       etat.r.site.x = Math.round(p.x / 5) * 5; etat.r.site.y = Math.round(p.y / 5) * 5;
       recalculer();
     });
     cv.addEventListener('pointermove', e => {
       const p = position(e);
+      if (enZones()) {
+        const zm = etat.zm;
+        if (!zm) return;
+        const [lon, lat] = zm.pr.versGeo([p.x, p.y]);
+        const dz = zm.points.map((pts, i) => `${zm.modele.zones[i].nom} ${virg(Math.min(...pts.map(q => Math.hypot(q.x - p.x, q.y - p.y))), 0)} km`);
+        $('#al-curseur').textContent = `${latLon(lat, lon)} · point le plus proche : ${dz.join(', ')} — cliquer pour y placer le site`;
+        return;
+      }
       if (p.x < DOMAINE.x0 || p.x > DOMAINE.x1 || p.y < DOMAINE.y0 || p.y > DOMAINE.y1) { $('#al-curseur').textContent = '—'; return; }
       const dz = etat.modele.zones.map(z => Math.min(...z.points.map(q => Math.hypot(q.x - p.x, q.y - p.y))));
       $('#al-curseur').textContent = `x ${virg(p.x, 0)} km, y ${virg(p.y, 0)} km · point le plus proche : zone A ${virg(dz[0], 0)} km, zone B ${virg(dz[1], 0)} km`
@@ -585,31 +928,52 @@ import Isolignes from './sismo/isolignes.js';
     });
     const redessiner = () => { if (etat.res && !$('#banc-alea').hidden) dessiner(); };
     const ro = new ResizeObserver(redessiner);
-    for (const id of ['#al-carte', '#al-courbe', '#al-uhs', '#al-cms', '#al-desag', '#al-tornade']) ro.observe($(id));
+    for (const id of CANEVAS) ro.observe($(id));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redessiner);
     new MutationObserver(redessiner).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
+  // Explorer, Exercice ou Zones du catalogue. Les réglages d'Explorer sont mis de côté en le quittant et retrouvés au
+  // retour des zones réelles ; au retour d'un exercice, le modèle d'école repart de ses valeurs (comme avant).
   function changerMode(m) {
     if (etat.mode === m) return;
+    const avant = etat.mode;
+    if (avant === 'explorer') etat.sauvegarde = { r: etat.r, zone: etat.zone };
+    if (avant === 'zones') { annulerCalcul(); etat.zone = etat.sauvegarde ? etat.sauvegarde.zone : 0; }
     etat.mode = m;
-    $('#al-mode-explorer').setAttribute('aria-pressed', String(m === 'explorer'));
-    $('#al-mode-exercice').setAttribute('aria-pressed', String(m === 'exercice'));
-    $('#al-panneau-explorer').hidden = m !== 'explorer';
-    $('#al-panneau-exercice').hidden = m !== 'exercice';
+    arreterCarte();
+    majVue();
     if (m === 'exercice') nouvelExercice();
-    else { etat.r = reglagesDefaut(); if (etat.geoRecu) etat.r.geo = etat.geoRecu; etat.verifie = false; recalculer(); }
+    else if (m === 'zones') lireZones();
+    else {
+      if (avant === 'zones' && etat.sauvegarde) etat.r = etat.sauvegarde.r;
+      else { etat.r = reglagesDefaut(); if (etat.geoRecu) etat.r.geo = etat.geoRecu; }
+      etat.verifie = false; recalculer();
+    }
   }
 
   // Moments estimés au banc « géodésie » : ils remplacent ceux du modèle d'école (hors exercice).
   window.addEventListener('geodesie:moments', e => {
     etat.geoRecu = { ...reglagesDefaut().geo, moments: e.detail.moments.slice(), source: e.detail.source };
-    if (etat.mode !== 'explorer') return; // appliqué au retour en exploration
+    if (etat.mode !== 'explorer') { // appliqué au retour en exploration
+      if (etat.mode === 'zones' && etat.sauvegarde) etat.sauvegarde.r.geo = { ...etat.sauvegarde.r.geo, ...etat.geoRecu, actif: true, poids: etat.sauvegarde.r.geo.poids };
+      return;
+    }
     etat.r.geo = { ...etat.r.geo, ...etat.geoRecu, actif: true, poids: etat.r.geo.poids };
     if (etat.pret) recalculer();
   });
+  // Zones publiées par le banc « sismicité » (ou un fichier) : le banc passe en mode « Zones du catalogue » et les calcule,
+  // tout de suite s'il est construit, sinon à sa première ouverture.
+  window.addEventListener('alea:zones', e => {
+    if (!(e.detail && e.detail.source === 'fichier')) $('#al-zones-info').textContent = 'Zones reçues du banc « sismicité ».';
+    if (!etat.pret) { etat.modeDepart = 'zones'; return; }
+    if (!enZones()) changerMode('zones'); else lireZones();
+  });
   window.addEventListener('banc:ouvert', e => {
     if (e.detail !== 'alea') return;
-    if (!etat.pret) { etat.pret = true; brancher(); recalculer(); }
+    if (!etat.pret) {
+      etat.pret = true; brancher();
+      if (etat.modeDepart === 'zones') changerMode('zones'); else recalculer();
+    } else if (enZones() && ZonesReel.version() !== etat.zonesVersion) lireZones();
     else tout();
   });
 })();
