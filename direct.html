@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=90ba7ccaf5">
+<link rel="stylesheet" href="lecteur.css?v=8c0ddd96a1">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=73cbea972f",
+  "./src/direct-page.js": "./src/direct-page.js?v=6aa52263fd",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -153,8 +153,8 @@
           travaux pratiques simulent : P, S et ondes de surface, temps de trajet ak135, détection automatique.</p>
         <ol class="experiences">
           <li>Attendez que les traces se remplissent (quelques minutes de données récentes arrivent d'abord). Repérez la latence de chaque station et le bruit de la houle (microséisme) sans filtre, puis avec le filtre « 0,5 – 5 Hz ».</li>
-          <li>Cliquez une station sur la carte pour l'ajouter aux traces ou l'en retirer (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
-          <li>Dans « Séismes », choisissez un séisme récent : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et ses fronts P et S s'étendent sur la carte. Comparez-les aux arrivées observées.</li>
+          <li>Touchez une station (triangle) sur la carte : sa fiche s'ouvre sous la carte, avec sa trace ; « Suivre cette station » l'ajoute aux traces (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
+          <li>Touchez un séisme (disque) sur la carte, ou une ligne de « Séismes » : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et ses fronts P et S s'étendent sur la carte. Comparez-les aux arrivées observées.</li>
           <li>Pour un séisme lointain (« Monde, M ≥ 5,5 »), passez la fenêtre à 60 minutes et le filtre à « 18 – 22 s » : les ondes de surface arrivent bien après P et S.</li>
           <li>Repérez les déclenchements STA/LTA (triangles sur les traces) : un vrai séisme déclenche plusieurs stations dans l'ordre des distances, le bruit local une seule.</li>
         </ol>
@@ -166,9 +166,10 @@
 
     <div class="colonne">
       <section class="carte" aria-label="Carte des stations">
-        <h2>Carte des stations<small>Couleur : vitesse maximale du sol des 60 dernières secondes, filtrée de 0,5 à 5 Hz ; gris : pas de donnée depuis 3 min (15 min par le service FDSN) ; cercle vide : station non suivie. Disques : séismes récents (taille selon la magnitude) ; anneaux : fronts P et S du séisme choisi</small></h2>
-        <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; un clic ajoute ou retire une station"></canvas>
-        <p class="legende" id="dr-legende-carte"></p>
+        <h2>Carte des stations<small>Triangles : stations sismologiques, colorées par la vitesse maximale du sol des 60 dernières secondes (filtrée de 0,5 à 5 Hz). Disques : séismes des 7 derniers jours. Touchez un triangle ou un disque : sa fiche s'ouvre sous la carte</small></h2>
+        <canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte"></canvas>
+        <p class="legende legende-carte" id="dr-legende-carte"></p>
+        <div class="fiche" id="dr-fiche" hidden aria-live="polite"></div>
       </section>
       <section class="carte" aria-label="Traces en temps réel">
         <h2>Traces en temps réel<small>Composante verticale, vitesse du sol (µm/s) ; traits verticaux : arrivées prévues du séisme choisi ; triangles : déclenchements STA/LTA</small></h2>
@@ -183,7 +184,7 @@
           <span class="curseur-lecture" id="dr-curseur">—</span>
         </div>
         <canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas>
-        <p class="aide">Cliquez une station sur la carte pour l'ajouter ou la retirer. Chaque trace a sa propre échelle : son maximum est écrit à droite.</p>
+        <p class="aide">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite.</p>
       </section>
     </div>
 
@@ -237,6 +238,6 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="src/direct-page.js?v=73cbea972f"></script>
+<script type="module" src="src/direct-page.js?v=6aa52263fd"></script>
 </body>
 </html>
