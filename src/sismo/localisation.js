@@ -50,6 +50,17 @@ const Localisation = (() => {
     return (a + b) / 2;
   }
 
+  // Rai d'un foyer { lat, lon, h, t0 } vers une station { lat, lon } : distance (°), azimut depuis l'épicentre, distance
+  // hypocentrale (km), angle de départ de la première P et arrivées prévues P et S (t0 + temps de la table, null hors table).
+  function rai(table, f, st) {
+    const { distance, azimut } = distanceAzimut(f.lat, f.lon, st.lat, st.lon);
+    const tp = temps(table, 'P', f.h, distance), ts = temps(table, 'S', f.h, distance);
+    return {
+      distance, azimut, R: Math.hypot(km(distance), f.h), i: emergence(table, f.h, distance),
+      tP: tp === null ? null : f.t0 + tp, tS: ts === null ? null : f.t0 + ts,
+    };
+  }
+
   // Gap azimutal : plus grand secteur sans station vu depuis l'épicentre.
   function gap(lat, lon, stations) {
     const a = stations.map(s => distanceAzimut(lat, lon, s.lat, s.lon).azimut).sort((p, q) => p - q);
@@ -122,6 +133,6 @@ const Localisation = (() => {
     return { ...b, zone, residus, gap: gap(b.lat, b.lon, stations), nObs: obs.length };
   }
 
-  return { distanceAzimut, km, temps, emergence, distanceSP, gap, localiser };
+  return { distanceAzimut, km, temps, emergence, rai, distanceSP, gap, localiser };
 })();
 export default Localisation;

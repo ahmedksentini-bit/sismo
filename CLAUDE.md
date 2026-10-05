@@ -27,7 +27,11 @@ la virgule décimale.
    X/Ug = r²/(1 − r² + 2iξr). Toute intégration passe par Newmark à accélération
    moyenne (`Oscillateur.integrer` ou `Oscillateur.pas`, identiques pas à pas, testé).
 9. **Profil** : les temps sont comptés depuis l'origine ; la réduction (t − Δ/V) n'est
-   qu'un affichage, les droites sont toujours calculées en temps vrais.
+   qu'un affichage, les droites sont toujours calculées en temps vrais. La carte des stations et la coupe de la Terre
+   se redessinent à chaque changement ; leur géométrie (distance critique, rais Pg et Pn, croisement) sort de
+   `Refraction.coupe`, testée contre `Sismo.temps`. La croûte dessinée est celle des droites de l'étudiant (V₁, V₂, H des
+   lectures ; phase première = droite la plus précoce) ; le modèle simulé (tirets) n'apparaît qu'en mode Explorer ou après
+   « Vérifier », jamais avant.
 10. **Spectre de réponse** : Sa = ω²·Sd (pseudo-accélération). Pas d'intégration
     ≤ T/20 (sous-pas par interpolation linéaire) ; le calcul progressif de l'animation
     et le calcul d'un bloc donnent le même spectre (testé). Le spectre EC8 affiché est
@@ -264,4 +268,12 @@ la virgule décimale.
     polarités C/D de la première P (à la main, ou « Lire les polarités » : premier écart de plus de 3 σ du bruit dans la
     seconde qui suit le pointé), placées par l'azimut et l'angle de départ (table `iP` : croûte du cours sous 2°, départ
     ak135 au-delà, nœud le plus proche) pour la solution de l'étudiant ; `Mecanisme.inverser` au pas de 10°, 6 polarités
-    au moins.
+    au moins. Le séisme chargé est partagé (`src/seisme-reel.js` : fichier, pointés, polarités, solution, `version`) avec les
+    bancs « mécanisme » et « source », qui ont aussi un mode « Séisme réel » et reprennent l'état partagé à leur ouverture
+    si sa version a changé. Foyer : la solution du TP de localisation, sinon GEOFON (h ramenée à 0–40 km, la table s'arrête
+    là). Mécanisme : verticales filtrées de 1 à 10 Hz (causal), pointé P du banc « réseau », sinon de l'étudiant (clic sur la
+    trace, rendu au banc « réseau »), sinon automatique (`Reel.pointerP`, Akaike de Maeda autour de l'arrivée prévue) ; pas de
+    solution vraie. Source : `Source.analyserSerie` sur les horizontales des stations de 10 à 600 km, vitesses dérivées en
+    accélérations sur la série entière avant toute fenêtre (identique à l'accélération du générateur, testé), fenêtre S depuis
+    le pointé S (sinon la S prévue), bruit de même durée finissant 1 s avant P, ajustement de Brune sur les bandes où le signal
+    dépasse 3 fois le bruit (6 au moins) ; corrections du modèle du cours, ML comme au banc « réseau ».

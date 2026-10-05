@@ -2,7 +2,7 @@
 // stations (Wood-Anderson simulé sur les deux horizontales, amplitude maximale en nm, loi de l'IASPEI du cours :
 // Sismo.ML, comme au banc « station »), ML du réseau (moyenne des stations entre 10 et 600 km, domaine de la loi), et
 // polarité de la première onde P lue sur la verticale (sens du premier écart qui sort du bruit, comme un analyste).
-// Solveurs purs, sans accès au DOM.
+// Pointé automatique de la P (critère d'Akaike) pour les bancs « mécanisme » et « source ». Solveurs purs, sans accès au DOM.
 import Sismo from './signal.js';
 
 const Reel = (() => {
@@ -52,6 +52,31 @@ const Reel = (() => {
     return 0;
   }
 
-  return { RMIN, RMAX, amplitude, magnitudeStation, magnitudeReseau, polarite };
+  // Pointé automatique de la P autour d'une arrivée prévue tPrevu (s) : critère d'Akaike de Maeda (1985) sur la fenêtre
+  // [tPrevu − avant ; tPrevu + apres], AIC(k) = k·ln var(x[0..k]) + (N − k − 1)·ln var(x[k+1..N−1]), minimum au début du
+  // signal. Renvoie { t, rapport } (rapport : écart type de la seconde qui suit sur celui des `bruit` s qui précèdent) ou
+  // null si la fenêtre sort de l'enregistrement.
+  function pointerP(z, dt, tPrevu, { avant = 6, apres = 6, bruit = 3 } = {}) {
+    const a = Math.max(0, Math.round((tPrevu - avant) / dt)), b = Math.min(z.length, Math.round((tPrevu + apres) / dt));
+    const N = b - a;
+    if (N < 20) return null;
+    // sommes cumulées de x et x² pour les variances des deux côtés en O(N)
+    const s1 = new Float64Array(N + 1), s2 = new Float64Array(N + 1);
+    for (let i = 0; i < N; i++) { s1[i + 1] = s1[i] + z[a + i]; s2[i + 1] = s2[i] + z[a + i] ** 2; }
+    const variance = (i, j) => { const n = j - i, m = (s1[j] - s1[i]) / n; return (s2[j] - s2[i]) / n - m * m; };
+    let best = Infinity, kb = -1;
+    for (let k = 5; k < N - 6; k++) {
+      const v1 = variance(0, k + 1), v2 = variance(k + 1, N);
+      if (!(v1 > 0) || !(v2 > 0)) continue;
+      const aic = (k + 1) * Math.log(v1) + (N - k - 1) * Math.log(v2);
+      if (aic < best) { best = aic; kb = k; }
+    }
+    if (kb < 0) return null;
+    const i0 = a + kb, ecart = (i, j) => { i = Math.max(0, i); j = Math.min(z.length, j); if (j - i < 2) return 0; let m = 0; for (let q = i; q < j; q++) m += z[q]; m /= j - i; let s = 0; for (let q = i; q < j; q++) s += (z[q] - m) ** 2; return Math.sqrt(s / (j - i)); };
+    const eb = ecart(i0 - Math.round(bruit / dt), i0), es = ecart(i0, i0 + Math.round(1 / dt));
+    return { t: i0 * dt, rapport: eb > 0 ? es / eb : Infinity };
+  }
+
+  return { RMIN, RMAX, amplitude, magnitudeStation, magnitudeReseau, polarite, pointerP };
 })();
 export default Reel;
