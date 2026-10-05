@@ -209,7 +209,10 @@ la virgule décimale.
     `api/fdsn` pour les pages restées en cache. Carte : triangles = stations, disques = séismes des 7 derniers jours, légende
     faite des symboles mêmes de la carte ; toucher un objet (le plus proche, rayon élargi au doigt) ouvre sa fiche sous la
     carte (station : centre, pays, d'où viennent ses données, sa trace, « Suivre cette station » ; séisme : détails,
-    arrivées placées sur les traces) ; un toucher ne change jamais à lui seul les stations suivies. La liste des centres est la liste blanche des deux
+    arrivées placées sur les traces) ; un toucher ne change jamais à lui seul les stations suivies. Les séismes sont ceux du
+    catalogue de GEOFON (7 derniers jours) ; « Sismogrammes de ce séisme » lit les archives (dataselect) de 10 stations au
+    plus (`Direct.stationsSeisme` : les 3 plus proches puis des distances réparties), d'une minute avant l'origine à deux
+    minutes après les ondes de surface (ou S) de la plus lointaine (`Direct.fenetreSeisme`, < 2 h). La liste des centres est la liste blanche des deux
     fonctions Cloudflare Pages (`functions/api/`), relais bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 12 flux validés au plus, reprise
     ≤ 30 min, ne transmet que les voies demandées, se ferme au bout de 10 min (la page se reconnecte depuis son dernier
     échantillon) ; `?sonde=1` dit quels serveurs répondent à HELLO, `?diagnostic=1` déroule l'échange avec l'un d'eux ;

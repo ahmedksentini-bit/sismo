@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=8c0ddd96a1">
+<link rel="stylesheet" href="lecteur.css?v=c75582e051">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=6aa52263fd",
+  "./src/direct-page.js": "./src/direct-page.js?v=3d27c9fbcf",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -89,7 +89,7 @@
   "./src/sismo/coefficients/akkar2014.js": "./src/sismo/coefficients/akkar2014.js?v=d649279ca2",
   "./src/sismo/coefficients/bindi2014.js": "./src/sismo/coefficients/bindi2014.js?v=75d65799f7",
   "./src/sismo/coefficients/boore2014.js": "./src/sismo/coefficients/boore2014.js?v=61fd6969f4",
-  "./src/sismo/direct.js": "./src/sismo/direct.js?v=dda754cb0c",
+  "./src/sismo/direct.js": "./src/sismo/direct.js?v=50be7b1701",
   "./src/sismo/faille.js": "./src/sismo/faille.js?v=711c6bcef2",
   "./src/sismo/fdsn.js": "./src/sismo/fdsn.js?v=2cd2e7bb50",
   "./src/sismo/geodesie.js": "./src/sismo/geodesie.js?v=c59d80cef9",
@@ -186,6 +186,20 @@
         <canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas>
         <p class="aide">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite.</p>
       </section>
+      <section class="carte" aria-label="Sismogrammes du séisme" id="dr-sismo" hidden>
+        <h2>Sismogrammes du séisme choisi<small id="dr-ev-titre"></small></h2>
+        <p class="aide">Enregistrements lus dans les archives des centres de données (services FDSN), pour des stations réparties
+          en distance : composante verticale, vitesse du sol (µm/s), une échelle par trace, temps comptés depuis l'origine du
+          séisme. Traits verticaux : arrivées prévues par le modèle ak135 (P, S, ondes de surface LR).</p>
+        <div class="outils">
+          <select id="dr-ev-filtre" aria-label="Filtre des sismogrammes">
+            <option value="aucun">Sans filtre</option><option value="large">0,5 – 5 Hz</option><option value="proche">1 – 8 Hz · séismes proches</option><option value="tele">0,5 – 2 Hz · ondes P lointaines</option><option value="ms">18 – 22 s · ondes de surface</option>
+          </select>
+          <button type="button" class="outil neutre" id="dr-ev-fermer">Fermer</button>
+        </div>
+        <p class="aide" id="dr-ev-etat"></p>
+        <canvas id="dr-ev-traces" aria-label="Sismogrammes du séisme choisi, rangés par distance"></canvas>
+      </section>
     </div>
 
     <aside class="colonne">
@@ -238,6 +252,6 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="src/direct-page.js?v=6aa52263fd"></script>
+<script type="module" src="src/direct-page.js?v=3d27c9fbcf"></script>
 </body>
 </html>

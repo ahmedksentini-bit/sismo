@@ -39,7 +39,7 @@ import Sismo from './sismo/signal.js';
   const etat = {
     mode: 'seedlink', stations: [], suivies: [], voies: new Map(), seismes: [], catalogue: 'med', choisi: null,
     fenetre: 15, filtre: 'large', pause: null, cotes: null, pays: [], demo: null, mesures: new Map(), arrivees: new Map(),
-    reseaux: new Map(), actifs: null, centres: new Map(), sources: new Map(), listeOk: false, journal: [], selection: null,
+    reseaux: new Map(), actifs: null, centres: new Map(), sources: new Map(), listeOk: false, journal: [], selection: null, ev: null,
     cx: { groupes: new Map(), fdsn: 0, demo: 0, echecsFdsn: 0, paquets: 0, dernier: null, diagnostics: new Set() },
   };
   // Journal de connexion (les 8 derniers événements), affiché sous la source des données : il dit ce qui se passe quand
@@ -722,6 +722,91 @@ import Sismo from './sismo/signal.js';
     majFiche(); majArrivees(); majTout();
   }
 
+  // ── Sismogrammes d'un séisme passé : archives des centres (dataselect), stations réparties en distance ────────
+  async function chargerSismogrammes(e) {
+    const carte = $('#dr-sismo'), cands = [...new Map([...visibles(), ...etat.suivies].map(s => [ident(s), s])).values()];
+    const lignes = Direct.stationsSeisme(cands, e, 10), { debut, fin } = Direct.fenetreSeisme(e, lignes.map(l => l.distance));
+    const ev = { seisme: e, debut, fin, lignes: lignes.map(l => ({ ...l, voie: Direct.voie(3 * 3600 * 1000) })), etat: 'lecture' };
+    etat.ev = ev;
+    carte.hidden = false;
+    $('#dr-ev-titre').textContent = `M ${virg(e.mag, 1)} · ${e.region || ''} · ${new Date(e.temps).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+    $('#dr-ev-filtre').value = lignes.length && lignes[lignes.length - 1].distance > 15 ? 'tele' : 'large';
+    $('#dr-ev-etat').textContent = `Lecture des archives : ${lignes.length} stations, de ${hms(debut)} à ${hms(fin)} UTC…`;
+    carte.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    dessinerSismogrammes();
+    if (Date.now() - e.temps < 3 * 60000) $('#dr-ev-etat').textContent += ' Le séisme date de moins de 3 minutes : les archives n\'ont peut-être pas encore ses ondes.';
+    const parCentre = new Map();
+    for (const l of ev.lignes) { if (!parCentre.has(l.s.centre)) parCentre.set(l.s.centre, []); parCentre.get(l.s.centre).push(l); }
+    let echecs = 0;
+    await Promise.all([...parCentre].map(async ([centre, ls]) => {
+      const uniq = f => [...new Set(ls.map(l => f(l.s)))].join(',');
+      try {
+        const r = await fetch(api('dataselect', { network: uniq(s => s.reseau), station: uniq(s => s.station), channel: uniq(s => s.voie), starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }, centre));
+        if (r.status === 204) return;
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const parId = new Map(ls.map(l => [ident(l.s), l]));
+        for (const enr of MiniSeed.lire(await r.arrayBuffer())) { const l = parId.get(enr.id); if (l) l.voie.ajouter(enr); }
+      } catch (err) { echecs++; journal(`archives ${nomCentre(centre)} : échec (${err.message || err})`); }
+      if (etat.ev === ev) dessinerSismogrammes();
+    }));
+    if (etat.ev !== ev) return;
+    ev.etat = 'lu';
+    const avec = ev.lignes.filter(l => l.voie.fin() !== null).length;
+    $('#dr-ev-etat').textContent = `${avec} station${avec > 1 ? 's' : ''} sur ${ev.lignes.length} avec des données dans les archives${echecs ? ` (${echecs} centre${echecs > 1 ? 's' : ''} injoignable${echecs > 1 ? 's' : ''})` : ''}, de ${hms(debut)} à ${hms(fin)} UTC.`;
+    dessinerSismogrammes();
+  }
+  // Une trace par station, rangées par distance ; temps comptés depuis l'origine ; arrivées prévues (ak135).
+  function dessinerSismogrammes() {
+    const ev = etat.ev, cv = $('#dr-ev-traces');
+    if (!ev || !cv || $('#dr-sismo').hidden) return;
+    const n = Math.max(1, ev.lignes.length), hautRang = window.innerWidth < 760 ? 58 : 66;
+    const { ctx, W, H } = preparer(cv, 30 + n * hautRang + 28), g = { x0: 10, x1: W - 10, y0: 24, y1: H - 28 }, hR = (g.y1 - g.y0) / n;
+    const e = ev.seisme, X = t => g.x0 + ((t - ev.debut) / (ev.fin - ev.debut)) * (g.x1 - g.x0), cle = $('#dr-ev-filtre').value;
+    // graduations : minutes (ou secondes) après l'origine
+    const duree = (ev.fin - e.temps) / 1000, nmax = Math.max(3, Math.min(8, Math.floor((g.x1 - g.x0) / 64)));
+    const pas = [10, 30, 60, 120, 300, 600, 900, 1200].find(p => duree / p <= nmax) || 1800;
+    ctx.font = `10.5px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let ts = 0; ts <= duree; ts += pas) {
+      const x = Math.round(X(e.temps + ts * 1000)) + 0.5;
+      ctx.strokeStyle = COUL.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, g.y0); ctx.lineTo(x, g.y1); ctx.stroke();
+      ctx.fillStyle = COUL.muted; ctx.fillText(pas < 60 ? `${ts} s` : `${ts / 60} min`, x, g.y1 + 6);
+    }
+    ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(e.temps), g.y0 - 4); ctx.lineTo(X(e.temps), g.y1); ctx.stroke();
+    texte(ctx, 'origine', X(e.temps) + 4, g.y0 - 12, COUL.ink, `700 10.5px ${POLICE}`);
+    ev.lignes.forEach((l, k) => {
+      const yc = g.y0 + hR * (k + 0.5), s = l.s;
+      if (k) { ctx.strokeStyle = COUL['grid-strong']; ctx.beginPath(); ctx.moveTo(g.x0, Math.round(g.y0 + hR * k) + 0.5); ctx.lineTo(g.x1, Math.round(g.y0 + hR * k) + 0.5); ctx.stroke(); }
+      for (const a of arriveesStation(s, e)) {
+        const t = e.temps + a.temps * 1000;
+        if (t < ev.debut || t > ev.fin || /^(PcP|ScS)$/.test(a.phase)) continue;
+        const x = X(t), coul = a.phase === 'LR' ? COUL.amp : /^[pP]/.test(a.phase) ? COUL['pick-p'] : COUL['pick-s'];
+        ctx.strokeStyle = coul; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, yc - hR / 2 + 2); ctx.lineTo(x, yc + hR / 2 - 2); ctx.stroke(); ctx.setLineDash([]);
+        if (/^(P|S|LR|PKIKP|PKP|SKS)$/.test(a.phase)) texte(ctx, a.phase, x + 3, yc + hR / 2 - 9, coul, `800 10px ${POLICE}`);
+      }
+      const x = l.voie.fin() === null ? null : l.voie.extraire(ev.debut, ev.fin);
+      let max = 0;
+      if (x && x.donnees.length) {
+        const fs = x.cadence, f = FILTRES[cle], brut = Direct.preparer(x.donnees, 1e6 / s.sensibilite, Math.round(20 * fs)), y = f ? Direct.filtrer(brut, sos(cle, fs)) : brut;
+        for (const v of y) if (!Number.isNaN(v)) max = Math.max(max, Math.abs(v));
+        const ech = (hR * 0.45) / (max || 1), parPx = Math.max(1, Math.floor(y.length / (g.x1 - g.x0)));
+        ctx.save(); ctx.beginPath(); ctx.rect(g.x0, yc - hR / 2, g.x1 - g.x0, hR); ctx.clip();
+        ctx.strokeStyle = COUL.trace; ctx.lineWidth = 1; ctx.beginPath();
+        let leve = true;
+        for (let i = 0; i < y.length; i += parPx) {
+          let mn = Infinity, mx = -Infinity;
+          for (let j = i; j < Math.min(y.length, i + parPx); j++) { const v = y[j]; if (!Number.isNaN(v)) { if (v < mn) mn = v; if (v > mx) mx = v; } }
+          if (mn === Infinity) { leve = true; continue; }
+          const xx = X(x.t0 + (i * 1000) / fs);
+          if (leve) { ctx.moveTo(xx, yc - mx * ech); leve = false; } else ctx.lineTo(xx, yc - mx * ech);
+          ctx.lineTo(xx, yc - mn * ech);
+        }
+        ctx.stroke(); ctx.restore();
+      }
+      texte(ctx, `${s.reseau}.${s.station} · Δ ${virg(l.distance, 1)}°`, g.x0 + 4, yc - hR / 2 + 9, COUL.ink, `700 11.5px ${MONO}`);
+      texte(ctx, x ? `max ${virg(max, max < 1 ? 3 : 1)} µm/s` : ev.etat === 'lecture' ? 'lecture…' : 'pas de donnée', g.x1 - 4, yc - hR / 2 + 9, COUL.muted, `10.5px ${MONO}`, 'right');
+    });
+  }
+
   // ── Fiche de l'objet touché ─────────────────────────────────────────────────────────────────────────────────
   const suivie = s => etat.suivies.some(x => ident(x) === ident(s));
   // D'où viennent les données d'une station suivie, et depuis quand rien n'est arrivé.
@@ -753,8 +838,11 @@ import Sismo from './sismo/signal.js';
       const d = etat.suivies.map(s => ({ s, d: Direct.distanceAzimut(e.lat, e.lon, s.lat, s.lon).distance })).sort((a, b) => a.d - b.d).slice(0, 3);
       div.innerHTML = `<p class="fiche-titre"><b>Séisme M ${virg(e.mag, 1)}${e.typeMag ? ` ${echapper(e.typeMag)}` : ''}</b> · ${echapper(e.region || 'région inconnue')}</p>
         <p class="aide">${new Date(e.temps).toISOString().slice(0, 19).replace('T', ' à ')} UTC (il y a ${depuisQuand(t - e.temps)}) · profondeur ${virg(e.h, 0)} km · ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E${e.id === 'demo' ? ' · séisme fictif' : ''}</p>
-        <p class="aide">Ses arrivées prévues (P, S, ondes de surface) sont placées sur les traces${t - e.temps < 3600000 ? ' et ses fronts P et S s\'étendent sur la carte' : ''}.${d.length ? ` Stations suivies les plus proches : ${d.map(x => `${echapper(x.s.station)} à ${virg(x.d, 1)}°`).join(', ')}.` : ''}${t - e.temps > etat.fenetre * 60000 ? ' Le séisme est plus ancien que la fenêtre des traces : ses ondes ne s\'y voient plus.' : ''}</p>
-        <div class="fiche-actions"><button type="button" class="bouton primaire" id="dr-fiche-traces">Voir les traces</button></div>`;
+        <p class="aide">${e.id === 'demo' ? 'Séisme fictif de la démonstration.' : `Séisme réel, lu dans le catalogue de GEOFON (GFZ Potsdam) : position et magnitude calculées par ce centre, identifiant ${/^gfz/.test(e.id) ? `<a href="https://geofon.gfz.de/eqinfo/event.php?id=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">${echapper(e.id)}</a>` : echapper(e.id)}.`}</p>
+        <p class="aide">« Sismogrammes de ce séisme » lit dans les archives des centres les enregistrements de stations réparties en distance, autour de ses arrivées prévues, même s'il date de plusieurs jours.${t - e.temps < etat.fenetre * 60000 ? ' Il est aussi assez récent pour paraître sur les traces en direct.' : ''}${d.length ? ` Stations suivies les plus proches : ${d.map(x => `${echapper(x.s.station)} à ${virg(x.d, 1)}°`).join(', ')}.` : ''}</p>
+        <div class="fiche-actions">${e.id === 'demo' ? '' : '<button type="button" class="bouton primaire" id="dr-fiche-sismo">Sismogrammes de ce séisme</button>'}<button type="button" class="bouton" id="dr-fiche-traces">Traces en direct</button></div>`;
+      const b = $('#dr-fiche-sismo');
+      if (b) b.addEventListener('click', () => chargerSismogrammes(e));
     }
     const v = $('#dr-fiche-traces');
     if (v) v.addEventListener('click', () => $('section[aria-label="Traces en temps réel"]').scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -797,6 +885,9 @@ import Sismo from './sismo/signal.js';
     $('#dr-filtre').addEventListener('change', e => { etat.filtre = e.target.value; dessinerTout(); });
     $('#dr-pause').addEventListener('click', e => { etat.pause = etat.pause ? null : Date.now(); e.currentTarget.textContent = etat.pause ? 'Reprendre' : 'Pause'; e.currentTarget.setAttribute('aria-pressed', String(!!etat.pause)); majTout(); });
     $$('[data-dr-mode]').forEach(b => b.addEventListener('click', () => { if (b.dataset.drMode !== etat.mode) changerMode(b.dataset.drMode); }));
+    $('#dr-ev-filtre').addEventListener('change', () => dessinerSismogrammes());
+    $('#dr-ev-fermer').addEventListener('click', () => { etat.ev = null; $('#dr-sismo').hidden = true; });
+    new ResizeObserver(() => dessinerSismogrammes()).observe($('#dr-sismo'));
     $$('[data-dr-catalogue]').forEach(b => b.addEventListener('click', () => { etat.catalogue = b.dataset.drCatalogue; $$('[data-dr-catalogue]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); chargerSeismes(); }));
     $('#dr-traces').addEventListener('mousemove', ev => {
       const r = ev.currentTarget.getBoundingClientRect(), x = ev.clientX - r.left, W = r.width, t1 = maintenant(), t0 = t1 - etat.fenetre * 60000;

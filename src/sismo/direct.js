@@ -4,8 +4,8 @@ import Teleseisme from './teleseisme.js';
 // src/sismo/direct.js — traitements de la page « En direct » (stations en temps réel) : distance et azimut sur la
 // sphère, filtre de Butterworth passe-bande causal en sections du second ordre (comme scipy.signal.butter et sosfilt),
 // détecteur STA/LTA et déclenchements (comme ObsPy, classic_sta_lta et trigger_onset), tampon d'une voie qui assemble
-// les enregistrements miniSEED reçus (trous, recouvrements), arrivées prévues d'un séisme à une station (ak135), pays
-// d'une station.
+// les enregistrements miniSEED reçus (trous, recouvrements), arrivées prévues d'un séisme à une station (ak135),
+// stations et fenêtre des sismogrammes d'un séisme passé, pays d'une station.
 // Vérifié contre scipy et ObsPy (tests/references/direct.json, tools/obspy/direct.py). Solveurs purs.
 const Direct = (() => {
   'use strict';
@@ -177,6 +177,31 @@ const Direct = (() => {
     return out.sort((x, y) => x.temps - y.temps);
   }
 
+  // ── Sismogrammes d'un séisme passé (archives des centres) ──────────────────────────────────────────────────
+  // Stations retenues pour un séisme : les trois plus proches, puis des stations réparties sur le reste des distances
+  // (rangs régulièrement espacés), n au plus, rangées par distance : { s, distance (°), azimut (°) }.
+  function stationsSeisme(stations, e, n = 10) {
+    const tri = stations.map(s => ({ s, ...distanceAzimut(e.lat, e.lon, s.lat, s.lon) })).sort((a, b) => a.distance - b.distance);
+    if (tri.length <= n) return tri.map(({ s, distance, azimut }) => ({ s, distance, azimut }));
+    const proches = Math.min(3, n), reste = tri.slice(proches), k = n - proches, pris = tri.slice(0, proches);
+    for (let i = 0; i < k; i++) pris.push(reste[Math.round(((i + 1) * (reste.length - 1)) / k)]);
+    return [...new Set(pris)].sort((a, b) => a.distance - b.distance).map(({ s, distance, azimut }) => ({ s, distance, azimut }));
+  }
+  // Fenêtre de lecture (ms) : une minute avant l'origine, jusqu'à deux minutes après la dernière arrivée prévue (ondes
+  // de surface au-delà de 2°, sinon S) à la station la plus lointaine ; 4 minutes au moins, moins de 2 h (limite du
+  // relais FDSN).
+  function fenetreSeisme(e, distances) {
+    let dernier = 0;
+    for (const d of distances) {
+      // les réflexions sur le noyau (PcP, ScS) arrivent tard aux petites distances mais ne servent pas ici ; tout près du
+      // foyer (pas de S directe dans les rais), l'onde S est bornée par une vitesse de 3,2 km/s
+      const h = Number.isFinite(e.h) ? e.h : 10, a = arrivees(Math.max(0.05, d), h), z = a.find(x => x.phase === 'LR') || a.find(x => x.phase === 'S');
+      dernier = Math.max(dernier, z ? z.temps : Math.hypot(d * RAD * Globe.R, h) / 3.2);
+    }
+    const debut = e.temps - 60000, fin = e.temps + Math.max(240, dernier + 120) * 1000;
+    return { debut, fin: Math.min(fin, debut + 2 * 3600 * 1000 - 60000) };
+  }
+
   // ── Pays d'une station ──────────────────────────────────────────────────────────────────────────────────────
   // Polygones { code, nom, anneaux: [[lon, lat, lon, lat…]…] } de data/pays-mediterranee.json (Natural Earth, règle
   // pair-impair, trous compris). Une station côtière peut tomber juste hors du polygone simplifié : à moins de `marge`
@@ -215,6 +240,6 @@ const Direct = (() => {
   // Latence (s) d'une voie : temps écoulé depuis son dernier échantillon.
   const latence = (fin, maintenant = Date.now()) => (fin === null ? Infinity : (maintenant - fin) / 1000);
 
-  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, pays, latence, PHASES };
+  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, stationsSeisme, fenetreSeisme, pays, latence, PHASES };
 })();
 export default Direct;

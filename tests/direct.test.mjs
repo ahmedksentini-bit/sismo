@@ -107,3 +107,22 @@ test('préparation avant filtrage : décalage retiré, départ adouci, le filtre
   assert.ok(Number.isNaN(p[1050]) && Math.abs(p[1100]) < 1e-9 && Math.abs(p[0]) < 1e-9);
   assert.ok(Math.abs(p[2000] - 2 * (x[2000] - 250000)) < 1, 'facteur appliqué, moyenne retirée');
 });
+
+test('sismogrammes d\'un séisme passé : trois stations proches puis distances réparties ; fenêtre jusqu\'aux dernières ondes', () => {
+  const e = { lat: 38, lon: 23, h: 10, temps: Date.UTC(2026, 9, 4, 12, 0, 0) };
+  const st = Array.from({ length: 30 }, (_, i) => ({ station: `S${i}`, lat: 38, lon: 23 + 0.5 * (i + 1) }));
+  const r = D.stationsSeisme(st, e, 10);
+  assert.equal(r.length, 10);
+  assert.deepEqual(r.slice(0, 3).map(x => x.s.station), ['S0', 'S1', 'S2']);
+  assert.equal(r.at(-1).s.station, 'S29', 'la plus lointaine est gardée');
+  assert.ok(r.every((x, i) => !i || x.distance > r[i - 1].distance));
+  assert.equal(D.stationsSeisme(st.slice(0, 4), e, 10).length, 4);
+  // fenêtre : séisme proche (S puis 2 min, 4 min au moins) ; téléséisme (ondes de surface), moins de 2 h
+  const proche = D.fenetreSeisme(e, [0.5, 1]);
+  assert.equal(proche.debut, e.temps - 60000);
+  assert.equal(proche.fin, e.temps + 240000);
+  const loin = D.fenetreSeisme(e, [5, 60]), lr = D.arrivees(60, 10).at(-1);
+  assert.equal(lr.phase, 'LR');
+  assert.ok(Math.abs(loin.fin - (e.temps + (lr.temps + 120) * 1000)) < 1);
+  assert.ok(D.fenetreSeisme(e, [170]).fin - (e.temps - 60000) < 2 * 3600 * 1000);
+});
