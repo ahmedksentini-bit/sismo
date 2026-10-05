@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#075985">
 <meta name="description" content="Travaux pratiques de sismologie et d'aléa sismique : dix-sept bancs interactifs, de la lecture d'un sismogramme à l'isolation à la base">
 <title>Travaux pratiques — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=c5e05430db">
+<link rel="stylesheet" href="lecteur.css?v=2d2e515096">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -22,12 +22,12 @@
   "./src/banc-poussee.js": "./src/banc-poussee.js?v=1ae7248b49",
   "./src/banc-profil.js": "./src/banc-profil.js?v=34e550acef",
   "./src/banc-selection.js": "./src/banc-selection.js?v=fa88657041",
-  "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=c48155923a",
+  "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=6c4393cfb4",
   "./src/banc-sismometre.js": "./src/banc-sismometre.js?v=97df4b1e82",
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
   "./src/banc-source.js": "./src/banc-source.js?v=a0c137fe7c",
   "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
-  "./src/consignes.js": "./src/consignes.js?v=dde43d2388",
+  "./src/consignes.js": "./src/consignes.js?v=e815c35e35",
   "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
   "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
   "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
@@ -610,9 +610,32 @@
     <div class="colonne">
       <section class="carte" id="sc-carte-reel" aria-label="Carte des épicentres" hidden>
         <h2>Carte des épicentres<small id="sc-carte-legende"></small></h2>
-        <canvas id="sc-carte" aria-label="Carte des épicentres du catalogue réel"></canvas>
+        <canvas id="sc-carte" aria-label="Carte des épicentres du catalogue réel ; pincer ou la molette zooment, glisser déplace la carte"></canvas>
+        <div class="outils outils-zoom">
+          <div class="segments compact" role="group" aria-label="Zoom de la carte">
+            <button type="button" id="sc-carte-plus" aria-label="Zoomer la carte">+</button><button type="button" id="sc-carte-moins" aria-label="Dézoomer la carte">−</button><button type="button" id="sc-carte-tout">Vue d'ensemble</button>
+          </div>
+          <span class="aide">Pincez (ou molette) pour zoomer, glissez pour déplacer, double-cliquez pour agrandir.</span>
+        </div>
         <p class="legende"><span><i style="background:var(--ink)"></i>retenus (chocs principaux et isolés)</span><span><i style="background:var(--amp)"></i>répliques retirées par le déclusterage</span><span><i style="background:var(--muted)"></i>hors analyse</span></p>
-        <p class="aide" id="sc-carte-info">Survolez un épicentre pour lire sa date, sa magnitude et sa profondeur.</p>
+        <p class="aide" id="sc-carte-info">Survolez (ou touchez) un épicentre pour lire sa date, sa magnitude et sa profondeur.</p>
+      </section>
+      <section class="carte" id="sc-zones" aria-label="Zones sismogènes" hidden>
+        <h2>Zones sismogènes<small>Tracez des zones sur la carte : chacune reçoit les séismes retenus de son polygone (déclusterés, depuis le début de l'analyse, au-dessus de Mc), d'où sa valeur b, son taux annuel et sa magnitude maximale ; le banc « aléa » en calcule l'aléa en un site</small></h2>
+        <div class="outils">
+          <button type="button" class="outil" id="sc-zone-tracer" aria-pressed="false">Tracer une zone</button>
+          <button type="button" class="outil" id="sc-zone-fermer" disabled>Fermer la zone</button>
+          <button type="button" class="outil neutre" id="sc-zone-annuler" disabled>Retirer le dernier point</button>
+          <button type="button" class="outil" id="sc-site-placer" aria-pressed="false">Placer le site</button>
+        </div>
+        <p class="aide" id="sc-zones-aide"></p>
+        <div class="table-defile"><table class="resultats" id="sc-zones-table"></table></div>
+        <div class="actions" style="margin-top:10px">
+          <button type="button" class="bouton primaire" id="sc-zones-alea">Calculer l'aléa avec ces zones</button>
+          <button type="button" class="bouton secondaire" id="sc-zones-enregistrer">Enregistrer les zones</button>
+          <label class="bouton secondaire bouton-fichier">Charger des zones<input type="file" id="sc-zones-fichier" accept=".json,application/json"></label>
+        </div>
+        <p class="aide" id="sc-zones-info"></p>
       </section>
       <section class="carte" aria-label="Catalogue">
         <h2><span id="sc-cat-titre">Catalogue 1900 – 2025</span><small>Magnitude en fonction du temps ; un clic fixe le début de l'analyse et Mc</small></h2>
@@ -1602,7 +1625,7 @@
 <script type="module" src="src/banc-sismometre.js?v=97df4b1e82"></script>
 <script type="module" src="src/banc-profil.js?v=34e550acef"></script>
 <script type="module" src="src/banc-spectre.js?v=d3f8f69f8a"></script>
-<script type="module" src="src/banc-sismicite.js?v=c48155923a"></script>
+<script type="module" src="src/banc-sismicite.js?v=6c4393cfb4"></script>
 <script type="module" src="src/banc-geodesie.js?v=34dc2cee6d"></script>
 <script type="module" src="src/banc-alea.js?v=efef685cad"></script>
 <script type="module" src="src/banc-selection.js?v=fa88657041"></script>

@@ -46,7 +46,12 @@ la virgule décimale.
     jour près ; identique à HMTK sur le catalogue de référence, testé) ; types de magnitude mélangés signalés ; ni vérité
     ni corrigé. Téléchargement par le relais FDSN (service event, pages de 500, 20 au plus, liste blanche inchangée).
     Carte : `Catalogue.cadre` (antiméridien compris), fond Natural Earth du monde (`tools/carte/monde.py`), méditerranéen
-    (plus fin) quand la vue y tient.
+    (plus fin) quand la vue y tient ; zoom et déplacement (pincer, molette, double clic, glisser, boutons) dans le cadre.
+    **Zones sismogènes** (`src/sismo/zones.js`, testé) : polygones tracés sur la carte (sommets au toucher, fermeture sur le
+    premier sommet), statistiques par la méthode d'Aki sur les réglages de l'analyse (période, Mc, déclusterage) : b propre
+    à partir de 30 séismes, sinon b régional ; λ(≥ Mc) ; Mmax proposée = Mmax observée + 0,5 ; fichier « sismo-zones » v1 ;
+    « Calculer l'aléa avec ces zones » publie le modèle (`src/zones-reel.js`), émet `alea:zones` et ouvre le banc « aléa ».
+    `Zones.modelePsha` : projection équirectangulaire locale (km), Mmin du calcul max(Mc, 4), branches b ± 1,645σ.
 12. **Références OpenQuake** : toute loi d'atténuation, tout traitement de catalogue et le
     moteur PSHA sont comparés à OpenQuake via `tests/references/` ; les coefficients sont
     exportés de hazardlib par `tools/oq/coefficients.py`, jamais recopiés à la main. Le

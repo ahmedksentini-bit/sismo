@@ -94,9 +94,9 @@ const CONSIGNES = {
       "Méthode « Aki » : fixez le début de la période et Mc (curseurs ou clic sur le catalogue), puis comparez à Mc par courbure maximale.",
       "Notez b ± σ, λ(M ≥ 5) et le nombre de séismes retenus, sans puis avec déclusterage.",
       "Méthode « Weichert » avec votre table : comparez b et λ. Dans « Probabilité sur une durée », calculez P(M ≥ 6 en 50 ans).",
-      "En mode Exercice, analysez un nouveau catalogue, puis « Vérifier ». En mode « Catalogue réel », chargez un vrai catalogue (« Charger un catalogue » : texte FDSN, CSV de l'USGS ou tableau) ou téléchargez-en un (« Télécharger »), lisez son résumé et sa carte, gardez un seul « Type de magnitude analysé » s'il en mélange plusieurs, puis refaites l'analyse : ici, pas de corrigé.",
+      "En mode Exercice, analysez un nouveau catalogue, puis « Vérifier ». En mode « Catalogue réel », chargez un vrai catalogue (« Charger un catalogue » : texte FDSN, CSV de l'USGS ou tableau) ou téléchargez-en un (« Télécharger »), lisez son résumé et sa carte, gardez un seul « Type de magnitude analysé » s'il en mélange plusieurs, puis refaites l'analyse : ici, pas de corrigé. Tracez enfin des zones sismogènes sur la carte (« Tracer une zone »), relevez b, λ et Mmax de chacune, puis « Calculer l'aléa avec ces zones » ouvre le banc « aléa » sur votre modèle.",
     ],
-    rendre: "la table de complétude, b ± σ, λ(M ≥ 5), la probabilité en 50 ans, et un commentaire sur l'effet des répliques ; pour un catalogue réel, sa source, son type de magnitude, Mc et b ± σ.",
+    rendre: "la table de complétude, b ± σ, λ(M ≥ 5), la probabilité en 50 ans, et un commentaire sur l'effet des répliques ; pour un catalogue réel, sa source, son type de magnitude, Mc et b ± σ, et le tableau de vos zones sismogènes.",
   },
   geodesie: {
     objectif: "Tirer des taux de séismes de la déformation lente mesurée par GNSS : taux de déformation, moment de Kostrov, couplage, et confrontation au catalogue.",

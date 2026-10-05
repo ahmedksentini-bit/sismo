@@ -231,6 +231,15 @@ select, input[type="number"], input[type="text"] { width: 100%; min-width: 0; pa
 #sc-fmd { display: block; width: 100%; height: 320px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
 /* mode « Catalogue réel » : carte des épicentres aux proportions du cadre (--rapport, posé par le banc), téléchargement */
 #sc-carte { display: block; width: 100%; aspect-ratio: var(--rapport, 1.8); min-height: 200px; max-height: 520px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+#sc-carte { touch-action: none; cursor: grab; }
+#sc-carte.trace { cursor: crosshair; }
+#sc-carte.glisse { cursor: grabbing; }
+#sc-zones-table input[type="text"] { min-width: 110px; padding: 5px 7px; }
+#sc-zones-table input[type="number"] { width: 72px; padding: 5px 7px; }
+#sc-zones-table select { width: auto; padding: 5px 7px; }
+#sc-zones-table .pastille { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+#sc-zones-table td:first-child { white-space: nowrap; }
+#sc-zones-table td:first-child input { display: inline-block; width: auto; vertical-align: middle; }
 #banc-sismicite .mode-banc button { flex: 1 1 auto; padding-inline: 8px; white-space: nowrap; } /* trois modes sur une ligne */
 #sc-telechargement { margin: 6px 0 12px; }
 #sc-telechargement summary { color: var(--blue-ink); font-size: 13px; font-weight: 800; cursor: pointer; }

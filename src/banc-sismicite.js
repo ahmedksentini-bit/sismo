@@ -2,12 +2,15 @@ import Sismo from './sismo/signal.js';
 import Sismicite from './sismo/sismicite.js';
 import Catalogue from './sismo/catalogue.js';
 import Centres from './sismo/centres.js';
+import Zones from './sismo/zones.js';
+import ZonesReel from './zones-reel.js';
 
 // src/banc-sismicite.js — banc « sismicité » : un catalogue simulé, sa complétude, le déclusterage,
 // la loi de Gutenberg-Richter ajustée et les probabilités de Poisson qui en découlent.
 // Mode « Catalogue réel » : un catalogue chargé (texte FDSN, CSV ou GeoJSON de l'USGS, tableau à en-tête) ou téléchargé par
 // le relais FDSN du site (src/sismo/catalogue.js) passe par la même analyse, sur la période et la région de ses données,
-// avec la carte de ses épicentres ; pas de vérité terrain ni de corrigé.
+// avec la carte de ses épicentres (zoom, déplacement) ; pas de vérité terrain ni de corrigé. Sur cette carte, l'étudiant trace
+// des zones sismogènes (src/sismo/zones.js : b, taux, Mmax de chaque zone) et les passe au banc « aléa » (src/zones-reel.js).
 (() => {
   'use strict';
   const SM = Sismo, Sc = Sismicite, Cat = Catalogue;
@@ -36,6 +39,8 @@ import Centres from './sismo/centres.js';
     methode: 'aki', table: TABLE_SIMULEE.map(r => [...r]),
     m: 6, duree: 50, verifie: false,
     dom: DOMAINE_SIMULE, reel: null, fonds: {}, telechargement: false,
+    // zones sismogènes tracées sur la carte (gardées d'un catalogue à l'autre), tracé en cours, outil de la carte, site
+    zones: [], trace: null, outil: null, site: null, numero: 0,
   };
   const reel = () => etat.mode === 'reel';
   const parametres = () => (etat.mode === 'explorer' ? etat.explo : etat.exo.p);
@@ -329,10 +334,12 @@ import Centres from './sismo/centres.js';
     }).catch(() => { etat.fonds[cle] = false; });
     return null;
   }
+  // Vue de la carte : centre (longitude dans la fenêtre du cadre) et facteur de zoom ; 1 = tout le cadre.
+  const vueEnsemble = c => ({ clon: (c.lon[0] + c.lon[1]) / 2, clat: (c.lat[0] + c.lat[1]) / 2, z: 1 });
   function projectionCarte(cv) {
-    const W = cv.clientWidth, H = cv.clientHeight, c = etat.reel.cadre, m = 8;
-    const latc = (c.lat[0] + c.lat[1]) / 2, kx = Math.max(0.15, Math.cos((latc * Math.PI) / 180));
-    const k = Math.min((W - 2 * m) / ((c.lon[1] - c.lon[0]) * kx), (H - 2 * m) / (c.lat[1] - c.lat[0])), cx = (c.lon[0] + c.lon[1]) / 2;
+    const W = cv.clientWidth, H = cv.clientHeight, c = etat.reel.cadre, m = 8, v = etat.reel.vue;
+    const kx0 = Math.max(0.15, Math.cos((((c.lat[0] + c.lat[1]) / 2) * Math.PI) / 180)), latc = v.clat, kx = Math.max(0.15, Math.cos((latc * Math.PI) / 180));
+    const k = Math.min((W - 2 * m) / ((c.lon[1] - c.lon[0]) * kx0), (H - 2 * m) / (c.lat[1] - c.lat[0])) * v.z, cx = v.clon;
     const X = lon => W / 2 + (lon - cx) * kx * k, Y = lat => H / 2 - (lat - latc) * k;
     // étendue visible (la carte remplit le cadre du canevas)
     const vue = { lon: [cx - W / 2 / (kx * k), cx + W / 2 / (kx * k)], lat: [Math.max(-90, latc - H / 2 / k), Math.min(90, latc + H / 2 / k)] };
@@ -390,6 +397,7 @@ import Centres from './sismo/centres.js';
       }
     }
     ctx.globalAlpha = 1;
+    dessinerZones(ctx, p, o);
     // étiquettes du graticule, par-dessus
     ctx.font = `10px ${MONO}`;
     for (let v = Math.ceil(vue.lon[0] / pas) * pas; v <= vue.lon[1]; v += pas) if (X(v) > 20 && X(v) < W - 20) texte(ctx, etiquette(v, pas, 'E', 'O'), X(v), H - 4, COUL.muted, `10px ${MONO}`, 'center', 'bottom');
@@ -408,6 +416,211 @@ import Centres from './sismo/centres.js';
       x += c.l + 2 * c.rr + 14;
     }
     etat.reel.projection = p;
+  }
+
+  // Zones tracées (surface, contour, nom), tracé en cours (sommets, le premier à toucher pour fermer), site du calcul d'aléa.
+  const COULEURS_ZONES = ['blue', 'pick-p', 'teal', 'amp', 'cyan', 'pick-s'];
+  const couleurZone = i => COUL[COULEURS_ZONES[i % COULEURS_ZONES.length]];
+  function dessinerZones(ctx, p, o) {
+    const P = ([lon, lat]) => [p.X(Cat.lonDans(lon, o)), p.Y(lat)];
+    etat.zones.forEach((z, i) => {
+      const pts = z.polygone.map(P), c = couleurZone(i);
+      ctx.beginPath(); pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
+      ctx.globalAlpha = 0.12; ctx.fillStyle = c; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+      const cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cy = pts.reduce((a, q) => a + q[1], 0) / pts.length;
+      texte(ctx, z.nom, cx, cy, c, `800 12px ${POLICE}`, 'center');
+    });
+    const t = etat.trace;
+    if (t && t.length) {
+      const pts = t.map(P);
+      ctx.strokeStyle = COUL.ink; ctx.lineWidth = 1.6; ctx.setLineDash([5, 4]); ctx.beginPath();
+      pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); ctx.setLineDash([]);
+      pts.forEach(([x, y], j) => { ctx.fillStyle = j === 0 && t.length >= 3 ? COUL['pick-p'] : COUL.ink; ctx.beginPath(); ctx.arc(x, y, j === 0 && t.length >= 3 ? 7 : 4, 0, 2 * Math.PI); ctx.fill(); });
+    }
+    const s = siteCalcul();
+    if (s) {
+      const [x, y] = P([s.lon, s.lat]);
+      ctx.fillStyle = COUL['pick-p']; ctx.strokeStyle = COUL.paper; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + 8, y + 6); ctx.lineTo(x - 8, y + 6); ctx.closePath(); ctx.stroke(); ctx.fill();
+      texte(ctx, etat.site ? 'Site' : 'Site (centre des zones)', x + 11, y + 1, COUL['pick-p'], `800 11.5px ${POLICE}`);
+    }
+  }
+  // Site du calcul d'aléa : placé par l'étudiant, sinon au centre des zones.
+  const siteCalcul = () => etat.site || (etat.zones.length ? { ...Zones.centre(etat.zones), vs30: 800 } : null);
+
+  // ── Zoom et déplacement de la carte (pincer, molette, double clic, glisser) ; toucher : sommet de zone, site ou séisme ──
+  function bornerVue() {
+    const r = etat.reel, c = r.cadre, v = r.vue;
+    v.z = Math.max(1, Math.min(200, v.z));
+    v.clon = Math.max(c.lon[0], Math.min(c.lon[1], v.clon)); v.clat = Math.max(c.lat[0], Math.min(c.lat[1], v.clat));
+  }
+  function zoomerCarte(f, x, y) {
+    const p = etat.reel && etat.reel.projection;
+    if (!p) return;
+    const v = etat.reel.vue, cv = $('#sc-carte'), lon = p.lon(x ?? cv.clientWidth / 2), lat = p.lat(y ?? cv.clientHeight / 2), z = Math.max(1, Math.min(200, v.z * f)), k = v.z / z;
+    v.clon = lon + (v.clon - lon) * k; v.clat = lat + (v.clat - lat) * k; v.z = z;
+    bornerVue(); dessinerCarte();
+  }
+  function deplacerCarte(dx, dy) {
+    const p = etat.reel && etat.reel.projection;
+    if (!p) return;
+    etat.reel.vue.clon -= dx / (p.kx * p.k); etat.reel.vue.clat += dy / p.k;
+    bornerVue(); dessinerCarte();
+  }
+  function gestes(cv, h) {
+    const pts = new Map();
+    let glisse = null, pince = null;
+    const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener('pointerdown', e => {
+      try { cv.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
+      pts.set(e.pointerId, pos(e));
+      if (pts.size === 1) glisse = { p: pos(e), bouge: false };
+      else if (pts.size === 2) { const [a, b] = [...pts.values()]; pince = Math.hypot(a[0] - b[0], a[1] - b[1]); glisse = null; }
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      const p = pos(e), avant = pts.get(e.pointerId);
+      pts.set(e.pointerId, p);
+      if (pts.size >= 2 && pince) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (d > 0) h.zoomer(d / pince, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        pince = d;
+        return;
+      }
+      if (!glisse) return;
+      if (!glisse.bouge && Math.hypot(p[0] - glisse.p[0], p[1] - glisse.p[1]) > 6) { glisse.bouge = true; cv.classList.add('glisse'); }
+      if (glisse.bouge) h.glisser(p[0] - avant[0], p[1] - avant[1]);
+    });
+    const fin = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (e.type === 'pointerup' && glisse && !glisse.bouge && !pts.size) h.toucher(...pos(e));
+      if (pts.size < 2) pince = null;
+      if (!pts.size) { glisse = null; cv.classList.remove('glisse'); }
+    };
+    cv.addEventListener('pointerup', fin);
+    cv.addEventListener('pointercancel', fin);
+    cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = pos(e); h.zoomer(e.deltaY < 0 ? 1.25 : 0.8, x, y); }, { passive: false });
+    // double clic : agrandir, sauf pendant un tracé (les deux clics posent des sommets)
+    cv.addEventListener('dblclick', e => { if (etat.outil) return; const [x, y] = pos(e); h.zoomer(2, x, y); });
+  }
+  // Séisme le plus proche d'un point du canevas (rayon en pixels).
+  function seismeProche(x, y, rayon = 14) {
+    const p = etat.reel && etat.reel.projection;
+    if (!p) return -1;
+    let best = -1, dmin = rayon * rayon;
+    const o = etat.reel.cadre.lon[0];
+    etat.cat.forEach((ev, i) => { const dx = p.X(Cat.lonDans(ev.lon, o)) - x, dy = p.Y(ev.lat) - y, d2 = dx * dx + dy * dy; if (d2 < dmin || (d2 === dmin && best >= 0 && ev.M > etat.cat[best].M)) { dmin = d2; best = i; } });
+    return best;
+  }
+  function infoSeisme(best) {
+    const ev = etat.cat[best];
+    $('#sc-carte-info').innerHTML = ev
+      ? `<b>${new Date(ev.ms).toISOString().slice(0, 16).replace('T', ' ')} UTC</b> · ${echapper(ev.typeMag || 'M')} ${virg(ev.mag, 1)} · h ${ev.h === null ? '—' : virg(ev.h, 0) + ' km'} · ${latLon(ev.lat, 'N', 'S')}, ${latLon(ev.lon, 'E', 'O')}`
+        + ` · ${etat.declus && !etat.garde[best] ? 'réplique ou précurseur retiré' : dans(ev, best) ? 'retenu' : 'hors analyse'}`
+      : 'Survolez (ou touchez) un épicentre pour lire sa date, sa magnitude et sa profondeur.';
+  }
+  function toucherCarte(x, y) {
+    const p = etat.reel && etat.reel.projection;
+    if (!p) return;
+    const lon = ((((p.lon(x) + 180) % 360) + 360) % 360) - 180, lat = Math.max(-89.9, Math.min(89.9, p.lat(y)));
+    if (etat.outil === 'zone') {
+      const t = etat.trace || (etat.trace = []), o = etat.reel.cadre.lon[0];
+      // toucher le premier sommet ferme la zone
+      if (t.length >= 3 && Math.hypot(p.X(Cat.lonDans(t[0][0], o)) - x, p.Y(t[0][1]) - y) < 12) { fermerZone(); return; }
+      t.push([lon, lat]); majZones(); dessinerCarte(); return;
+    }
+    if (etat.outil === 'site') { etat.site = { lat, lon, vs30: 800 }; etat.outil = null; majZones(); dessinerCarte(); return; }
+    infoSeisme(seismeProche(x, y, 22));
+  }
+
+  // ── Zones sismogènes : tracé, statistiques (Zones.statistiques), modèle passé au banc « aléa » ────────────
+  const RAKES = [[0, 'décrochement'], [-90, 'normale'], [90, 'inverse']];
+  function fermerZone() {
+    if (!etat.trace || etat.trace.length < 3) return;
+    etat.numero += 1;
+    etat.zones.push({ id: `z${etat.numero}`, nom: `Zone ${etat.numero}`, polygone: etat.trace, rake: 0, mmax: null });
+    etat.trace = null; etat.outil = null;
+    majZones(); dessinerCarte();
+  }
+  // Statistiques de chaque zone sur les réglages de l'analyse (méthode d'Aki : période et Mc), b régional = celui de tous
+  // les séismes retenus.
+  function statsZones() {
+    if (!etat.cat.length) return etat.zones.map(() => null);
+    const evts = independants(), d = D(), reg = Sc.valeurB(retenus().map(e => e.M), etat.Mc);
+    return etat.zones.map(z => Zones.statistiques(evts, z.polygone, { debut: etat.debutAnalyse, fin: d.fin, mc: etat.Mc, bRegional: reg }));
+  }
+  // Modèle « sismo-zones » des zones tracées.
+  function modeleZones() {
+    const st = statsZones(), d = D(), reg = Sc.valeurB(retenus().map(e => e.M), etat.Mc), r = etat.reel;
+    return {
+      format: Zones.FORMAT, version: Zones.VERSION,
+      source: { catalogue: `${r ? r.nom : ''}${r && r.famille !== 'tous' ? ` (${r.famille})` : ''}`, debut: etat.debutAnalyse, fin: d.fin, mc: etat.Mc, b: reg ? reg.b : null, sigmaB: reg ? reg.sigma : null },
+      site: siteCalcul(),
+      zones: etat.zones.map((z, i) => {
+        const s = st[i] || {};
+        return { id: z.id, nom: z.nom, polygone: z.polygone, mc: etat.Mc, mmax: z.mmax ?? Zones.mmaxPropose(s.mmaxObs, etat.Mc), mmaxObs: s.mmaxObs, b: s.b, sigmaB: s.sigmaB, bPropre: s.bPropre, lam: s.lam, n: s.n, rake: z.rake, profondeur: s.profondeur };
+      }),
+    };
+  }
+  function majZones() {
+    const sect = $('#sc-zones');
+    if (!sect || !reel()) return;
+    const t = etat.trace;
+    $('#sc-zone-tracer').setAttribute('aria-pressed', String(etat.outil === 'zone'));
+    $('#sc-site-placer').setAttribute('aria-pressed', String(etat.outil === 'site'));
+    $('#sc-zone-fermer').disabled = !(t && t.length >= 3);
+    $('#sc-zone-annuler').disabled = !(t && t.length);
+    $('#sc-carte').classList.toggle('trace', !!etat.outil);
+    $('#sc-zones-aide').textContent = etat.outil === 'zone'
+      ? `Touchez la carte pour poser les sommets (${t ? t.length : 0} posé${t && t.length > 1 ? 's' : ''}) ; touchez le premier sommet ou « Fermer la zone » pour la fermer. Glisser déplace toujours la carte.`
+      : etat.outil === 'site' ? 'Touchez la carte à l\'endroit du site.'
+        : etat.zones.length ? `Statistiques des zones par la méthode d'Aki sur les réglages de l'analyse (depuis ${annee(etat.debutAnalyse)}, Mc = ${virg(etat.Mc, 1)}, ${etat.declus ? 'déclusteré' : 'sans déclusterage'}) ; b propre à la zone à partir de 30 séismes, sinon b régional (rég.). Mmax proposée : Mmax observée + 0,5.`
+          : 'Aucune zone : « Tracer une zone », puis touchez la carte pour en poser les sommets.';
+    const st = statsZones();
+    $('#sc-zones-table').innerHTML = etat.zones.length ? `<thead><tr><th>Zone</th><th>Mécanisme</th><th>N ≥ Mc</th><th>b</th><th>λ(≥ Mc) /an</th><th>Mmax obs.</th><th>Mmax</th><th>h (km)</th><th></th></tr></thead><tbody>${etat.zones.map((z, i) => {
+      const s = st[i], mm = z.mmax ?? (s ? Zones.mmaxPropose(s.mmaxObs, etat.Mc) : null);
+      return `<tr><td><span class="pastille" style="background:${couleurZone(i)}"></span><input type="text" data-sc-zone-nom="${i}" value="${echapper(z.nom)}" aria-label="Nom de la zone"></td>
+        <td><select data-sc-zone-rake="${i}" aria-label="Mécanisme de la zone">${RAKES.map(([v, t]) => `<option value="${v}"${v === z.rake ? ' selected' : ''}>${t}</option>`).join('')}</select></td>
+        <td class="n">${s ? milliers(s.n) : '—'}</td><td class="n">${s && s.b ? `${virg(s.b, 2)} ± ${virg(s.sigmaB, 2)}${s.bPropre ? '' : ' <small>rég.</small>'}` : '—'}</td>
+        <td class="n">${s ? virg(s.lam, s.lam < 1 ? 3 : 2) : '—'}</td><td class="n">${s && s.mmaxObs !== null ? virg(s.mmaxObs, 1) : '—'}</td>
+        <td><input type="number" data-sc-zone-mmax="${i}" min="4.5" max="9.5" step="0.1" value="${mm !== null ? mm.toFixed(1) : ''}" aria-label="Mmax retenue"></td>
+        <td class="n">${s ? virg(s.profondeur, 0) : '—'}</td><td><button type="button" class="outil neutre" data-sc-zone-suppr="${i}" aria-label="Supprimer la zone">×</button></td></tr>`;
+    }).join('')}</tbody>` : '';
+    $$('[data-sc-zone-nom]').forEach(x => x.addEventListener('change', () => { etat.zones[+x.dataset.scZoneNom].nom = x.value.trim() || `Zone ${+x.dataset.scZoneNom + 1}`; dessinerCarte(); }));
+    $$('[data-sc-zone-rake]').forEach(x => x.addEventListener('change', () => { etat.zones[+x.dataset.scZoneRake].rake = +x.value; }));
+    $$('[data-sc-zone-mmax]').forEach(x => x.addEventListener('change', () => { const v = parseFloat(String(x.value).replace(',', '.')); etat.zones[+x.dataset.scZoneMmax].mmax = Number.isFinite(v) ? v : null; majZones(); }));
+    $$('[data-sc-zone-suppr]').forEach(x => x.addEventListener('click', () => { etat.zones.splice(+x.dataset.scZoneSuppr, 1); majZones(); dessinerCarte(); }));
+    const s = siteCalcul();
+    $('#sc-zones-alea').disabled = !etat.zones.length || !etat.cat.length;
+    $('#sc-zones-enregistrer').disabled = !etat.zones.length || !etat.cat.length;
+    if (!$('#sc-zones-info').dataset.message) $('#sc-zones-info').textContent = s ? `Site du calcul d'aléa : ${latLon(s.lat, 'N', 'S')}, ${latLon(s.lon, 'E', 'O')}${etat.site ? '' : ' (centre des zones ; « Placer le site » pour le choisir)'}.` : '';
+  }
+  function message(texte) { const p = $('#sc-zones-info'); p.textContent = texte; p.dataset.message = '1'; setTimeout(() => { delete p.dataset.message; }, 8000); }
+  // Modèle publié pour le banc « aléa », qui s'ouvre (événement alea:zones, src/zones-reel.js).
+  function versAlea() {
+    try { ZonesReel.publier(modeleZones()); } catch (err) { message(`Zones refusées : ${err.message || err}.`); return; }
+    window.dispatchEvent(new CustomEvent('alea:zones'));
+    const b = document.querySelector('[data-onglet="alea"]');
+    if (b) { b.click(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }
+  function enregistrerZones() {
+    let texte;
+    try { texte = Zones.ecrire(Zones.lire(modeleZones())); } catch (err) { message(`Zones refusées : ${err.message || err}.`); return; }
+    const a = document.createElement('a'), url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
+    a.href = url; a.download = `zones-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    message('Fichier de zones enregistré : rechargez-le ici avec un autre catalogue, ou dans le banc « aléa ».');
+  }
+  async function chargerZones(fichier) {
+    try {
+      const m = Zones.lire(await fichier.text());
+      etat.zones = m.zones.map(z => ({ id: z.id, nom: z.nom, polygone: z.polygone, rake: z.rake, mmax: z.mmax }));
+      etat.numero = Math.max(etat.numero, etat.zones.length); etat.site = m.site; etat.trace = null; etat.outil = null;
+      message(`${m.zones.length} zone${m.zones.length > 1 ? 's' : ''} chargée${m.zones.length > 1 ? 's' : ''} : statistiques recalculées sur le catalogue chargé.`);
+      majZones(); dessinerCarte();
+    } catch (err) { message(`Fichier refusé : ${err.message || err}.`); }
   }
 
   // ── Panneaux ────────────────────────────────────────────────────────────
@@ -465,7 +678,7 @@ import Centres from './sismo/centres.js';
     $('#sc-cat-titre').textContent = reel() ? (etat.reel ? `Catalogue ${intervalle(d.debut, d.fin)}` : 'Catalogue réel') : `Catalogue ${DEBUT} – ${FIN}`;
     $('#sc-leg-vraie').hidden = reel();
   }
-  function tout() { majControles(); majTitre(); dessinerCatalogue(); dessinerFMD(); dessinerStepp(); dessinerCarte(); majAfficheurs(); majVerite(); majReel(); }
+  function tout() { majControles(); majTitre(); dessinerCatalogue(); dessinerFMD(); dessinerStepp(); dessinerCarte(); majAfficheurs(); majVerite(); majReel(); majZones(); }
 
   // ── Exercice ────────────────────────────────────────────────────────────
   function nouvelExercice() {
@@ -567,7 +780,8 @@ import Centres from './sismo/centres.js';
     }
   }
   function installer(lu, evts, periode, nom, tronque) {
-    etat.reel = { lu, evts, periode, nom, tronque, famille: 'tous', resume: Cat.resume(evts), cadre: Cat.cadre(evts) };
+    const cadre = Cat.cadre(evts);
+    etat.reel = { lu, evts, periode, nom, tronque, famille: 'tous', resume: Cat.resume(evts), cadre, vue: vueEnsemble(cadre) };
     const ec = Object.entries(lu.ecartes || {}), rej = lu.rejets && lu.rejets.length ? ` (ligne ${lu.rejets[0].ligne} : ${lu.rejets[0].raison}${lu.rejetees > 1 ? '…' : ''})` : '';
     const col = Object.values(lu.colonnes || {});
     $('#sc-reel-info').innerHTML = `<b>${echapper(nom)}</b> : ${echapper(lu.nom)}, ${milliers(evts.length)} séismes lus`
@@ -679,18 +893,23 @@ import Centres from './sismo/centres.js';
     });
     // Survol de la carte : le séisme le plus proche du pointeur
     const carte = $('#sc-carte');
-    carte.addEventListener('pointermove', e => {
-      const p = etat.reel && etat.reel.projection;
-      if (!p) return;
-      let best = -1, dmin = 14 * 14;
-      const o = etat.reel.cadre.lon[0];
-      etat.cat.forEach((ev, i) => { const dx = p.X(Cat.lonDans(ev.lon, o)) - e.offsetX, dy = p.Y(ev.lat) - e.offsetY, d2 = dx * dx + dy * dy; if (d2 < dmin || (d2 === dmin && best >= 0 && ev.M > etat.cat[best].M)) { dmin = d2; best = i; } });
-      const ev = etat.cat[best];
-      $('#sc-carte-info').innerHTML = ev
-        ? `<b>${new Date(ev.ms).toISOString().slice(0, 16).replace('T', ' ')} UTC</b> · ${echapper(ev.typeMag || 'M')} ${virg(ev.mag, 1)} · h ${ev.h === null ? '—' : virg(ev.h, 0) + ' km'} · ${latLon(ev.lat, 'N', 'S')}, ${latLon(ev.lon, 'E', 'O')}`
-          + ` · ${etat.declus && !etat.garde[best] ? 'réplique ou précurseur retiré' : dans(ev, best) ? 'retenu' : 'hors analyse'}`
-        : 'Survolez un épicentre pour lire sa date, sa magnitude et sa profondeur.';
+    carte.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) infoSeisme(seismeProche(e.offsetX, e.offsetY)); });
+    gestes(carte, { zoomer: zoomerCarte, glisser: deplacerCarte, toucher: toucherCarte });
+    $('#sc-carte-plus').addEventListener('click', () => zoomerCarte(2));
+    $('#sc-carte-moins').addEventListener('click', () => zoomerCarte(0.5));
+    $('#sc-carte-tout').addEventListener('click', () => { if (etat.reel) { etat.reel.vue = vueEnsemble(etat.reel.cadre); dessinerCarte(); } });
+    // zones sismogènes
+    $('#sc-zone-tracer').addEventListener('click', () => {
+      if (etat.outil === 'zone') { etat.outil = null; if (etat.trace && etat.trace.length >= 3) fermerZone(); else etat.trace = null; }
+      else { etat.outil = 'zone'; etat.trace = []; }
+      majZones(); dessinerCarte();
     });
+    $('#sc-zone-fermer').addEventListener('click', fermerZone);
+    $('#sc-zone-annuler').addEventListener('click', () => { if (etat.trace) etat.trace.pop(); majZones(); dessinerCarte(); });
+    $('#sc-site-placer').addEventListener('click', () => { etat.outil = etat.outil === 'site' ? null : 'site'; etat.trace = null; majZones(); dessinerCarte(); });
+    $('#sc-zones-alea').addEventListener('click', versAlea);
+    $('#sc-zones-enregistrer').addEventListener('click', enregistrerZones);
+    $('#sc-zones-fichier').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) chargerZones(f); });
     const redessiner = () => { if (!$('#banc-sismicite').hidden) { dessinerCatalogue(); dessinerFMD(); dessinerStepp(); dessinerCarte(); } };
     const ro = new ResizeObserver(redessiner);
     ro.observe(cv); ro.observe($('#sc-fmd')); ro.observe($('#sc-stepp')); ro.observe(carte);
@@ -706,6 +925,8 @@ import Centres from './sismo/centres.js';
       $(`#sc-panneau-${n}`).hidden = m !== n;
     }
     $('#sc-carte-reel').hidden = m !== 'reel';
+    $('#sc-zones').hidden = m !== 'reel';
+    if (m !== 'reel') { etat.outil = null; etat.trace = null; }
     etat.verifie = false;
     if (m === 'reel') { activerReel(); return; }
     if (quitteReel) { etat.dom = DOMAINE_SIMULE; etat.table = TABLE_SIMULEE.map(r => [...r]); }
