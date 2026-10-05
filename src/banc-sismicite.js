@@ -483,30 +483,51 @@ import ZonesReel from './zones-reel.js';
     }
   }
   // Mécanismes lus (fichier ou colonnes du catalogue) : régime de chacun, carte et zones redessinées.
-  function installerMecs(r, nom) {
-    etat.mecs = { nom, format: r.format, rejetees: r.rejetees, liste: r.mecanismes.map((m, i) => ({ ...m, regime: Mecanismes.regime(m), cle: `${i}|${m.azimut}|${m.pendage}|${m.glissement}` })) };
+  // origine : « fichier » (chargé par l'étudiant, garde la main), « catalogue » (colonnes du catalogue) ou « gcmt » (extrait livré).
+  function installerMecs(r, nom, origine) {
+    etat.mecs = { nom, origine, format: r.format, rejetees: r.rejetees, liste: r.mecanismes.map((m, i) => ({ ...m, regime: Mecanismes.regime(m), cle: `${i}|${m.azimut}|${m.pendage}|${m.glissement}` })) };
     cacheMecs.clear();
     majInfoMecs(); majZones(); dessinerCarte();
   }
-  // Case « Afficher les mécanismes » : grisée tant qu'aucun mécanisme n'est lu (le site ne les télécharge pas), suivie de
+  // Extrait méditerranéen du Global CMT livré avec le site (data/mecanismes-mediterranee.json, tools/gcmt/extrait.mjs) : lu
+  // une fois, à la demande ; ses mécanismes de la région et de la période du catalogue s'affichent sans fichier à charger
+  // quand l'étendue du catalogue tient dans le domaine de l'extrait, tant que l'étudiant n'a pas chargé les siens.
+  let extraitGcmt = null, jetonGcmt = 0;
+  const lireExtraitGcmt = () => extraitGcmt || (extraitGcmt = fetch('data/mecanismes-mediterranee.json')
+    .then(r => { if (!r.ok) throw new Error(`extrait du Global CMT illisible (${r.status})`); return r.text(); })
+    .then(t => Mecanismes.lire(t)));
+  async function mecsGcmt() {
+    const jeton = ++jetonGcmt, r = etat.reel, s = r && r.resume;
+    const ok = r && Mecanismes.couvre({ lon: s.lon, lat: s.lat });
+    if (!ok) { if (etat.mecs && etat.mecs.origine === 'gcmt') { etat.mecs = null; cacheMecs.clear(); majZones(); dessinerCarte(); } majInfoMecs(); return; }
+    let ex;
+    try { ex = await lireExtraitGcmt(); } catch (err) { extraitGcmt = null; if (jeton === jetonGcmt) majInfoMecs(); return; }
+    if (jeton !== jetonGcmt || etat.reel !== r || (etat.mecs && etat.mecs.origine !== 'gcmt')) return;
+    const liste = Mecanismes.selectionner(ex.mecanismes, { cadre: r.cadre, debut: s.debut, fin: s.fin + 1000 });
+    installerMecs({ format: ex.format, rejetees: 0, mecanismes: liste }, 'Global CMT, extrait méditerranéen', 'gcmt');
+  }
+  // Case « Afficher les mécanismes » : grisée tant qu'aucun mécanisme n'est lu (extrait du Global CMT hors de son domaine), suivie de
   // leur nombre ; bilan des mécanismes lus et de ceux qui tombent dans la région du catalogue.
   let AIDE_MECS = '';
   function majInfoMecs() {
     const m = etat.mecs, cas = $('#sc-mec-afficher');
     cas.disabled = !m; $('#sc-mec-compte').textContent = m ? `(${milliers(m.liste.length)})` : '(aucun chargé)';
     if (!m) { $('#sc-mec-info').textContent = AIDE_MECS; return; }
+    const credit = m.origine === 'gcmt' ? ` <small>Global CMT Project (Dziewonski et al. 1981 ; Ekström et al. 2012), séismes de la région et de la période du catalogue ;
+      « Charger des mécanismes au foyer » les remplace par les vôtres.</small>` : '';
+    if (!m.liste.length) { $('#sc-mec-info').innerHTML = `<b>${echapper(m.nom)}</b> : aucun mécanisme au foyer dans la région et la période du catalogue.${credit}`; return; }
     const b = Mecanismes.bilan(m.liste), t = b.parType, pl = n => (n > 1 ? 's' : ''), c = etat.reel && etat.reel.cadre;
     const dans = c ? m.liste.filter(q => { const lon = Cat.lonDans(q.lon, c.lon[0]); return lon <= c.lon[1] && q.lat >= c.lat[0] && q.lat <= c.lat[1]; }).length : null;
     const region = dans === null || dans === b.n ? ''
       : dans === 0 ? ' <b>Aucun n\'est dans la région du catalogue</b> : le fichier couvre-t-il la même région ?'
         : ` ${milliers(dans)} dans la région du catalogue.`;
     $('#sc-mec-info').innerHTML = `<b>${echapper(m.nom)}</b> : ${milliers(b.n)} mécanisme${pl(b.n)} au foyer (${t.normale} normale${pl(t.normale)}, ${t.inverse} inverse${pl(t.inverse)}, ${t.decrochement} décrochement${pl(t.decrochement)}${t.indetermine ? `, ${t.indetermine} indéterminé${pl(t.indetermine)}` : ''}, régimes de Zoback 1992)${m.rejetees ? ` ; ${milliers(m.rejetees)} séisme${pl(m.rejetees)} sans mécanisme lisible` : ''}.${region}`
-      + (etat.afficherMecs ? ' Touchez une sphère focale pour lire ses plans nodaux.' : ' Cochez « Afficher les mécanismes » pour les voir sur la carte.');
+      + (etat.afficherMecs ? ' Touchez une sphère focale pour lire ses plans nodaux.' : ' Cochez « Afficher les mécanismes » pour les voir sur la carte.') + credit;
   }
   async function chargerMecs(fichier) {
     try {
       if (fichier.size > 50 * 1024 * 1024) throw new Error('fichier trop gros (50 Mo au plus)');
-      installerMecs(Mecanismes.lire(new Uint8Array(await fichier.arrayBuffer())), `« ${fichier.name} »`);
+      installerMecs(Mecanismes.lire(new Uint8Array(await fichier.arrayBuffer())), `« ${fichier.name} »`, 'fichier');
     } catch (err) { $('#sc-mec-info').textContent = `Fichier refusé : ${err.message || err}.`; }
   }
   // Mécanisme dont la sphère est sous le point (x, y) du canevas, ou null.
@@ -866,8 +887,9 @@ import ZonesReel from './zones-reel.js';
     const cadre = Cat.cadre(evts);
     etat.reel = { lu, evts, periode, nom, tronque, famille: 'tous', resume: Cat.resume(evts), cadre, vue: vueEnsemble(cadre) };
     const avecMec = evts.filter(e => e.mec);
-    if (avecMec.length) installerMecs({ format: 'catalogue', mecanismes: avecMec.map(e => ({ t: e.t, lat: e.lat, lon: e.lon, h: e.h, mag: e.mag, typeMag: e.typeMag, id: e.id, ...e.mec })), rejetees: 0 }, `${nom} (colonnes du catalogue)`);
-    else if (etat.mecs) majInfoMecs(); // mécanismes d'un fichier : comptés de nouveau dans la région du nouveau catalogue
+    if (avecMec.length) installerMecs({ format: 'catalogue', mecanismes: avecMec.map(e => ({ t: e.t, lat: e.lat, lon: e.lon, h: e.h, mag: e.mag, typeMag: e.typeMag, id: e.id, ...e.mec })), rejetees: 0 }, `${nom} (colonnes du catalogue)`, 'catalogue');
+    else if (etat.mecs && etat.mecs.origine === 'fichier') majInfoMecs(); // mécanismes d'un fichier : comptés de nouveau dans la région du nouveau catalogue
+    else { if (etat.mecs && etat.mecs.origine === 'catalogue') { etat.mecs = null; cacheMecs.clear(); } mecsGcmt(); }
     const ec = Object.entries(lu.ecartes || {}), rej = lu.rejets && lu.rejets.length ? ` (ligne ${lu.rejets[0].ligne} : ${lu.rejets[0].raison}${lu.rejetees > 1 ? '…' : ''})` : '';
     const col = Object.values(lu.colonnes || {});
     $('#sc-reel-info').innerHTML = `<b>${echapper(nom)}</b> : ${echapper(lu.nom)}, ${milliers(evts.length)} séismes lus`

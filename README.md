@@ -87,7 +87,8 @@ src/sismo/zones.js        zones sismogènes d'un catalogue réel : statistiques 
                           projection locale en km, modèle PSHA du banc « aléa »
 src/zones-reel.js         modèle de zones partagé entre les bancs « sismicité » et « aléa »
 src/sismo/mecanismes.js   mécanismes au foyer d'un catalogue : ndk du Global CMT, QuakeML, tableaux strike/dip/rake,
-                          régimes de Zoback (1992), mécanisme dominant d'une zone
+                          régimes de Zoback (1992), mécanisme dominant d'une zone ; extrait « sismo-mecanismes »
+                          du Global CMT et sa sélection sur la région et la période d'un catalogue
 src/sismo/gmpe.js         lois d'atténuation : Akkar, Sandıkkaya et Bommer (2014), Bindi et al. (2014),
                           Boore, Stewart, Seyhan et Atkinson (2014, NGA-West2, sans terme de bassin)
 src/sismo/geodesie.js     modèle géodésique : champ GNSS, taux de déformation par moindres carrés,
@@ -156,6 +157,7 @@ tools/carte/cotes.py    côtes et frontières Natural Earth découpées à la M�
 tools/carte/pays.py     pays Natural Earth découpés à la Méditerranée (data/pays-mediterranee.json)
 tools/carte/monde.py    côtes et frontières Natural Earth du monde entier (data/cotes-monde.json), carte des épicentres
 tools/failles/gem.mjs   extrait méditerranéen de la base GEM des failles actives (data/failles-mediterranee.json)
+tools/gcmt/extrait.mjs  extrait méditerranéen du Global CMT (data/mecanismes-mediterranee.json) depuis les fichiers ndk
 tools/versions.mjs      versions des scripts et feuilles de style (cartes d'import des pages) : npm run versions
 src/sismo/dossier.js    fichier d'un séisme réel (format sismo-seisme) : écriture par « En direct », relecture par le TP
 src/sismo/localisation.js localisation d'un séisme réel sur la sphère (table croûte du cours + ak135)
@@ -186,7 +188,7 @@ src/onglets.js          onglets et fil du parcours (partie, banc précédent et 
 src/consignes.js        consigne de chaque banc (objectif, étapes, à rendre), placée en tête du poste par src/onglets.js
 tests/                  signal, localisation, bancs, spectre, sismicité, géodésie, failles, PSHA, sélection,
                         site, isolignes, liquéfaction, inélastique, mécanisme, source, intensité, bâtiment, poussée, isolation, globe,
-                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, sismogrammes d'un séisme, versions des scripts, séisme réel dans le TP de localisation (localisation, ML, mécanisme), pointé automatique, spectre de la source en vitesse et bruit, catalogues réels, propagation en direct, zones sismogènes, mécanismes au foyer, failles actives et champ GNSS réels (251 tests)
+                        parcours, cours (plan, banques d'exercices reproductibles, exemples du texte, liens des pages), références, schémas des notes, équations des lois, tables de temps de trajet, consignes des TP, téléséismes, fronts d'onde, miniSEED, SeedLink, traitements en direct, centres de données et pays, sismogrammes d'un séisme, versions des scripts, séisme réel dans le TP de localisation (localisation, ML, mécanisme), pointé automatique, spectre de la source en vitesse et bruit, catalogues réels, propagation en direct, zones sismogènes, mécanismes au foyer, failles actives et champ GNSS réels (254 tests)
 tests/references/       valeurs calculées par OpenQuake, pystrata, liquepy, OpenSeesPy, ObsPy et eqsig (npm run references)
 tools/oq/               scripts de référence (Python, OpenQuake), export du catalogue et du modèle d'aléa
 tools/calage-accelerogrammes.mjs  correction spectrale des accélérogrammes (npm run calage)
@@ -300,6 +302,15 @@ Faults Database*, Earthquake Spectra 36(1_suppl), 160–180, doi:10.1177/8755293
 CC BY-SA 4.0 ; l'extrait garde cette licence. `tools/failles/gem.mjs` le refait depuis le GeoJSON du dépôt
 GEMScienceTools/gem-global-active-faults : failles qui touchent la Méditerranée (20° O – 50° E, 22° N – 53° N), frontières
 de plaques, subductions, dorsales et plis écartés, traces simplifiées à 100 m.
+
+Les mécanismes au foyer affichés sans fichier au banc « sismicité » (`data/mecanismes-mediterranee.json`) sont un extrait
+du catalogue du Global CMT Project (www.globalcmt.org) : Dziewonski, A. M., Chou, T.-A. et Woodhouse, J. H. (1981),
+*Determination of earthquake source parameters from waveform data for studies of global and regional seismicity*,
+J. Geophys. Res. 86, 2825–2852 ; Ekström, G., Nettles, M. et Dziewonski, A. M. (2012), *The global CMT project 2004–2010:
+Centroid-moment tensors for 13,017 earthquakes*, Phys. Earth Planet. Inter. 200–201, 1–9. `tools/gcmt/extrait.mjs` le
+refait depuis les fichiers ndk (catalogue complet puis fichiers mensuels, fichiers locaux ou adresses http(s)) : séismes du
+domaine 20° O – 50° E, 22° N – 53° N, Mw du moment scalaire, premier plan nodal. Conditions d'utilisation : à vérifier sur
+globalcmt.org avant de livrer l'extrait (le site n'était pas joignable depuis l'environnement de développement).
 
 Pour les régénérer (environ dix minutes, le PSHA compris) :
 
