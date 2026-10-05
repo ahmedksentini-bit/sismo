@@ -3,8 +3,10 @@
 // de tests/references/miniseed/steim2.mseed réétiquetés (réseau, station, voie) et redatés à partir de 5 minutes avant
 // la connexion ; il refuse les stations du réseau IV et la station NOPE, pour essayer le repli vers le service FDSN. Un
 // serveur FDSN (HTTP, port 8090) sert, sous /<centre>/fdsnws/…, des voies et des réseaux propres à chaque centre (GEOFON,
-// INGV, et un réseau tunisien fictif chez EarthScope), des séismes et des enregistrements redatés ; PANNE_GEOFON=lent ou
-// panne simule un GEOFON lent (inventaire complet en 40 s) ou en panne.
+// INGV, et un réseau tunisien fictif chez EarthScope), un réseau mondial fictif de 120 stations (IU, chez EarthScope, dont
+// une station sur sept est muette : ni SeedLink ni dataselect), une station GE lointaine (Chili), des séismes et des
+// enregistrements redatés ; les requêtes station respectent network et la boîte géographique ; PANNE_GEOFON=lent ou panne
+// simule un GEOFON lent (inventaire complet en 40 s) ou en panne.
 // Usage : node tools/direct/serveurs-essai.mjs, puis
 //   npx wrangler pages dev . --binding SEEDLINK_SERVEUR=127.0.0.1:18000 --binding FDSN_ESSAI=http://127.0.0.1:8090/{centre}
 import net from 'node:net';
@@ -41,7 +43,7 @@ net.createServer(sock => {
       else if (l.startsWith('STATION')) {
         const [, sta, res] = l.split(' ');
         if (sta === 'NOPE' || res === 'IV') { courante = null; sock.write('ERROR\r\n'); }
-        else { courante = { reseau: res, station: sta, emplacement: '', voie: 'BHZ' }; stations.push(courante); sock.write('OK\r\n'); }
+        else { courante = { reseau: res, station: sta, emplacement: '', voie: 'BHZ' }; if (!muette(sta)) stations.push(courante); sock.write('OK\r\n'); }
       } else if (l.startsWith('SELECT')) {
         const m = /^SELECT (\??\??|[A-Z0-9]{0,2})([A-Z0-9]{3})\.D$/.exec(l);
         if (courante && m) { courante.emplacement = /\?/.test(m[1]) ? '' : m[1]; courante.voie = m[2]; }
@@ -67,11 +69,23 @@ net.createServer(sock => {
 
 const ENTETE = '#Network | Station | Location | Channel | Latitude | Longitude | Elevation | Depth | Azimuth | Dip | SensorDescription | Scale | ScaleFreq | ScaleUnits | SampleRate | StartTime | EndTime';
 const voie = (r, s, lat, lon) => `${r}|${s}||BHZ|${lat}|${lon}|100.0|0.0|0.0|-90.0|essai|6.0E8|1.0|M/S|20.0|2010-01-01T00:00:00|`;
+const MONDE = Array.from({ length: 120 }, (_, i) => voie('IU', `W${String(i + 1).padStart(3, '0')}`, Math.round((-55 + ((i * 37) % 125)) * 10) / 10, Math.round((-178 + ((i * 61) % 356)) * 10) / 10));
+const muette = sta => /^W\d+$/.test(sta) && Number(sta.slice(1)) % 7 === 0;
+const DESCRIPTIONS = { GE: 'GEOFON (essai)', IV: 'Réseau italien (essai) https://doi.org/10.13127/SD/X0FXNH7QFY_IDENTIFIANT_TRES_LONG_SANS_ESPACE_POUR_ESSAYER_LE_DEBORDEMENT', TT: 'Réseau tunisien fictif (essai)', IU: 'Réseau mondial fictif (essai)' };
 const CENTRES = {
-  geofon: { voies: [voie('GE', 'MTE', 40.4, -7.5), voie('GE', 'ESSAI', 38.0, 23.7)], reseaux: ['GE|GEOFON (essai)|1993-01-01T00:00:00||2'] },
-  ingv: { voies: [voie('IV', 'LPEL', 35.5, 12.6), voie('IV', 'ROMA', 41.9, 12.5)], reseaux: ['IV|Réseau italien (essai) https://doi.org/10.13127/SD/X0FXNH7QFY_IDENTIFIANT_TRES_LONG_SANS_ESPACE_POUR_ESSAYER_LE_DEBORDEMENT|1988-01-01T00:00:00||2'] },
-  earthscope: { voies: [voie('TT', 'TUNI', 36.8, 10.2), voie('GE', 'MTE', 40.4, -7.5)], reseaux: ['TT|Réseau tunisien fictif (essai)|2010-01-01T00:00:00||1', 'GE|GEOFON|1993-01-01T00:00:00||1'] },
+  geofon: { voies: [voie('GE', 'MTE', 40.4, -7.5), voie('GE', 'ESSAI', 38.0, 23.7), voie('GE', 'LVC', -22.6, -68.9)] },
+  ingv: { voies: [voie('IV', 'LPEL', 35.5, 12.6), voie('IV', 'ROMA', 41.9, 12.5)] },
+  earthscope: { voies: [voie('TT', 'TUNI', 36.8, 10.2), voie('GE', 'MTE', 40.4, -7.5), ...MONDE] },
 };
+// Voies d'un centre retenues par une requête station : réseaux nommés et boîte géographique
+function filtrer(c, q) {
+  const reseaux = q.get('network') ? q.get('network').split(',') : null, b = k => (q.get(k) === null ? null : Number(q.get(k)));
+  return c.voies.filter(l => {
+    const f = l.split('|'), lat = +f[4], lon = +f[5];
+    return (!reseaux || reseaux.includes(f[0])) && (b('minlatitude') === null || lat >= b('minlatitude')) && (b('maxlatitude') === null || lat <= b('maxlatitude'))
+      && (b('minlongitude') === null || lon >= b('minlongitude')) && (b('maxlongitude') === null || lon <= b('maxlongitude'));
+  });
+}
 const SEISMES = `#EventID | Time | Latitude | Longitude | Depth/km | Author | Catalog | Contributor | ContributorID | MagType | Magnitude | MagAuthor | EventLocationName
 essai1|${new Date(Date.now() - 600000).toISOString().slice(0, 19)}|35.1|23.4|18.0|GFZ|GEOFON|GFZ|essai1|mb|4.6|GFZ|Séisme d'essai
 `;
@@ -83,16 +97,22 @@ http.createServer((req, res) => {
     if (centre === 'geofon' && PANNE === 'panne') { res.writeHead(500); res.end('panne d\'essai'); return; }
     if (centre === 'geofon' && PANNE === 'lent' && !q.get('network')) { setTimeout(() => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end(`${ENTETE}\n${c.voies.join('\n')}\n`); }, 40000); return; }
     if (!c) { res.writeHead(204); res.end(); return; }
-    if (q.get('level') === 'network') texte(`#Network | Description | StartTime | EndTime | TotalStations\n${c.reseaux.join('\n')}\n`);
+    const voies = filtrer(c, q);
+    if (!voies.length) { res.writeHead(204); res.end(); return; }
+    if (q.get('level') === 'network') {
+      const n = new Map();
+      for (const l of voies) n.set(l.split('|')[0], (n.get(l.split('|')[0]) || 0) + 1);
+      texte(`#Network | Description | StartTime | EndTime | TotalStations\n${[...n].map(([r, k]) => `${r}|${DESCRIPTIONS[r] || r}|1990-01-01T00:00:00||${k}`).join('\n')}\n`);
+    }
     // « BH? » : les trois composantes, avec leur azimut et leur pendage
-    else if ((q.get('channel') || '').includes('?')) texte(`${ENTETE}\n${c.voies.flatMap(l => [['Z', '0.0', '-90.0'], ['N', '0.0', '0.0'], ['E', '90.0', '0.0']].map(([x, az, dip]) => { const f = l.split('|'); f[3] = 'BH' + x; f[8] = az; f[9] = dip; return f.join('|'); })).join('\n')}\n`);
-    else texte(`${ENTETE}\n${c.voies.join('\n')}\n`);
+    else if ((q.get('channel') || '').includes('?')) texte(`${ENTETE}\n${voies.flatMap(l => [['Z', '0.0', '-90.0'], ['N', '0.0', '0.0'], ['E', '90.0', '0.0']].map(([x, az, dip]) => { const f = l.split('|'); f[3] = 'BH' + x; f[8] = az; f[9] = dip; return f.join('|'); })).join('\n')}\n`);
+    else texte(`${ENTETE}\n${voies.join('\n')}\n`);
   } else if (u.pathname.includes('/event/')) texte(SEISMES);
   else if (u.pathname.includes('/dataselect/')) {
     // enregistrements de chaque station demandée, de starttime à endtime
     const t0 = Date.parse(q.get('starttime') + 'Z'), t1 = Date.parse(q.get('endtime') + 'Z'), out = [];
     for (const sta of q.get('station').split(',')) for (const r of q.get('network').split(',')) {
-      if (!c || !c.voies.some(l => l.startsWith(`${r}|${sta}|`))) continue;
+      if (!c || !c.voies.some(l => l.startsWith(`${r}|${sta}|`)) || muette(sta)) continue;
       // « BH? » : les trois composantes (Z, N, E), comme un centre
       const voies = q.get('channel').split(',').flatMap(c => (c.endsWith('?') ? ['Z', 'N', 'E'].map(x => c.slice(0, 2) + x) : [c])).slice(0, 3);
       for (const v of voies) for (let t = t0, k = 0; t + duree[k % enregs.length] < t1; t += duree[k % enregs.length], k++) out.push(etiqueter(enregs[k % enregs.length], { reseau: r, station: sta, emplacement: '', voie: v }, t));

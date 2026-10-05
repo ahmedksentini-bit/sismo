@@ -239,24 +239,41 @@ la virgule décimale.
     SKS : jamais d'onde S dans le noyau), réfléchis sous la surface (pP, sS, trait fin) ou sur le noyau (PcP, ScS, tirets) ;
     le front rejoint la surface par interpolation des arrivées. Séisme local : coupe de la croûte du générateur (rais droits,
     Snell au Moho, onde conique). En mode Exercice, l'animation reste masquée jusqu'à « Vérifier ».
-34. **En direct** (`direct.html`, `src/direct-page.js`) : stations autour de la Méditerranée des centres de données de
+34. **En direct** (`direct.html`, `src/direct-page.js`) : stations du monde entier des centres de données de
     `src/sismo/centres.js` (GEOFON, INGV, Epos-France, NOA, KOERI, SED, NIEP, ORFEUS, IGN, ICGC, EarthScope), choisies par
-    réseau (carte « Réseaux », GE et tout réseau ayant une station en Tunisie cochés au départ, sinon le plus grand réseau
-    permanent ; pays par les polygones de `tools/carte/pays.py`). La page démarre sur le réseau GE de GEOFON, demandé par
-    son nom (requête courte) ; les inventaires complets des centres, lents sans nom de réseau, complètent la liste à
-    leur arrivée (60 s au plus), et « Centres interrogés » donne la cause d'un échec. `api/geofon` reste un alias de
-    `api/fdsn` pour les pages restées en cache. Carte : triangles = stations, disques = séismes des 7 derniers jours, légende
+    réseau (carte « Réseaux », filtre par code, nom ou pays, 150 lignes au plus ; GE et tout réseau ayant une station en
+    Tunisie cochés au départ, sinon le plus grand réseau permanent ; pays par les polygones de `tools/carte/pays.py`, « hors
+    Méditerranée » au-delà de leur domaine). La page démarre sur le réseau GE de GEOFON dans le monde entier, demandé par
+    son nom (requête courte) ; les inventaires complets des centres dans la boîte de la Méditerranée (`ZONE`), lents sans nom
+    de réseau, complètent la liste à leur arrivée (60 s au plus), les listes des réseaux du monde de chaque centre
+    (level=network, réseaux temporaires écartés) aussi ; les stations d'un réseau lointain ne sont lues (`chargerReseau`,
+    network nommé, sans boîte) qu'à son premier cochage. « Centres interrogés » donne la cause d'un échec. Jusqu'à 100
+    stations suivies (8 au départ, autour de la Méditerranée) : connexions au relais par serveur et par paquets de 20 flux
+    (`Direct.paquets`, `SeedLink.MAX_FLUX` = 25), requêtes FDSN par 10 stations ; les mesures des traces (filtres,
+    STA/LTA, amplitude) se recalculent à l'arrivée d'un paquet ou quand la fenêtre avance de 30 s, sinon la série gardée est
+    découpée ; seules les rangées visibles se dessinent ; un canevas garde au plus 16 millions de pixels. Un × en tête de
+    chaque trace retire la station ; « Suivre la vue » ajoute les stations visibles qui ont des données récentes, « Retirer
+    les muettes » celles qui n'ont rien livré depuis 10 min (suivies depuis plus de 90 s). Présence de données des stations
+    non suivies : le relais lit 2 min de dataselect (de 5 à 3 min avant l'heure) et n'en renvoie que le résumé
+    (`resume=1`, `MiniSeed.resumer`, en-têtes seuls) ; triangle bordé de vert (données récentes), pâle (rien), gris (pas
+    encore sondée) ; stations de la vue d'abord, 300 par tour, toutes les 2 min et après un changement de vue ou de réseau.
+    `api/geofon` reste un alias de `api/fdsn` pour les pages restées en cache. Carte du monde (zoom 1 à 64, boutons « Monde »
+    et « Méditerranée » ; en zoomant, longitudes réduites peu à peu par cos φ du centre ; côtes de la Méditerranée quand la
+    vue y tient, sinon du monde, lignes hors de la vue sautées ; noms des stations suivies jusqu'à 25, ou en zoomant) :
+    triangles = stations, disques = séismes des 7 derniers jours, légende
     faite des symboles mêmes de la carte ; toucher un objet (le plus proche, rayon élargi au doigt) ouvre sa fiche sous la
     carte (station : centre, pays, d'où viennent ses données, sa trace, « Suivre cette station » ; séisme : détails,
     arrivées placées sur les traces) ; un toucher ne change jamais à lui seul les stations suivies. Zoom (pincer, molette,
-    double toucher, boutons) : la carte se zoome dans le domaine des côtes sans changer la zone de référence des stations ;
+    double toucher, boutons) : la carte se zoome et se déplace dans le monde ;
     les traces en direct remontent au plus 70 min (durée des tampons), « Revenir au direct » ; les sismogrammes d'un
     séisme se zooment dans leur fenêtre lue, filtrés sur toute la fenêtre. Sur les traces, Ctrl + molette seulement et
     touch-action: pan-y, pour que la page défile encore. Les séismes sont ceux du
-    catalogue de GEOFON (7 derniers jours) ; « Sismogrammes de ce séisme » lit les archives (dataselect) de 10 stations au
+    catalogue de l'EMSC (réseaux nationaux réunis : les petits séismes de la Méditerranée y sont), sinon de GEOFON (7 derniers
+    jours ; `Centres.CATALOGUES` : service event seul) ; chaque séisme garde le nom de son catalogue, référence du fichier
+    exporté pour les TP ; « Sismogrammes de ce séisme » lit les archives (dataselect) de 10 stations au
     plus (`Direct.stationsSeisme` : les 3 plus proches puis des distances réparties), d'une minute avant l'origine à deux
     minutes après les ondes de surface (ou S) de la plus lointaine (`Direct.fenetreSeisme`, < 2 h). La liste des centres est la liste blanche des deux
-    fonctions Cloudflare Pages (`functions/api/`), relais bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 12 flux validés au plus, reprise
+    fonctions Cloudflare Pages (`functions/api/`), relais bornés : `seedlink.js` ouvre une connexion TCP vers le serveur SeedLink demandé, pour 25 flux validés au plus, reprise
     ≤ 30 min, ne transmet que les voies demandées, se ferme au bout de 10 min (la page se reconnecte depuis son dernier
     échantillon) ; `?sonde=1` dit quels serveurs répondent à HELLO, `?diagnostic=1` déroule l'échange avec l'un d'eux ;
     `fdsn.js` ne transmet que les services FDSN station, dataselect (≤ 2 h, ≤ 12 stations nommées) et event, au format
@@ -276,7 +293,8 @@ la virgule décimale.
     croissants ; Rayleigh à la vitesse de groupe à 20 s ; testé), à l'heure de l'horloge tant que le séisme a moins de deux
     heures, ou au temps d'un rejeu (« Rejouer la propagation » : × 1 à × 60, pause, curseur, jusqu'aux ondes de Rayleigh à la
     station la plus lointaine) ; les stations de la carte s'allument au passage de la P et de la S prévues dans la même table ;
-    un séisme réel de moins de 30 min, nouveau et plus récent que le choisi, est choisi tout seul (jamais pendant un rejeu) ;
+    un séisme réel de M ≥ 4 de moins de 30 min, nouveau et plus récent que le choisi, est choisi tout seul (jamais pendant un
+    rejeu) ;
     pendant un rejeu, un trait rouge suit le temps sur les sismogrammes du même séisme. **Tableau de bord** : à partir de
     1 200 × 600 px (même requête dans `lecteur.css` et `TABLEAU` de `src/direct-page.js`), la page tient dans l'écran sans
     défilement : grille de trois colonnes (source, réseaux, à retenir | carte, traces | séismes, arrivées ; un séisme ouvert
@@ -291,16 +309,17 @@ la virgule décimale.
     script ou d'une feuille de style, ne jamais modifier la carte à la main ; un script d'entrée n'est importé par aucun
     module (testé).
 36. **Séisme réel** (banc « réseau », mode « Séisme réel ») : la page « En direct » enregistre un séisme (« Enregistrer
-    pour le TP de localisation ») dans un fichier `sismo-seisme` v1 (`src/sismo/dossier.js`) : séisme du catalogue de
-    GEOFON (la référence), stations (position, sensibilité de la verticale, bande), enregistrements miniSEED tels que
+    pour le TP de localisation ») dans un fichier `sismo-seisme` v1 (`src/sismo/dossier.js`) : séisme du catalogue de la
+    liste (EMSC, sinon GEOFON ; `seisme.catalogue`, GEOFON pour les fichiers plus anciens : la référence, nommée telle quelle
+    par les bancs, « Comparer au catalogue »), stations (position, sensibilité de la verticale, bande), enregistrements miniSEED tels que
     livrés (base64), trois composantes, d'une minute avant l'origine à cinq minutes après la S de la plus lointaine. La
     relecture assemble chaque composante sur une grille commune (trous à zéro, moyenne retirée), passe en m/s par la
     sensibilité de chaque composante (celle de la verticale à défaut) et rééchantillonne à la plus petite cadence. La
     localisation (`src/sismo/localisation.js`) se fait sur la sphère avec la table `data/temps-localisation.json`
     (`npm run temps-localisation` : croûte du cours jusqu'à 1°, ak135 au-delà de 2°, raccord linéaire ; premières P et S,
-    0 à 100°, h de 0 à 40 km) ; P pondérée 1, S 0,5, t0 analytique, grille ±25° puis ±1° puis ±0,06°. « Comparer à
-    GEOFON » montre l'écart d'épicentre et d'heure d'origine (repères 30 km et 3 s) et trace les arrivées prévues pour
-    la solution de GEOFON, jamais avant. Le fichier porte la sensibilité, l'azimut et le pendage de chaque composante
+    0 à 100°, h de 0 à 40 km) ; P pondérée 1, S 0,5, t0 analytique, grille ±25° puis ±1° puis ±0,06°. « Comparer au
+    catalogue » montre l'écart d'épicentre et d'heure d'origine (repères 30 km et 3 s) et trace les arrivées prévues pour
+    la solution du catalogue, jamais avant. Le fichier porte la sensibilité, l'azimut et le pendage de chaque composante
     (`composantes`, facultatif : sans eux, sensibilité de la verticale et amplitudes marquées « ≈ ») ; la relecture remet la
     verticale vers le haut et tourne 1/2 vers N/E. Magnitude (`src/sismo/reel.js`) : Wood-Anderson depuis la vitesse
     (`Sismo.woodAndersonVitesse`, identique à la vérité du générateur depuis l'accélération, testé), amplitude maximale de
@@ -310,7 +329,7 @@ la virgule décimale.
     ak135 au-delà, nœud le plus proche) pour la solution de l'étudiant ; `Mecanisme.inverser` au pas de 10°, 6 polarités
     au moins. Le séisme chargé est partagé (`src/seisme-reel.js` : fichier, pointés, polarités, solution, `version`) avec les
     bancs « mécanisme » et « source », qui ont aussi un mode « Séisme réel » et reprennent l'état partagé à leur ouverture
-    si sa version a changé. Foyer : la solution du TP de localisation, sinon GEOFON (h ramenée à 0–40 km, la table s'arrête
+    si sa version a changé. Foyer : la solution du TP de localisation, sinon celle du catalogue (h ramenée à 0–40 km, la table s'arrête
     là). Mécanisme : verticales filtrées de 1 à 10 Hz (causal), pointé P du banc « réseau », sinon de l'étudiant (clic sur la
     trace, rendu au banc « réseau »), sinon automatique (`Reel.pointerP`, Akaike de Maeda autour de l'arrivée prévue) ; pas de
     solution vraie. Source : `Source.analyserSerie` sur les horizontales des stations de 10 à 600 km, vitesses dérivées en

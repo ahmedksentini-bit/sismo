@@ -239,7 +239,7 @@ import SeismeReel from './seisme-reel.js';
       afficheur('Axes P et T', `P ${virg(ax.P.azimut)}°↓${virg(ax.P.plongement)}°`, `T ${virg(ax.T.azimut)}°↓${virg(ax.T.plongement)}°`),
       afficheur('Inversion', inv ? `${inv.desaccords} désaccord${inv.desaccords > 1 ? 's' : ''}` : '—', inv ? `${inv.solutions.length} solution${inv.solutions.length > 1 ? 's' : ''} au pas de 10°` : etat.message || 'recherche exhaustive'),
       reel()
-        ? afficheur('Réseau', F ? `${etat.stations.length} stations` : '—', F ? `${l.length} polarités ; foyer ${F.source === 'geofon' ? 'de GEOFON' : 'de votre localisation'} à ${virg(F.h)} km` : 'aucun fichier')
+        ? afficheur('Réseau', F ? `${etat.stations.length} stations` : '—', F ? `${l.length} polarités ; foyer ${F.source === 'geofon' ? `du catalogue (${c.dossier.seisme.catalogue || 'GEOFON'})` : 'de votre localisation'} à ${virg(F.h)} km` : 'aucun fichier')
         : afficheur('Réseau', `${etat.n} stations`, `${nPn} en Pn (émergence ${virg(Me.emergence(300, H).i)}°), foyer à ${H} km`),
     ].join('');
   }
@@ -268,8 +268,8 @@ import SeismeReel from './seisme-reel.js';
     $('#me-lire-pol').disabled = !c;
     if (!c) { info.textContent = 'Aucun fichier chargé : chargez-en un ici ou dans le banc « réseau ».'; $('#me-pol-stations').innerHTML = ''; return; }
     const e = c.dossier.seisme, d = new Date(e.temps).toISOString(), hors = c.dossier.stations.length - etat.stations.length;
-    info.innerHTML = `<b>${e.region || 'Séisme'}</b>, ${d.slice(0, 10)} à ${d.slice(11, 19)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (GEOFON) · ${etat.stations.length} stations${hors ? ` (${hors} hors de la table, écartée${hors > 1 ? 's' : ''})` : ''}.
-      Foyer ${F.source === 'geofon' ? 'de GEOFON' : 'de votre localisation (banc « réseau »)'} : ${virg(F.lat, 2)}° N, ${virg(F.lon, 2)}° E, h = ${virg(F.h)} km${F.hCatalogue > 40 ? ` (GEOFON donne ${virg(F.hCatalogue)} km ; la table s'arrête à 40 km : angles de départ approchés)` : ''}.${c.solution ? '' : ' Localisez-le dans le banc « réseau » pour utiliser votre propre foyer.'}`;
+    info.innerHTML = `<b>${e.region || 'Séisme'}</b>, ${d.slice(0, 10)} à ${d.slice(11, 19)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (${e.catalogue || 'GEOFON'}) · ${etat.stations.length} stations${hors ? ` (${hors} hors de la table, écartée${hors > 1 ? 's' : ''})` : ''}.
+      Foyer ${F.source === 'geofon' ? `du catalogue (${e.catalogue || 'GEOFON'})` : 'de votre localisation (banc « réseau »)'} : ${virg(F.lat, 2)}° N, ${virg(F.lon, 2)}° E, h = ${virg(F.h)} km${F.hCatalogue > 40 ? ` (le catalogue donne ${virg(F.hCatalogue)} km ; la table s'arrête à 40 km : angles de départ approchés)` : ''}.${c.solution ? '' : ' Localisez-le dans le banc « réseau » pour utiliser votre propre foyer.'}`;
     const div = $('#me-pol-stations');
     div.innerHTML = [...etat.stations].sort((a, b) => a.az - b.az).map(s => {
       const b = (v, t) => `<button type="button" class="outil${v === 1 ? ' p' : v === -1 ? ' s' : ' neutre'}" data-me-pol="${s.k}" data-v="${v}" aria-pressed="${s.polarite === v}">${t}</button>`;

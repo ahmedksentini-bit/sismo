@@ -2,11 +2,11 @@
 // de la poignée de main (STATION, SELECT, TIME ou DATA, END), lecture des réponses ligne à ligne, découpage du flux en
 // paquets « SL » + numéro de séquence (6 chiffres hexadécimaux) + enregistrement miniSEED (512 octets en général,
 // longueur lue dans la blockette 1000). Validation des demandes reçues par le relais (functions/api/seedlink.js) :
-// flux bien formés, au plus 12, reprise au plus 30 minutes en arrière. Partagé par le relais et la page « En direct ».
+// flux bien formés, au plus 25 par connexion, reprise au plus 30 minutes en arrière. Partagé par le relais et la page « En direct ».
 // Solveurs purs, sans accès au DOM ni au réseau.
 const SeedLink = (() => {
   'use strict';
-  const MAX_FLUX = 12, RETOUR_MAX = 30 * 60 * 1000;
+  const MAX_FLUX = 25, RETOUR_MAX = 30 * 60 * 1000;
   const MOTIF = /^([A-Z0-9]{1,2})\.([A-Z0-9]{1,5})\.([A-Z0-9]{0,2})\.([BHESL][HNL][ZNE12])$/;
 
   // « GE.TNTN..BHZ,GE.ISP..BHZ » → [{ reseau, station, emplacement, voie }], ou null si un flux est mal formé.

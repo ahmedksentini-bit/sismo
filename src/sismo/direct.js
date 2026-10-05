@@ -291,7 +291,9 @@ const Direct = (() => {
 
   // Latence (s) d'une voie : temps écoulé depuis son dernier échantillon.
   const latence = (fin, maintenant = Date.now()) => (fin === null ? Infinity : (maintenant - fin) / 1000);
+  // Paquets de n éléments au plus, dans l'ordre (connexions au relais, requêtes FDSN de la page « En direct »).
+  const paquets = (liste, n) => Array.from({ length: Math.ceil(liste.length / n) }, (_, k) => liste.slice(k * n, (k + 1) * n));
 
-  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, tableFronts, distanceFront, tempsFront, stationsSeisme, fenetreSeisme, pays, latence, PHASES };
+  return { distanceAzimut, butterPasseBande, filtrer, preparer, staLta, declenchements, voie, arrivees, tableFronts, distanceFront, tempsFront, stationsSeisme, fenetreSeisme, pays, latence, paquets, PHASES };
 })();
 export default Direct;

@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#075985">
-<meta name="description" content="Stations sismologiques autour de la Méditerranée, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI…) : carte des stations par réseau, traces qui défilent, séismes récents et arrivées prévues">
+<meta name="description" content="Stations sismologiques du monde entier, en temps réel (GEOFON, INGV, Epos-France, NOA, KOERI, EarthScope…) : carte des stations par réseau, jusqu'à 100 traces qui défilent, séismes récents et arrivées prévues">
 <title>En direct — Sismologie</title>
-<link rel="stylesheet" href="lecteur.css?v=dc984b5d0e">
+<link rel="stylesheet" href="lecteur.css?v=800ae358f5">
 <!-- versions des modules : produit par npm run versions (tools/versions.mjs), ne pas modifier à la main -->
 <script type="importmap">
 {"imports": {
@@ -18,16 +18,16 @@
   "./src/banc-geodesie.js": "./src/banc-geodesie.js?v=34dc2cee6d",
   "./src/banc-isolation.js": "./src/banc-isolation.js?v=b75f629476",
   "./src/banc-liquefaction.js": "./src/banc-liquefaction.js?v=a209e4a6a4",
-  "./src/banc-mecanisme.js": "./src/banc-mecanisme.js?v=89346d54de",
+  "./src/banc-mecanisme.js": "./src/banc-mecanisme.js?v=99297d9783",
   "./src/banc-poussee.js": "./src/banc-poussee.js?v=1ae7248b49",
   "./src/banc-profil.js": "./src/banc-profil.js?v=34e550acef",
   "./src/banc-selection.js": "./src/banc-selection.js?v=fa88657041",
   "./src/banc-sismicite.js": "./src/banc-sismicite.js?v=d581fd3cc0",
   "./src/banc-sismometre.js": "./src/banc-sismometre.js?v=97df4b1e82",
   "./src/banc-site.js": "./src/banc-site.js?v=07d6eb2b49",
-  "./src/banc-source.js": "./src/banc-source.js?v=a0c137fe7c",
+  "./src/banc-source.js": "./src/banc-source.js?v=e62104f688",
   "./src/banc-spectre.js": "./src/banc-spectre.js?v=d3f8f69f8a",
-  "./src/consignes.js": "./src/consignes.js?v=364f176ad4",
+  "./src/consignes.js": "./src/consignes.js?v=b27ccdad50",
   "./src/cours-ch1.js": "./src/cours-ch1.js?v=d2b3e417ea",
   "./src/cours-ch10.js": "./src/cours-ch10.js?v=61a0a5f503",
   "./src/cours-ch11.js": "./src/cours-ch11.js?v=5e7ab8434d",
@@ -47,7 +47,7 @@
   "./src/cours-ch9.js": "./src/cours-ch9.js?v=b8d28e8981",
   "./src/cours-schemas.js": "./src/cours-schemas.js?v=1c48f9bcd3",
   "./src/curseurs.js": "./src/curseurs.js?v=7b106ef900",
-  "./src/direct-page.js": "./src/direct-page.js?v=b4f1857e46",
+  "./src/direct-page.js": "./src/direct-page.js?v=072843ff39",
   "./src/donnees.js": "./src/donnees.js?v=9ed96686e8",
   "./src/exercices.js": "./src/exercices.js?v=b3a0a02b9a",
   "./src/exerciseur.js": "./src/exerciseur.js?v=c1a6fa546a",
@@ -74,7 +74,7 @@
   "./src/globe-figure.js": "./src/globe-figure.js?v=3dab247c58",
   "./src/gmpe-notes.js": "./src/gmpe-notes.js?v=0c33f8c35b",
   "./src/impression.js": "./src/impression.js?v=b8f76b944a",
-  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=5c1cf4e88e",
+  "./src/lecteur-reseau.js": "./src/lecteur-reseau.js?v=c95d7741b8",
   "./src/lecteur-station.js": "./src/lecteur-station.js?v=2c4aacd228",
   "./src/onglets.js": "./src/onglets.js?v=869ae39f99",
   "./src/parcours.js": "./src/parcours.js?v=0576a3a1d5",
@@ -85,13 +85,13 @@
   "./src/sismo/accelerogramme.js": "./src/sismo/accelerogramme.js?v=c4d9584306",
   "./src/sismo/batiment.js": "./src/sismo/batiment.js?v=64d6e346cb",
   "./src/sismo/catalogue.js": "./src/sismo/catalogue.js?v=df81065444",
-  "./src/sismo/centres.js": "./src/sismo/centres.js?v=9434d01982",
+  "./src/sismo/centres.js": "./src/sismo/centres.js?v=c75c73c6df",
   "./src/sismo/coefficients/accelerogrammes.js": "./src/sismo/coefficients/accelerogrammes.js?v=f718def810",
   "./src/sismo/coefficients/ak135.js": "./src/sismo/coefficients/ak135.js?v=02690d2d65",
   "./src/sismo/coefficients/akkar2014.js": "./src/sismo/coefficients/akkar2014.js?v=d649279ca2",
   "./src/sismo/coefficients/bindi2014.js": "./src/sismo/coefficients/bindi2014.js?v=75d65799f7",
   "./src/sismo/coefficients/boore2014.js": "./src/sismo/coefficients/boore2014.js?v=61fd6969f4",
-  "./src/sismo/direct.js": "./src/sismo/direct.js?v=20fea47383",
+  "./src/sismo/direct.js": "./src/sismo/direct.js?v=2fd1457f94",
   "./src/sismo/dossier.js": "./src/sismo/dossier.js?v=7bcc26a0b7",
   "./src/sismo/faille.js": "./src/sismo/faille.js?v=711c6bcef2",
   "./src/sismo/failles.js": "./src/sismo/failles.js?v=ff8740515c",
@@ -108,14 +108,14 @@
   "./src/sismo/localisation.js": "./src/sismo/localisation.js?v=338696d654",
   "./src/sismo/mecanisme.js": "./src/sismo/mecanisme.js?v=9ddc2d867b",
   "./src/sismo/mecanismes.js": "./src/sismo/mecanismes.js?v=bd5f4db7c9",
-  "./src/sismo/miniseed.js": "./src/sismo/miniseed.js?v=e89719161b",
+  "./src/sismo/miniseed.js": "./src/sismo/miniseed.js?v=7dea4bd880",
   "./src/sismo/oscillateur.js": "./src/sismo/oscillateur.js?v=3f8504910f",
   "./src/sismo/poussee.js": "./src/sismo/poussee.js?v=a9a6aa3dd5",
   "./src/sismo/propagation.js": "./src/sismo/propagation.js?v=6b02374afd",
   "./src/sismo/psha.js": "./src/sismo/psha.js?v=058550a9d7",
   "./src/sismo/reel.js": "./src/sismo/reel.js?v=1c6e05c856",
   "./src/sismo/refraction.js": "./src/sismo/refraction.js?v=dff98ef9aa",
-  "./src/sismo/seedlink.js": "./src/sismo/seedlink.js?v=d1f8330f2a",
+  "./src/sismo/seedlink.js": "./src/sismo/seedlink.js?v=50813d82f4",
   "./src/sismo/selection.js": "./src/sismo/selection.js?v=d7d9327078",
   "./src/sismo/signal.js": "./src/sismo/signal.js?v=269aa56df1",
   "./src/sismo/sismicite.js": "./src/sismo/sismicite.js?v=cbf0ae0354",
@@ -149,8 +149,8 @@
     <div>
       <p class="eyebrow">Données réelles · réseaux sismologiques</p>
       <h1>Stations sismologiques en direct</h1>
-      <p class="chapeau">Les stations des réseaux sismologiques autour de la Méditerranée (GEOFON, INGV, Epos-France, NOA,
-        KOERI…), comme dans un centre de surveillance (SeisComP) : carte des stations colorées par le mouvement du sol, traces
+      <p class="chapeau">Les stations des réseaux sismologiques du monde entier (GEOFON, INGV, Epos-France, NOA, KOERI,
+        EarthScope…), comme dans un centre de surveillance (SeisComP) : carte des stations colorées par le mouvement du sol, traces
         qui défilent, séismes récents et arrivées prévues des ondes à chaque station.</p>
     </div>
     <span class="live-badge" id="dr-badge"><i></i><span>Connexion…</span></span>
@@ -158,20 +158,20 @@
 
   <div class="poste" id="poste-direct">
     <section class="carte consigne" aria-label="Ce que vous allez faire">
-      <details open id="dr-consigne"><summary><h2>Ce que vous allez faire<small>Observation libre · données réelles des réseaux de la Méditerranée</small></h2></summary>
+      <details open id="dr-consigne"><summary><h2>Ce que vous allez faire<small>Observation libre · données réelles des réseaux du monde entier</small></h2></summary>
         <div class="consigne-corps">
-        <p><b>Objectif.</b> Voir arriver les ondes de vrais séismes aux stations de la Méditerranée et les relier à ce que les
+        <p><b>Objectif.</b> Voir arriver les ondes de vrais séismes aux stations, de la Méditerranée au monde entier, et les relier à ce que les
           travaux pratiques simulent : P, S et ondes de surface, temps de trajet ak135, détection automatique.</p>
         <ol class="experiences">
           <li>Attendez que les traces se remplissent (quelques minutes de données récentes arrivent d'abord). Repérez la latence de chaque station et le bruit de la houle (microséisme) sans filtre, puis avec le filtre « 0,5 – 5 Hz ».</li>
-          <li>Touchez une station (triangle) sur la carte : sa fiche s'ouvre, avec sa trace ; « Suivre cette station » l'ajoute aux traces (12 au plus). Dans « Réseaux », cochez un réseau national pour afficher ses stations sur la carte.</li>
-          <li>Touchez un séisme (disque) sur la carte, ou une ligne de « Séismes » : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et, s'il date de moins de deux heures, les fronts de ses ondes P, S et de Rayleigh s'étendent sur la carte en temps réel ; les stations s'allument au passage de la P et de la S. Un séisme publié par GEOFON pendant que la page est ouverte est choisi tout seul. Comparez les arrivées prévues aux arrivées observées.</li>
+          <li>Touchez une station (triangle) sur la carte : sa fiche s'ouvre, avec sa trace ; « Suivre cette station » l'ajoute aux traces (100 au plus) ; le × en tête d'une trace la retire. Un triangle bordé de vert a livré des données récentes, un triangle pâle n'en a pas : choisissez plutôt les premiers. Dans « Réseaux », cochez un réseau, de la Méditerranée ou d'ailleurs (le filtre le trouve par son code, son nom ou son pays), pour afficher ses stations sur la carte ; « Monde » et « Méditerranée » cadrent la carte.</li>
+          <li>Touchez un séisme (disque) sur la carte, ou une ligne de « Séismes » : ses arrivées prévues (P, S, ondes de surface) se placent sur les traces et, s'il date de moins de deux heures, les fronts de ses ondes P, S et de Rayleigh s'étendent sur la carte en temps réel ; les stations s'allument au passage de la P et de la S. Un séisme de magnitude 4 ou plus publié pendant que la page est ouverte est choisi tout seul. Comparez les arrivées prévues aux arrivées observées.</li>
           <li>Pour un séisme plus ancien, « Rejouer la propagation » (dans sa fiche ou au-dessus de ses sismogrammes) rejoue ses fronts en accéléré : vitesse, pause, curseur du temps ; ses sismogrammes suivent avec un trait rouge.</li>
           <li>Pour un séisme lointain (« Monde, M ≥ 5,5 »), passez la fenêtre à 60 minutes et le filtre à « 18 – 22 s » : les ondes de surface arrivent bien après P et S.</li>
           <li>Repérez les déclenchements STA/LTA (triangles sur les traces) : un vrai séisme déclenche plusieurs stations dans l'ordre des distances, le bruit local une seule.</li>
         </ol>
-        <p class="a-rendre"><b>À noter.</b> Les données viennent des centres de données (GEOFON, INGV, Epos-France…) à travers un
-          relais du site ; sans connexion, la page passe en mode « Démo (simulée) » (séisme fictif, signaux simulés), clairement
+        <p class="a-rendre"><b>À noter.</b> Les données viennent des centres de données (GEOFON, INGV, Epos-France, EarthScope…) à travers un
+          relais du site, les séismes du catalogue de l'EMSC (GEOFON en secours) ; sans connexion, la page passe en mode « Démo (simulée) » (séisme fictif, signaux simulés), clairement
           signalé.</p>
         </div>
       </details>
@@ -183,7 +183,7 @@
         <div class="dr-defile"><canvas id="dr-carte" aria-label="Carte des stations et des séismes ; toucher une station ou un séisme ouvre sa fiche sous la carte ; pincer ou la molette zooment, glisser déplace la carte"></canvas></div>
         <div class="outils outils-zoom">
           <div class="segments compact" role="group" aria-label="Zoom de la carte">
-            <button type="button" id="dr-carte-plus" aria-label="Zoomer la carte">+</button><button type="button" id="dr-carte-moins" aria-label="Dézoomer la carte">−</button><button type="button" id="dr-carte-tout">Vue d'ensemble</button>
+            <button type="button" id="dr-carte-plus" aria-label="Zoomer la carte">+</button><button type="button" id="dr-carte-moins" aria-label="Dézoomer la carte">−</button><button type="button" id="dr-carte-tout">Monde</button><button type="button" id="dr-carte-med">Méditerranée</button>
           </div>
           <button type="button" class="outil neutre" id="dr-legende-bouton" aria-expanded="false" aria-controls="dr-legende-carte">Légende</button>
           <span class="aide explication">Pincez (ou molette) pour zoomer, glissez pour déplacer, double-touchez pour agrandir.</span>
@@ -215,10 +215,12 @@
           </div>
           <button type="button" class="outil neutre" id="dr-pause" aria-pressed="false">Pause</button>
           <button type="button" class="outil" id="dr-direct" hidden>Revenir au direct</button>
+          <button type="button" class="outil" id="dr-suivre-vue" title="Ajoute aux traces les stations visibles sur la carte qui ont des données récentes (100 traces au plus)">Suivre la vue</button>
+          <button type="button" class="outil neutre" id="dr-retirer-muettes" title="Retire des traces les stations sans donnée depuis 10 minutes (suivies depuis plus d'une minute et demie)">Retirer les muettes</button>
           <span class="curseur-lecture" id="dr-curseur">—</span>
         </div>
-        <div class="dr-defile"><canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas></div>
-        <p class="aide explication">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici. Chaque trace a sa propre échelle : son maximum est écrit à droite. Zoom : boutons + et −, pincement ou Ctrl + molette ; glissez de côté pour remonter dans le temps (70 minutes au plus), « Revenir au direct » pour suivre de nouveau.</p>
+        <div class="dr-defile dr-traces-cadre"><canvas id="dr-traces" aria-label="Traces des stations suivies, qui défilent en temps réel"></canvas><div id="dr-traces-x"></div></div>
+        <p class="aide explication">Touchez une station sur la carte pour ouvrir sa fiche, puis « Suivre cette station » pour l'ajouter ici (100 au plus) ; le × en tête d'une trace la retire. Chaque trace a sa propre échelle : son maximum est écrit à droite. Zoom : boutons + et −, pincement ou Ctrl + molette ; glissez de côté pour remonter dans le temps (70 minutes au plus), « Revenir au direct » pour suivre de nouveau.</p>
       </section>
       <section class="carte" aria-label="Sismogrammes du séisme" id="dr-sismo" hidden>
         <h2>Sismogrammes du séisme choisi<small id="dr-ev-titre"></small></h2>
@@ -257,9 +259,11 @@
       </section>
       <section class="carte" aria-label="Réseaux" id="dr-p-reseaux">
         <p class="sous-titre">Réseaux</p>
-        <p class="aide explication">Stations en service et en libre accès des centres de données européens et américains (services web FDSN).
-          Cochez un réseau pour afficher ses stations sur la carte ; deux d'entre elles rejoignent les traces.</p>
+        <p class="aide explication">Stations en service et en libre accès des centres de données européens et américains (services web FDSN) :
+          toutes celles de la Méditerranée, et les réseaux du monde entier, dont les stations se lisent quand on les coche. Cochez un réseau
+          pour afficher ses stations sur la carte ; deux d'entre elles rejoignent les traces.</p>
         <p class="aide" id="dr-tunisie"></p>
+        <input type="search" id="dr-reseaux-filtre" class="dr-filtre-reseaux" placeholder="Filtrer les réseaux : code, nom, pays" aria-label="Filtrer les réseaux par code, nom ou pays" autocomplete="off">
         <div id="dr-reseaux"><p class="aide">Recherche des stations…</p></div>
         <details class="dr-centres"><summary>Centres interrogés</summary><ul class="journal" id="dr-centres"></ul></details>
       </section>
@@ -292,6 +296,6 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="src/direct-page.js?v=b4f1857e46"></script>
+<script type="module" src="src/direct-page.js?v=072843ff39"></script>
 </body>
 </html>

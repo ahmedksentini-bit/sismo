@@ -42,3 +42,18 @@ test('un enregistrement abîmé ou étranger est ignoré sans erreur', () => {
   assert.equal(MS.enregistrement(faux), null);
   assert.deepEqual(MS.lire(faux), []);
 });
+
+test('résumé d\'une réponse dataselect (en-têtes seuls) : début, fin et nombre d\'échantillons de chaque voie, comme le décodage', () => {
+  for (const c of ref) {
+    const octets = readFileSync(new URL(`./references/${c.fichier}`, import.meta.url)), u = new Uint8Array(octets.buffer, octets.byteOffset, octets.byteLength);
+    const enr = MS.lire(u), r = MS.resumer(u), ids = [...new Set(enr.map(e => e.id))];
+    assert.deepEqual(Object.keys(r.voies).sort(), ids.sort(), c.codage);
+    for (const id of ids) {
+      const l = enr.filter(e => e.id === id), v = r.voies[id];
+      assert.equal(v.debut, Math.min(...l.map(e => e.debut)), `${c.codage} début`);
+      assert.ok(Math.abs(v.fin - Math.max(...l.map(e => e.debut + (e.echantillons.length * 1000) / e.cadence))) < 1e-6, `${c.codage} fin`);
+      assert.equal(v.n, l.reduce((s, e) => s + e.echantillons.length, 0), `${c.codage} n`);
+    }
+  }
+  assert.deepEqual(MS.resumer(new Uint8Array(1000)), { voies: {} });
+});

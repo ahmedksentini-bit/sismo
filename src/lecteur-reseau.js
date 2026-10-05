@@ -7,7 +7,8 @@ import Mecanisme from './sismo/mecanisme.js';
 
 // src/lecteur-reseau.js — banc « réseau » : quatre stations, pointés P/S, cercles, Wadati, localisation sur grille.
 // Mode « Séisme réel » : un fichier enregistré par la page « En direct » (src/sismo/dossier.js) remplace les quatre
-// stations simulées ; la localisation se fait sur la sphère (src/sismo/localisation.js) et se compare à GEOFON.
+// stations simulées ; la localisation se fait sur la sphère (src/sismo/localisation.js) et se compare au catalogue du
+// fichier (EMSC, ou GEOFON).
 (() => {
   'use strict';
   const SM = Sismo;
@@ -293,8 +294,11 @@ import Mecanisme from './sismo/mecanisme.js';
     $('#r-carte-legende').innerHTML = `Cercles bleus : R tirée de S − P · <span style="color:var(--amp)">★ solution</span>${montrerVrai ? ' · <span style="color:var(--vrai)">★ épicentre vrai</span>' : ''}${etat.mode === 'explorer' ? ' (glissez-la)' : ''}`;
   }
 
-  // ── Séisme réel : carte en latitude et longitude, arrivées prévues à la solution de GEOFON ─────────────────
-  // Heure d'origine de GEOFON dans l'échelle des traces (s depuis le début du fichier) et arrivées P et S prévues à
+  // ── Séisme réel : carte en latitude et longitude, arrivées prévues à la solution du catalogue ─────────────────
+  // Catalogue de référence du fichier : celui de la liste de la page « En direct » (EMSC, ou GEOFON en secours et pour les
+  // fichiers plus anciens).
+  const nomCat = e => (e && e.catalogue) || 'GEOFON';
+  // Heure d'origine du catalogue dans l'échelle des traces (s depuis le début du fichier) et arrivées P et S prévues à
   // chaque station pour sa solution (table de la localisation).
   const origineGeofon = () => (etat.reel.seisme.temps - etat.reel.debut) / 1000;
   function prevuesGeofon() {
@@ -315,7 +319,7 @@ import Mecanisme from './sismo/mecanisme.js';
     const cv = $('#r-carte'), { ctx, W, H } = preparer(cv), L = etat.loc, e = etat.reel ? etat.reel.seisme : null;
     ctx.fillStyle = COUL.paper; ctx.fillRect(0, 0, W, H);
     if (!etat.reel) { ctx.fillStyle = COUL.muted; ctx.font = `700 12px ${POLICE}`; ctx.textAlign = 'center'; ctx.fillText('Chargez un fichier de séisme.', W / 2, H / 2); return; }
-    // cadre : stations, solution et (après comparaison) GEOFON, avec une marge
+    // cadre : stations, solution et (après comparaison) celle du catalogue, avec une marge
     const pts = [...STATIONS.map(s => [s.lat, s.lon]), ...(L ? [[L.lat, L.lon]] : []), ...(etat.verifie ? [[e.lat, e.lon]] : [])];
     let la0 = Math.min(...pts.map(p => p[0])), la1 = Math.max(...pts.map(p => p[0])), lo0 = Math.min(...pts.map(p => p[1])), lo1 = Math.max(...pts.map(p => p[1]));
     const latc = (la0 + la1) / 2, kx = Math.cos((latc * Math.PI) / 180), m = 26;
@@ -359,7 +363,7 @@ import Mecanisme from './sismo/mecanisme.js';
       ctx.font = `800 11px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       texteHalo(ctx, s.nom, x + 9, y - 1, COUL.ink);
     });
-    $('#r-carte-legende').innerHTML = `Cercles bleus : distance épicentrale tirée de S − P · <span style="color:var(--amp)">★ votre solution</span>${etat.verifie ? ' · <span style="color:var(--vrai)">★ GEOFON</span>' : ''}`;
+    $('#r-carte-legende').innerHTML = `Cercles bleus : distance épicentrale tirée de S − P · <span style="color:var(--amp)">★ votre solution</span>${etat.verifie ? ` · <span style="color:var(--vrai)">★ ${nomCat(etat.reel.seisme)}</span>` : ''}`;
   }
 
   // ── Wadati ──────────────────────────────────────────────────────────────
@@ -442,7 +446,7 @@ import Mecanisme from './sismo/mecanisme.js';
         const el = $(`#r-info-${k}`);
         if (!el) return;
         const d = etat.verifie ? Localisation.distanceAzimut(r.seisme.lat, r.seisme.lon, st.lat, st.lon).distance : null;
-        el.textContent = `${st.pays || ''}${st.pays ? ' · ' : ''}${virg(st.lat, 2)}° N, ${virg(st.lon, 2)}° E${d !== null ? ` · Δ = ${virg(d, 2)}° (${Math.round(Localisation.km(d))} km) de GEOFON` : ''}`;
+        el.textContent = `${st.pays || ''}${st.pays ? ' · ' : ''}${virg(st.lat, 2)}° N, ${virg(st.lon, 2)}° E${d !== null ? ` · Δ = ${virg(d, 2)}° (${Math.round(Localisation.km(d))} km) de l'épicentre de ${nomCat(etat.reel.seisme)}` : ''}`;
       });
       return;
     }
@@ -511,7 +515,7 @@ import Mecanisme from './sismo/mecanisme.js';
     tout();
   }
 
-  // ── Séisme réel : chargement du fichier, comparaison à GEOFON ─────────────────────────────────────────────
+  // ── Séisme réel : chargement du fichier, comparaison au catalogue ─────────────────────────────────────────────
   async function chargerFichier(fichier) {
     const info = $('#r-reel-info');
     try {
@@ -561,14 +565,14 @@ import Mecanisme from './sismo/mecanisme.js';
     const dEpi = L ? Localisation.km(Localisation.distanceAzimut(L.lat, L.lon, e.lat, e.lon).distance) : null, dT0 = L ? L.t0 - t0 : null;
     const okEpi = dEpi !== null && dEpi <= 30, okT0 = dT0 !== null && Math.abs(dT0) <= 3;
     etat.verifie = true;
-    $('#r-corrige-reel').innerHTML = `<div class="separateur"></div><p class="sous-titre">Comparaison à GEOFON</p>
+    $('#r-corrige-reel').innerHTML = `<div class="separateur"></div><p class="sous-titre">Comparaison au catalogue (${nomCat(e)})</p>
       <div class="table-defile"><table class="resultats"><thead><tr><th>Station</th><th>P − P prévue</th><th>S − S prévue</th></tr></thead><tbody>${lignes.join('')}
-      <tr class="${okEpi ? 'ok' : 'ko'}"><td><span class="verdict ${okEpi ? 'ok' : 'ko'}">${okEpi ? '✓' : '✗'}</span> Épicentre</td><td class="n" colspan="2">${dEpi !== null ? `${Math.round(dEpi)} km de celui de GEOFON` : '—'}<br><small style="color:var(--muted)">repère : 30 km</small></td></tr>
+      <tr class="${okEpi ? 'ok' : 'ko'}"><td><span class="verdict ${okEpi ? 'ok' : 'ko'}">${okEpi ? '✓' : '✗'}</span> Épicentre</td><td class="n" colspan="2">${dEpi !== null ? `${Math.round(dEpi)} km de celui de ${nomCat(e)}` : '—'}<br><small style="color:var(--muted)">repère : 30 km</small></td></tr>
       <tr class="${okT0 ? 'ok' : 'ko'}"><td><span class="verdict ${okT0 ? 'ok' : 'ko'}">${okT0 ? '✓' : '✗'}</span> Heure d'origine</td><td class="n" colspan="2">${dT0 !== null ? signe(dT0, 1) + ' s' : '—'}<br><small style="color:var(--muted)">repère : 3 s</small></td></tr>
       </tbody></table></div>
-      <p class="verite"><b>GEOFON :</b> ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E, h = ${virg(e.h, 0)} km, origine à ${horloge(t0)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (${e.region || ''}, identifiant ${e.id}).
+      <p class="verite"><b>${nomCat(e)} :</b> ${virg(e.lat, 2)}° N, ${virg(e.lon, 2)}° E, h = ${virg(e.h, 0)} km, origine à ${horloge(t0)} UTC, M ${virg(e.mag, 1)} ${e.typeMag || ''} (${e.region || ''}, identifiant ${e.id}).
       Les arrivées prévues pour cette solution (table de la croûte du cours puis ak135) sont maintenant tracées en vert : un écart de quelques
-      secondes est normal (modèle de Terre moyen, pointés). GEOFON localise avec bien plus de stations : sa solution n'est pas exacte non plus.</p>`;
+      secondes est normal (modèle de Terre moyen, pointés). ${nomCat(e)} localise avec bien plus de stations : sa solution n'est pas exacte non plus.</p>`;
     tout();
   }
 
@@ -594,10 +598,10 @@ import Mecanisme from './sismo/mecanisme.js';
     });
     const reseau = Reel.magnitudeReseau(res), e = etat.reel.seisme, mil = x => Math.round(x).toLocaleString('fr-FR');
     const lignes = res.map((m, k) => (m ? `<tr class="${m.domaine ? '' : 'hors'}"><td><b>${STATIONS[k].nom}</b>${etat.reel.stations[k].approchee ? ' <small title="sensibilité de la verticale">≈</small>' : ''}</td><td class="n">${mil(m.R)}</td><td class="n">${mil(m.N.Anm)}</td><td class="n">${mil(m.E.Anm)}</td><td class="n">${m.domaine ? virg(m.ML, 2) : `<small>hors domaine (${virg(m.ML, 1)})</small>`}</td></tr>` : `<tr><td><b>${STATIONS[k].nom}</b></td><td class="n" colspan="4">—</td></tr>`));
-    div.innerHTML = `<div class="afficheurs deux">${afficheur('ML du réseau', reseau ? virg(reseau.ML, 1) : '—', reseau ? `${reseau.n} station${reseau.n > 1 ? 's' : ''}${reseau.ecart !== null ? `, écart type ${virg(reseau.ecart, 2)}` : ''}` : `aucune station entre ${Reel.RMIN} et ${Reel.RMAX} km`)}${afficheur('GEOFON', etat.verifie ? `${virg(e.mag, 1)} ${e.typeMag || ''}` : '—', etat.verifie ? 'magnitude du catalogue' : 'après « Comparer à GEOFON »')}</div>
+    div.innerHTML = `<div class="afficheurs deux">${afficheur('ML du réseau', reseau ? virg(reseau.ML, 1) : '—', reseau ? `${reseau.n} station${reseau.n > 1 ? 's' : ''}${reseau.ecart !== null ? `, écart type ${virg(reseau.ecart, 2)}` : ''}` : `aucune station entre ${Reel.RMIN} et ${Reel.RMAX} km`)}${afficheur(nomCat(e), etat.verifie ? `${virg(e.mag, 1)} ${e.typeMag || ''}` : '—', etat.verifie ? 'magnitude du catalogue' : 'après « Comparer au catalogue »')}</div>
       <div class="table-defile" style="margin-top:10px"><table class="resultats"><thead><tr><th>Station</th><th>R (km)</th><th>A N (nm)</th><th>A E (nm)</th><th>ML</th></tr></thead><tbody>${lignes.join('')}</tbody></table></div>
       <p class="formule">ML = log A + 1,11 log R + 0,00189 R − 2,09 (A : amplitude maximale du Wood-Anderson en nm, R : distance hypocentrale en km), moyenne des deux horizontales, puis des stations de ${Reel.RMIN} à ${Reel.RMAX} km.</p>
-      ${etat.verifie ? '<p class="aide">GEOFON publie souvent mb ou Mw, pas ML : quelques dixièmes d\'écart sont normaux. Au-delà de 600 km, la loi de ML ne vaut plus.</p>' : ''}`;
+      ${etat.verifie ? `<p class="aide">${nomCat(e)} publie souvent mb, Mw ou la ML de son propre réseau : quelques dixièmes d'écart sont normaux. Au-delà de 600 km, la loi de ML ne vaut plus.</p>` : ''}`;
   }
   // Mécanisme : polarités de la première P (C : le sol monte, D : il descend) placées sur la sphère focale par l'azimut et
   // l'angle de départ de chaque rai (solution de l'étudiant), puis recherche exhaustive des plans nodaux.

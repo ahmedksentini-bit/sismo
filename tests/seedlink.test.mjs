@@ -6,12 +6,14 @@ import { readFileSync } from 'node:fs';
 import SL from '../src/sismo/seedlink.js';
 import MS from '../src/sismo/miniseed.js';
 
-test('flux demandés : bien formés, 12 au plus ; reprise bornée à 30 minutes', () => {
+test('flux demandés : bien formés, 25 au plus par connexion ; reprise bornée à 30 minutes', () => {
   assert.deepEqual(SL.lireFlux('GE.TNTN..BHZ,ge.isp.00.hhz'), [
     { reseau: 'GE', station: 'TNTN', emplacement: '', voie: 'BHZ' }, { reseau: 'GE', station: 'ISP', emplacement: '00', voie: 'HHZ' }]);
   for (const faux of ['', 'GE.TNTN.BHZ', 'GE.TNTN..BHZ;DROP', 'GE.TROPLONG..BHZ', 'GE.TNTN..XYZ', 'GE.A..BHZ\r\nEND', null])
     assert.equal(SL.lireFlux(faux), null, String(faux));
-  assert.equal(SL.lireFlux(Array.from({ length: 13 }, (_, i) => `GE.S${i}..BHZ`).join(',')), null);
+  assert.equal(SL.MAX_FLUX, 25);
+  assert.equal(SL.lireFlux(Array.from({ length: 25 }, (_, i) => `GE.S${i}..BHZ`).join(',')).length, 25);
+  assert.equal(SL.lireFlux(Array.from({ length: 26 }, (_, i) => `GE.S${i}..BHZ`).join(',')), null);
   const m = Date.UTC(2026, 9, 4, 20, 0, 0);
   assert.equal(SL.lireDepuis('2026-10-04T19:55:00Z', m), m - 5 * 60000);
   assert.equal(SL.lireDepuis('2026-10-04T10:00:00Z', m), m - 30 * 60000);
