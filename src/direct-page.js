@@ -1,6 +1,7 @@
 import MiniSeed from './sismo/miniseed.js';
 import Fdsn from './sismo/fdsn.js';
 import Centres from './sismo/centres.js';
+import Dossier from './sismo/dossier.js';
 import Direct from './sismo/direct.js';
 import Globe from './sismo/globe.js';
 import Teleseisme from './sismo/teleseisme.js';
@@ -811,6 +812,45 @@ import Sismo from './sismo/signal.js';
     $('#dr-ev-etat').textContent = `${avec} station${avec > 1 ? 's' : ''} sur ${ev.lignes.length} avec des données dans les archives${echecs ? ` (${echecs} centre${echecs > 1 ? 's' : ''} injoignable${echecs > 1 ? 's' : ''})` : ''}, de ${hms(debut)} à ${hms(fin)} UTC.`;
     dessinerSismogrammes();
   }
+  // Fichier du séisme pour le TP de localisation : trois composantes des stations qui ont des données, d'une minute avant
+  // l'origine à cinq minutes après la S de la plus lointaine (les ondes de surface ne servent pas à localiser).
+  async function exporterSeisme() {
+    const ev = etat.ev;
+    if (!ev || ev.etat !== 'lu') { toast('Attendez la fin de la lecture des archives.'); return; }
+    const e = ev.seisme, avec = ev.lignes.filter(l => l.voie.fin() !== null);
+    if (avec.length < 3) { toast('Il faut au moins trois stations avec des données pour localiser le séisme.'); return; }
+    const tS = Math.max(...avec.map(l => { const a = arriveesStation(l.s, e).find(x => x.phase === 'S'); return a ? a.temps : (ev.fin - e.temps) / 1000 - 300; }));
+    const debut = ev.debut, fin = Math.min(ev.fin, e.temps + (tS + 300) * 1000), bouton = $('#dr-ev-exporter');
+    bouton.disabled = true;
+    $('#dr-ev-etat').textContent = `Lecture des trois composantes de ${avec.length} stations…`;
+    const parCentre = new Map(), enregistrements = [], recues = new Set();
+    for (const l of avec) { if (!parCentre.has(l.s.centre)) parCentre.set(l.s.centre, []); parCentre.get(l.s.centre).push(l.s); }
+    try {
+      await Promise.all([...parCentre].map(async ([centre, ss]) => {
+        const uniq = f => [...new Set(ss.map(f))].join(',');
+        const r = await fetch(api('dataselect', { network: uniq(s => s.reseau), station: uniq(s => s.station), channel: uniq(s => `${s.voie.slice(0, 2)}?`), starttime: Fdsn.heure(debut), endtime: Fdsn.heure(fin) }, centre));
+        if (r.status === 204) return;
+        if (!r.ok) throw new Error(`${nomCentre(centre)} : HTTP ${r.status}`);
+        const voulues = new Map(ss.map(s => [`${s.reseau}.${s.station}.${s.emplacement}`, s.voie.slice(0, 2)]));
+        for (const enr of MiniSeed.lire(await r.arrayBuffer())) {
+          const cle = `${enr.reseau}.${enr.station}.${enr.emplacement}`;
+          if (voulues.get(cle) === enr.voie.slice(0, 2)) { enregistrements.push(enr.brut.slice()); recues.add(cle); }
+        }
+      }));
+      const stations = avec.map(l => l.s).filter(s => recues.has(`${s.reseau}.${s.station}.${s.emplacement}`));
+      if (stations.length < 3) throw new Error('moins de trois stations reçues');
+      const texte = Dossier.ecrire({ seisme: { ...e, catalogue: 'GEOFON' }, debut, fin, stations, enregistrements });
+      const nom = `seisme-${new Date(e.temps).toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-')}-${(e.region || 'region').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 40)}.json`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
+      a.download = nom; document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      $('#dr-ev-etat').textContent = `Fichier « ${nom} » enregistré : ${stations.length} stations, trois composantes, ${Math.round(texte.length / 1024)} Ko. Ouvrez-le dans le TP de localisation (Travaux pratiques, banc « Réseau », mode « Séisme réel »).`;
+      journal(`fichier du séisme enregistré : ${nom}`);
+    } catch (err) {
+      $('#dr-ev-etat').textContent = `Enregistrement impossible : ${err.message || err}.`;
+    } finally { bouton.disabled = false; }
+  }
   let geoSismo = null;
   function zoomerSismogrammes(f, x) {
     const ev = etat.ev;
@@ -1021,6 +1061,7 @@ import Sismo from './sismo/signal.js';
     $('#dr-pause').addEventListener('click', e => { etat.pause = etat.pause ? null : Date.now(); e.currentTarget.textContent = etat.pause ? 'Reprendre' : 'Pause'; e.currentTarget.setAttribute('aria-pressed', String(!!etat.pause)); majTout(); });
     $$('[data-dr-mode]').forEach(b => b.addEventListener('click', () => { if (b.dataset.drMode !== etat.mode) changerMode(b.dataset.drMode); }));
     $('#dr-ev-filtre').addEventListener('change', () => dessinerSismogrammes());
+    $('#dr-ev-exporter').addEventListener('click', exporterSeisme);
     $('#dr-ev-fermer').addEventListener('click', () => { etat.ev = null; $('#dr-sismo').hidden = true; });
     new ResizeObserver(() => dessinerSismogrammes()).observe($('#dr-sismo'));
     $$('[data-dr-catalogue]').forEach(b => b.addEventListener('click', () => { etat.catalogue = b.dataset.drCatalogue; $$('[data-dr-catalogue]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); chargerSeismes(); }));

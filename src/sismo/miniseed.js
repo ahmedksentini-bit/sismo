@@ -104,13 +104,15 @@ const MiniSeed = (() => {
   }
   const entete = h => ({ reseau: h.reseau, station: h.station, emplacement: h.emplacement, voie: h.voie, id: `${h.reseau}.${h.station}.${h.emplacement}.${h.voie}` });
 
-  // Tous les enregistrements d'un fichier (réponse FDSN dataselect : enregistrements bout à bout).
+  // Tous les enregistrements d'un fichier (réponse FDSN dataselect : enregistrements bout à bout). Chacun garde ses
+  // octets d'origine (brut, une vue sur le tampon), pour être réécrit tel quel (fichier d'un séisme).
   function lire(tampon) {
     const octets = tampon instanceof Uint8Array ? tampon : new Uint8Array(tampon), out = [];
     let i = 0;
     while (i + 48 <= octets.length) {
       const e = enregistrement(octets, i);
       if (!e) { i += 512; continue; }
+      e.brut = octets.subarray(i, Math.min(octets.length, i + e.longueur));
       out.push(e);
       i += e.longueur;
     }
